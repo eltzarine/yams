@@ -643,7 +643,14 @@ async function flushOutbox(){
   }finally{flushing=false}
   if(S.gid&&!readOutbox().some(x=>x.id===S.gid)&&S.started&&finished()&&syncState!=="ok"){syncState="ok";showSync()}
 }
-addEventListener("online",()=>setTimeout(flushOutbox,1500));
+// Partie terminée encore affichée mais jamais arrivée dans l'historique (ex. finie hors ligne avec l'ancienne version) : on la renvoie
+async function checkCurrent(){
+  if(!DB||!S.started||!finished()||!S.gid||!S.savedSig||navigator.onLine===false)return;
+  if(readOutbox().some(x=>x.id===S.gid))return;
+  try{const snap=await DB.collection("parties").doc(S.gid).get({source:"server"});
+    if(!snap.exists){S.savedSig=null;syncGame()}}catch(e){}
+}
+addEventListener("online",()=>{setTimeout(flushOutbox,1500);setTimeout(checkCurrent,8000)});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)flushOutbox()});
 function showSync(){const el=document.getElementById("syncSt");if(el)el.textContent=syncMsg()}
 async function syncGame(){
@@ -726,6 +733,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(ui.sheet==="hist")watchHist();
   if(S.started&&finished())syncGame();
   flushOutbox();
+  setTimeout(checkCurrent,8000); // laisse d'abord Firebase envoyer ce qu'il avait gardé
 });
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
