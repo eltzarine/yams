@@ -132,8 +132,6 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .hist .hd small{color:var(--muted);font-size:13px}
 .hist .rk{color:var(--muted);font-size:15px;margin-top:2px}
 .hist .rk strong{color:var(--ink)}
-.hist .del{border:0;background:transparent;color:var(--zero);font-size:13px;padding:2px 4px;margin-top:4px;min-height:32px}
-.hist .del.arm{background:var(--pip);color:#fff;border-radius:8px;padding:4px 10px;font-weight:600}
 .sheet .sub{color:var(--muted);margin:2px 0 14px;font-size:15px}
 .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
 .slot{aspect-ratio:1;border:2px dashed var(--line-strong);border-radius:12px;background:transparent;padding:0}
@@ -600,8 +598,7 @@ function histHTML(){
   if(!HIST.length)return`<h3>Historique</h3><p class="hint">Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.</p>`;
   return`<h3>Historique</h3><div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
-    <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
-    <button class="del" data-del="${esc(g.id)}">Supprimer</button></li>`).join("")}</ul>`;
+    <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div></li>`).join("")}</ul>`;
 }
 let histSub=null;
 const num=v=>{v=Math.round(+v);return Number.isFinite(v)?v:0};
@@ -618,27 +615,7 @@ function watchHist(){
     snap=>{HIST=snap.docs.map(cleanGame).filter(Boolean);HERR=false;refreshHist()},
     ()=>{HERR=true;histSub=null;refreshHist()});
 }
-function openHist(){watchHist();openSheet(histHTML(),bindHist);ui.sheet="hist"}
-function bindHist(sh){
-  sh.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{
-    if(b.disabled)return;
-    if(!b.classList.contains("arm")){
-      sh.querySelectorAll(".del.arm").forEach(o=>{o.classList.remove("arm");o.textContent="Supprimer"});
-      b.classList.add("arm");b.textContent="Confirmer la suppression";
-      clearTimeout(b._t);b._t=setTimeout(()=>{b.classList.remove("arm");b.textContent="Supprimer"},4000);
-      return;
-    }
-    clearTimeout(b._t);b.disabled=true;b.textContent="Suppression…";
-    const id=b.dataset.del;
-    try{
-      await DB.collection("parties").doc(id).delete();
-      HIST=(HIST||[]).filter(g=>g.id!==id);refreshHist();
-    }catch(e){
-      b.disabled=false;b.classList.remove("arm");
-      b.textContent=e&&(e.code==="not_granted"||e.code==="permission-denied")?"Suppression non autorisée":"Échec, réessayer";
-    }
-  });
-}
+function openHist(){watchHist();openSheet(histHTML());ui.sheet="hist"}
 function refreshHist(){if(ui.sheet==="hist")openHist()}
 document.addEventListener("DOMContentLoaded",()=>{
   try{
