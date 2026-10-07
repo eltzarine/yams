@@ -238,6 +238,16 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .splash .credit{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));font-size:15px}
 .splash .play{margin-top:22px;border:0;border-radius:999px;background:var(--gold);color:#1B2620;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:26px;letter-spacing:.03em;height:58px;min-width:200px;padding:0 36px;box-shadow:0 8px 22px rgba(0,0,0,.3);animation:fadeup .6s 1s both}
 .splash .play:active{transform:scale(.97)}
+.splash .foot{position:absolute;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;padding:0 16px}
+.splash .foot .credit{position:static;margin:0}
+.splash .install{border:1.5px solid rgba(255,255,255,.4);border-radius:999px;background:transparent;color:var(--felt-ink);font-weight:600;font-size:14px;height:32px;padding:0 12px;gap:6px;display:inline-flex;align-items:center;gap:8px;animation:fadeup .6s 1.2s both}
+.splash .install svg{width:15px;height:15px;filter:none}
+.splash .install:active{transform:scale(.97)}
+.splash .ihelp{position:absolute;left:16px;right:16px;bottom:calc(60px + env(safe-area-inset-bottom,0px));max-width:420px;margin:0 auto;background:var(--surface);color:var(--ink);border-radius:16px;padding:16px;text-align:left;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:15px;z-index:1}
+.splash .ihelp ol{margin:8px 0 12px;padding-left:20px}
+.splash .ihelp li{margin:4px 0}
+.splash .ihelp .ok{width:100%;height:44px;border:0;border-radius:10px;background:var(--felt);color:var(--felt-ink);font-weight:700}
+.splash .install[hidden],.splash .ihelp[hidden]{display:none}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.splash *{animation:none!important}}
 </style>
@@ -253,7 +263,11 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
   </svg>
   <p class="title">Yam’s Gaillon</p>
   <button class="play" id="btnPlay">Jouer</button>
-  <p class="credit">by <b>César</b> · © 2026</p>
+  <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
+  <div class="foot">
+    <button class="install" id="btnInstall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Installer l’appli</button>
+    <p class="credit">by <b>César</b> · © 2026</p>
+  </div>
 </div>
 <div class="wrap" id="app"></div>
 
@@ -740,6 +754,23 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
   document.getElementById("btnPlay").onclick=hide;})();
+/* bouton « Installer l'appli » sur l'écran d'accueil */
+(()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;
+  if(matchMedia("(display-mode: standalone)").matches||navigator.standalone===true)return; // déjà installée
+  let deferred=null;
+  addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;b.hidden=false});
+  addEventListener("appinstalled",()=>{b.hidden=true;h.hidden=true});
+  b.hidden=false;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  b.onclick=async()=>{
+    if(deferred){deferred.prompt();const r=await deferred.userChoice.catch(()=>null);deferred=null;if(r&&r.outcome==="accepted")b.hidden=true;return}
+    h.innerHTML=(ios
+      ?`<b>Sur iPhone ou iPad</b><ol><li>Ouvre le lien dans <b>Safari</b></li><li>Touche le bouton <b>Partager</b> (carré avec une flèche vers le haut)</li><li>Choisis <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b></li></ol>`
+      :`<b>Sur Android</b><ol><li>Ouvre le lien dans <b>Chrome</b></li><li>Touche le menu <b>⋮</b> en haut à droite</li><li>Choisis <b>Installer l’application</b> (ou <b>Ajouter à l’écran d’accueil</b>)</li></ol>`)
+      +`<button class="ok" id="ihOk">Compris</button>`;
+    h.hidden=false;const ok=h.querySelector("#ihOk");ok.onclick=()=>{h.hidden=true;b.focus()};ok.focus();
+  };
+})();
 render();
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))
   addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
