@@ -598,29 +598,77 @@ function gameData(){
     return{n:String(n).slice(0,30),v:ALL.map(k=>Math.max(0,Math.min(500,sc[k]|0))),prime:Math.max(0,Math.min(500,totals(p).prime|0))}});
   return{date:new Date().toISOString(),winner:r[0].n,top:r[0].t,ranking:r,sheet};
 }
-let syncing=false,syncAgain=false,syncState=null;
+const inflight=new Map();let syncAgain=false,syncState=null;
 function syncMsg(){
   if(!DB)return"⚠️ Partie non enregistrée : l'historique n'est pas configuré (Firebase).";
   if(syncState==="ok")return"✓ Partie enregistrée dans l'historique.";
   if(syncState==="denied")return"⚠️ Partie non enregistrée : accès refusé par la base Firebase (vérifie les règles Firestore).";
-  if(syncState==="error")return"⚠️ La partie n'a pas pu être enregistrée. Réessaie plus tard.";
-  return navigator.onLine===false?"Hors connexion : la partie sera enregistrée dès le retour du réseau.":"Enregistrement…";
+  if(syncState==="error")return"Partie gardée sur cet appareil : elle sera envoyée automatiquement dès que la connexion le permettra.";
+  return navigator.onLine===false?"Hors connexion : la partie est gardée sur cet appareil et sera envoyée automatiquement dès le retour du réseau.":"Enregistrement…";
 }
+/* Boîte d'envoi : parties terminées pas encore confirmées par Firebase.
+   Gardée sur l'appareil (survit à la fermeture de l'appli et aux nouvelles parties). */
+const OUTBOX_KEY="yams-outbox-v1";
+function readOutbox(){try{const o=JSON.parse(localStorage.getItem(OUTBOX_KEY)||"[]");return Array.isArray(o)?o.filter(x=>x&&typeof x.id==="string"&&x.d).slice(-30):[]}catch(e){return[]}}
+function writeOutbox(o){try{o.length?localStorage.setItem(OUTBOX_KEY,JSON.stringify(o.slice(-30))):localStorage.removeItem(OUTBOX_KEY)}catch(e){}}
+function outboxPut(id,d){const o=readOutbox().filter(x=>x.id!==id);o.push({id,d,n:0});writeOutbox(o)}
+function outboxDone(id,d){writeOutbox(readOutbox().filter(x=>!(x.id===id&&(!d||JSON.stringify(x.d)===JSON.stringify(d)))))}
+const isDenied=e=>e&&(e.code==="permission-denied"||e.code==="permission_denied");
+// Écrit une partie : création complète si elle n'existe pas encore, mise à jour sinon
+async function pushGame(ref,d,exists){
+  const write=x=>exists?ref.set(x,{merge:true}):ref.set({...x,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  try{await write(d)}catch(e){if(isDenied(e)){const{sheet,...light}=d;await write(light)}else throw e}
+}
+let flushing=false;
+async function flushOutbox(){
+  if(!DB||flushing||navigator.onLine===false)return;
+  flushing=true;
+  try{
+    for(const it of readOutbox()){
+      if(Date.now()-(inflight.get(it.id)||0)<20000)continue; // déjà en cours d'envoi
+      const ref=DB.collection("parties").doc(it.id);
+      try{
+        const snap=await ref.get({source:"server"});
+        await pushGame(ref,it.d,snap.exists);
+        outboxDone(it.id,it.d);
+      }catch(e){
+        if(isDenied(e)){
+          // refusé : si la partie est déjà dans l'historique on s'arrête là, sinon on réessaie quelques fois
+          let there=false;try{there=(await ref.get({source:"server"})).exists}catch(_){}
+          const o=readOutbox(),x=o.find(y=>y.id===it.id);
+          if(there||!x||++x.n>=5)outboxDone(it.id);else writeOutbox(o);
+        }else break; // réseau indisponible : on réessaiera plus tard
+      }
+    }
+  }finally{flushing=false}
+  if(S.gid&&!readOutbox().some(x=>x.id===S.gid)&&S.started&&finished()&&syncState!=="ok"){syncState="ok";showSync()}
+}
+addEventListener("online",()=>setTimeout(flushOutbox,1500));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)flushOutbox()});
 function showSync(){const el=document.getElementById("syncSt");if(el)el.textContent=syncMsg()}
 async function syncGame(){
   if(!DB)return;
-  if(syncing){syncAgain=true;return}
   const sig=JSON.stringify([S.players,S.scores]);
   if(S.savedSig===sig)return;
   if(!S.gid)S.gid="g"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  const prev=S.savedSig;S.savedSig=sig;syncing=true;
-  try{const d=gameData();if(prev&&S.gdate)d.date=S.gdate;else S.gdate=d.date;
-    const ref=DB.collection("parties").doc(S.gid);
-    const write=x=>prev?ref.set(x,{merge:true}):ref.set({...x,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    try{await write(d)}
-    catch(e){if(e&&(e.code==="permission-denied"||e.code==="permission_denied")){const{sheet,...light}=d;await write(light)}else throw e}syncState="ok";if(!prev&&window.gtag)gtag("event","partie_terminee",{joueurs:S.players.length})}
-  catch(e){S.savedSig=prev;syncState=e&&(e.code==="invalid_argument"||e.code==="not_granted"||e.code==="permission_denied"||e.code==="permission-denied")?"denied":"error"}
-  finally{syncing=false;persist();showSync();if(syncAgain){syncAgain=false;if(S.started&&finished())syncGame()}}
+  const gid=S.gid;
+  if(!S.savedSig)syncState=null;
+  const d=gameData();if(S.gdate)d.date=S.gdate;else S.gdate=d.date;
+  outboxPut(gid,d); // gardée sur l'appareil tant que Firebase n'a pas confirmé
+  persist();showSync();
+  if(inflight.has(gid)){syncAgain=true;return}
+  const prev=S.savedSig;S.savedSig=sig;inflight.set(gid,Date.now());
+  try{
+    await pushGame(DB.collection("parties").doc(gid),d,!!prev);
+    outboxDone(gid,d);
+    if(gid===S.gid)syncState="ok";
+    if(!prev&&window.gtag)gtag("event","partie_terminee",{joueurs:S.players.length})}
+  catch(e){
+    const denied=isDenied(e)||(e&&(e.code==="invalid_argument"||e.code==="not_granted"));
+    if(gid===S.gid){S.savedSig=prev;syncState=denied?"denied":"error"}
+    if(denied)outboxDone(gid,d);else setTimeout(flushOutbox,5000); // la boîte d'envoi la renverra
+  }
+  finally{inflight.delete(gid);persist();showSync();if(syncAgain&&gid===S.gid){syncAgain=false;if(S.started&&finished())syncGame()}}
 }
 function fmtDate(iso){try{return new Date(iso).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){return""}}
 function histHTML(){
@@ -677,6 +725,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(!DB){refreshHist();return}
   if(ui.sheet==="hist")watchHist();
   if(S.started&&finished())syncGame();
+  flushOutbox();
 });
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
