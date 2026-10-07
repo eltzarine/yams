@@ -3,10 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F4D3A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Yam’s">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Yam’s Gaillon</title>
+<meta name="description" content="Feuille de score du Yams avec calcul automatique des points et historique partagé des parties.">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -53,13 +63,14 @@ window.FIREBASE_CONFIG = {
   --sheet:rgba(0,0,0,.6);
 }
 *,*::before,*::after{box-sizing:inherit}
-html,body{margin:0;height:100%}
+html,body{margin:0;height:100%;touch-action:manipulation}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;-webkit-tap-highlight-color:transparent}
-html,body{touch-action:manipulation}
 button,input,a{touch-action:manipulation}
 button{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none}
 button:focus-visible,input:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
+.facebtn:disabled,.primary:disabled{opacity:.4;cursor:default}
+.sheet:focus{outline:none}
 .wrap{max-width:720px;margin:0 auto;padding:12px 12px 32px}
 
 /* header */
@@ -156,7 +167,7 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 /* settings */
 .set{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .set:last-of-type{border-bottom:0}
-.set span{font-weight:600}
+.set>span,.set label{font-weight:600}
 .set small{display:block;color:var(--muted);font-weight:400;font-size:14px}
 .set input{width:78px;height:42px;border:1px solid var(--line-strong);border-radius:10px;text-align:center;font:inherit;font-size:18px;background:var(--bg);color:var(--ink)}
 .seg{display:flex;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden}
@@ -206,7 +217,7 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 /* onglets */
 .tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin:0 0 12px}
 .tabs button{flex:1;min-width:0;height:42px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
-.tabs button[aria-selected="true"]{background:var(--felt);color:var(--felt-ink)}
+.tabs button[aria-pressed="true"]{background:var(--felt);color:var(--felt-ink)}
 .wrap.mode-turn .scroller,.wrap.mode-turn .hint{display:none}
 #turn{max-width:720px;margin:0 auto;padding:0 12px 32px}
 #turn:empty{display:none}
@@ -216,7 +227,7 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .splash svg{width:min(86vw,340px);height:auto;filter:drop-shadow(0 10px 18px rgba(0,0,0,.35));overflow:visible}
 .splash .dd{animation:roll .85s calc(var(--i)*.09s) cubic-bezier(.2,.8,.3,1) both}
 @keyframes roll{from{transform:translate(var(--dx),-90px) rotate(var(--rot));opacity:0}to{transform:none;opacity:1}}
-.splash h1{font-family:"Barlow Condensed",sans-serif;font-size:40px;line-height:1;margin:6px 0 0;letter-spacing:.01em;animation:fadeup .6s .5s both}
+.splash .title{font-family:"Barlow Condensed",sans-serif;font-size:40px;line-height:1;margin:6px 0 0;letter-spacing:.01em;animation:fadeup .6s .5s both}
 .splash p{margin:0;font-size:16px;opacity:.85;animation:fadeup .6s .75s both}
 .splash p b{color:var(--gold)}
 .splash .credit{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));font-size:15px}
@@ -235,7 +246,7 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
     <g class="dd" style="--i:3;--dx:40px;--rot:270deg;transform-origin:216px 48px"><g transform="rotate(7 216 48)"><rect x="192" y="24" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="205" cy="37" r="4.3"/><circle cx="227" cy="59" r="4.3"/></g></g></g>
     <g class="dd" style="--i:4;--dx:72px;--rot:360deg;transform-origin:270px 62px"><g transform="rotate(15 270 62)"><rect x="246" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="259" cy="51" r="4.3"/><circle cx="281" cy="51" r="4.3"/><circle cx="259" cy="73" r="4.3"/><circle cx="281" cy="73" r="4.3"/></g></g></g>
   </svg>
-  <h1>Yam’s Gaillon</h1>
+  <p class="title">Yam’s Gaillon</p>
   <button class="play" id="btnPlay">Jouer</button>
   <p class="credit">by <b>César</b> · © 2026</p>
 </div>
@@ -243,7 +254,7 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 
 <div id="turn"></div>
 <div class="backdrop" id="backdrop"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" tabindex="-1" inert></div>
 
 <script>
 const UPPER=[["un","1",1],["deux","2",2],["trois","3",3],["quatre","4",4],["cinq","5",5],["six","6",6]];
@@ -259,7 +270,12 @@ let ui={sheet:null,turnOpen:true,sel:null};
 if(!Array.isArray(S.dice))S.dice=[];
 
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);s.settings={...DEFAULTS,...s.settings};if(!s.rulesV2){s.settings.fullMode="fixe";s.settings.fullFixe=25;s.settings.seuil=63;s.rulesV2=true;}return s;}}catch(e){}
+  try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);
+    if(!s||typeof s!=="object"||!Array.isArray(s.players)||!s.players.length)throw 0;
+    s.players=s.players.slice(0,12).map(n=>String(n??"").slice(0,30));
+    if(!s.scores||typeof s.scores!=="object")s.scores={};
+    s.settings={...DEFAULTS,...s.settings};
+    for(const k of ["seuil","prime","petite","grande","yams","fullFixe"])s.settings[k]=clamp(s.settings[k],0,200);if(!s.rulesV2){s.settings.fullMode="fixe";s.settings.fullFixe=25;s.settings.seuil=63;s.rulesV2=true;}return s;}}catch(e){}
   return {players:["",""],scores:{},started:false,settings:{...DEFAULTS},rulesV2:true};
 }
 let saveT=0;
@@ -323,9 +339,9 @@ function render(){
     <button class="iconbtn" id="btnHist">Historique</button>
     <button class="iconbtn" id="btnSettings">Règles</button>
     <button class="iconbtn" id="btnNew">Nouvelle partie</button></header>
-  ${cp>=0?`<div class="tabs" role="tablist">
-    <button role="tab" id="tabBoard" aria-selected="${!ui.turnOpen}">Tableau</button>
-    <button role="tab" id="tabTurn" aria-selected="${ui.turnOpen}">▶ ${esc(S.players[cp])}</button></div>`:""}
+  ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
+    <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
+    <button id="tabTurn" aria-pressed="${ui.turnOpen}">▶ ${esc(S.players[cp])}</button></div>`:""}
   <div class="scroller"><table>
     <thead><tr><th class="cat" scope="col">Case</th>${head}</tr></thead>
     <tbody>
@@ -390,19 +406,19 @@ function renderTurn(){
     confirm=`<p class="hint" style="margin-top:12px">${full?"Choisis la case où inscrire ton score.":"Entre tes 5 dés, ou choisis directement une case à barrer."}</p>`;
   }
   const last=S.last&&S.scores[S.last.p]&&S.scores[S.last.p][S.last.k]===S.last.v?S.last:null;
-  el.innerHTML=`<div class="tcard" role="dialog" aria-modal="true" aria-label="Tour de ${esc(name)}">
+  el.innerHTML=`<section class="tcard" aria-label="Tour de ${esc(name)}">
     <div class="thead"><div class="who"><small>Tour ${round} sur ${ALL.length}</small><h2>À toi, ${esc(name)}</h2>
       <div class="tstats"><span>Total ${t.total}</span><span>Haut ${t.haut}</span>${prime}</div></div></div>
     <div class="tbody">
       ${last?`<div class="done"><span>✓ ${esc(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}</span><button id="tUndo">Annuler</button></div>`:""}
       <div class="tlabel">Tes dés <span>${d.length?`<button id="tClear">Vider</button>`:`<em>${5-d.length} à entrer</em>`}</span></div>
       <div class="slots">${[0,1,2,3,4].map(i=>`<button class="slot ${d[i]?"filled":""}" data-slot="${i}" aria-label="${d[i]?"Retirer le dé "+d[i]:"Dé vide"}">${d[i]?dieHTML(d[i]):""}</button>`).join("")}</div>
-      <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled style='opacity:.35'":""}>${dieHTML(n)}</button>`).join("")}</div>
+      <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled":""}>${dieHTML(n)}</button>`).join("")}</div>
       <div class="tlabel">Il te reste à faire <em>${left.length} case${pl} · ${upLeft} en haut, ${lowLeft} en bas</em></div>
       <div class="cats">${UPPER.map(u=>opt(u[0])).join("")}</div>
       <div class="cats">${LOWER.map(l=>opt(l[0])).join("")}</div>
       ${confirm}
-    </div></div>`;
+    </div></section>`;
   turnCtx={p,res,last};
 }
 let turnCtx=null;
@@ -425,12 +441,13 @@ document.getElementById("turn").addEventListener("click",e=>{
 document.getElementById("app").addEventListener("click",e=>{
   const b=e.target.closest("td.cell button");if(b)openCell(+b.dataset.p,b.dataset.k);
 });
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function clamp(v,a,b){v=Math.round(+v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):a}
 
 function setupHTML(){
   return `<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnHist">Historique</button></header>
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
-  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
+  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
   <button class="add" id="addP">Ajouter un joueur</button>
   <button class="primary" id="go">Commencer la partie</button></div>`;
 }
@@ -480,10 +497,16 @@ function bindDrag(){
 /* ---------- feuille du bas ---------- */
 function openSheet(html,bind){
   const sh=document.getElementById("sheet"),bd=document.getElementById("backdrop");
-  if(ui.sheet==="hist")ui.sheet=null;sh.innerHTML=html;bd.classList.add("open");requestAnimationFrame(()=>sh.classList.add("open"));
+  const wasOpen=!sh.inert;
+  if(!wasOpen)lastFocus=document.activeElement;
+  if(ui.sheet==="hist")ui.sheet=null;sh.innerHTML=html;sh.inert=false;bd.classList.add("open");requestAnimationFrame(()=>sh.classList.add("open"));
+  if(!wasOpen)sh.focus({preventScroll:true});
   bd.onclick=closeSheet;bind&&bind(sh);
 }
-function closeSheet(){if(ui.sheet==="hist"&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
+let lastFocus=null;
+function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;
+  if(lastFocus&&lastFocus.isConnected)lastFocus.focus({preventScroll:true});lastFocus=null;
+  if(ui.sheet==="hist"&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
 
 function openCell(p,k){
   ui.sheet={p,k,dice:[]};
@@ -491,17 +514,17 @@ function openCell(p,k){
   const draw=()=>{
     const d=ui.sheet.dice, full=d.length===5, r=full?compute(k,d):null;
     openSheet(`
-      <h3>${esc(S.players[p])} · ${LABEL[k]}</h3>
+      <h3 id="sheetTitle">${esc(S.players[p])} · ${LABEL[k]}</h3>
       <div class="sub">${cur!=null?`Actuellement ${cur} point${cur>1?"s":""}. `:""}Touche les faces pour entrer tes 5 dés.</div>
       <div class="slots">${[0,1,2,3,4].map(i=>`<button class="slot ${d[i]?"filled":""}" data-slot="${i}" aria-label="${d[i]?"Retirer le dé "+d[i]:"Dé vide"}">${d[i]?dieHTML(d[i]):""}</button>`).join("")}</div>
-      <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled style='opacity:.35'":""}>${dieHTML(n)}</button>`).join("")}</div>
+      <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled":""}>${dieHTML(n)}</button>`).join("")}</div>
       <div class="result">${r?`<span class="pts">${r.pts} pt${r.pts>1?"s":""}</span><span class="why">${r.why}</span>`:`<span class="why" style="text-align:left">${5-d.length} dé${5-d.length>1?"s":""} à entrer</span>`}</div>
       <div class="actions">
-        <button class="primary" id="ok" ${r?"":"disabled style='opacity:.4'"}>${r?`Inscrire ${r.pts}`:"Inscrire"}</button>
+        <button class="primary" id="ok" ${r?"":"disabled"}>${r?`Inscrire ${r.pts}`:"Inscrire"}</button>
         <button class="ghost" id="cross">Barrer (0)</button>
         <button class="ghost ${cur!=null?"danger":""}" id="${cur!=null?"clear":"cancel"}">${cur!=null?"Effacer la case":"Annuler"}</button>
       </div>
-      <div class="manual"><label for="man">Autre valeur</label><input id="man" type="number" inputmode="numeric" min="0" placeholder="ex. 18"><button id="manOk">Inscrire</button></div>`,
+      <div class="manual"><label for="man">Autre valeur</label><input id="man" type="number" inputmode="numeric" min="0" max="100" placeholder="ex. 18"><button id="manOk">Inscrire</button></div>`,
     sh=>{
       sh.querySelectorAll("[data-face]").forEach(b=>b.onclick=()=>{if(d.length<5){d.push(+b.dataset.face);d.sort((a,b)=>a-b);draw()}});
       sh.querySelectorAll("[data-slot]").forEach(b=>b.onclick=()=>{const i=+b.dataset.slot;if(d[i]){d.splice(i,1);draw()}});
@@ -510,7 +533,7 @@ function openCell(p,k){
       sh.querySelector("#cross").onclick=()=>set(0);
       const c=sh.querySelector("#clear");if(c)c.onclick=()=>{delete S.scores[p][k];save();closeSheet();render()};
       const cn=sh.querySelector("#cancel");if(cn)cn.onclick=closeSheet;
-      sh.querySelector("#manOk").onclick=()=>{const v=parseInt(sh.querySelector("#man").value,10);if(!isNaN(v)&&v>=0)set(v)};
+      sh.querySelector("#manOk").onclick=()=>{const v=parseInt(sh.querySelector("#man").value,10);if(v>=0&&v<=100)set(v)};
     });
   };
   draw();
@@ -518,8 +541,8 @@ function openCell(p,k){
 
 function openSettings(){
   const st=S.settings;
-  const num=(id,label,hint)=>`<div class="set"><span>${label}${hint?`<small>${hint}</small>`:""}</span><input type="number" inputmode="numeric" id="s_${id}" value="${st[id]}"></div>`;
-  openSheet(`<h3>Règles de la partie</h3><div class="sub">Réglées sur ta feuille. Change-les si vous jouez autrement.</div>
+  const num=(id,label,hint)=>`<div class="set"><label for="s_${id}"><span>${label}</span>${hint?`<small>${hint}</small>`:""}</label><input type="number" inputmode="numeric" min="0" max="200" id="s_${id}" value="${st[id]}"></div>`;
+  openSheet(`<h3 id="sheetTitle">Règles de la partie</h3><div class="sub">Réglées sur ta feuille. Change-les si vous jouez autrement.</div>
     ${num("seuil","Prime à partir de","total des cases 1 à 6")}
     ${num("prime","Valeur de la prime")}
     <div class="set"><span>Full<small>${st.fullMode==="somme"?"somme des 5 dés":"valeur fixe"}</small></span>
@@ -531,7 +554,7 @@ function openSettings(){
     <button class="primary" id="saveSet" style="margin-top:14px">Enregistrer</button>
     <button class="secondary" id="resetSet">Revenir aux valeurs de la feuille</button>`,
   sh=>{
-    const grab=()=>["seuil","prime","petite","grande","yams","fullFixe"].forEach(k=>{const el=sh.querySelector("#s_"+k);if(el&&el.value!=="")st[k]=+el.value});
+    const grab=()=>["seuil","prime","petite","grande","yams","fullFixe"].forEach(k=>{const el=sh.querySelector("#s_"+k);if(el&&el.value!=="")st[k]=clamp(el.value,0,200)});
     sh.querySelectorAll("[data-fm]").forEach(b=>b.onclick=()=>{grab();st.fullMode=b.dataset.fm;save();openSettings()});
     sh.querySelector("#saveSet").onclick=()=>{grab();save();closeSheet();render()};
     sh.querySelector("#resetSet").onclick=()=>{S.settings={...DEFAULTS};save();openSettings()};
@@ -539,7 +562,7 @@ function openSettings(){
 }
 
 function openNew(){
-  openSheet(`<h3>Nouvelle partie</h3><div class="sub">Les scores actuels seront effacés.</div>
+  openSheet(`<h3 id="sheetTitle">Nouvelle partie</h3><div class="sub">Les scores actuels seront effacés.</div>
     <button class="primary" id="change">Créer la nouvelle partie</button>
     <button class="secondary" id="keep">Continuer cette partie</button>`,
   sh=>{
@@ -550,7 +573,7 @@ function openNew(){
 
 function openEnd(){
   const r=S.players.map((n,p)=>({n,t:totals(p).total})).sort((a,b)=>b.t-a.t);
-  openSheet(`<h3>${esc(r[0].n)} gagne avec ${r[0].t} points</h3><div class="sub">Classement final</div>
+  openSheet(`<h3 id="sheetTitle">${esc(r[0].n)} gagne avec ${r[0].t} points</h3><div class="sub">Classement final</div>
     <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em></li>`).join("")}</ol>
     <p class="hint" id="syncSt">${esc(syncMsg())}</p>
     <button class="primary" id="again">Rejouer avec les mêmes joueurs</button>
@@ -573,7 +596,7 @@ function syncMsg(){
   if(syncState==="ok")return"✓ Partie enregistrée dans l'historique.";
   if(syncState==="denied")return"⚠️ Partie non enregistrée : accès refusé par la base Firebase (vérifie les règles Firestore).";
   if(syncState==="error")return"⚠️ La partie n'a pas pu être enregistrée. Réessaie plus tard.";
-  return"Enregistrement…";
+  return navigator.onLine===false?"Hors connexion : la partie sera enregistrée dès le retour du réseau.":"Enregistrement…";
 }
 function showSync(){const el=document.getElementById("syncSt");if(el)el.textContent=syncMsg()}
 async function syncGame(){
@@ -592,11 +615,11 @@ async function syncGame(){
 }
 function fmtDate(iso){try{return new Date(iso).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){return""}}
 function histHTML(){
-  if(!DB)return`<h3>Historique</h3><p class="hint">L'historique partagé n'est pas encore configuré (Firebase).</p>`;
-  if(HERR)return`<h3>Historique</h3><p class="hint">Impossible de charger l'historique pour le moment.</p>`;
-  if(!HIST)return`<h3>Historique</h3><p class="hint">Chargement…</p>`;
-  if(!HIST.length)return`<h3>Historique</h3><p class="hint">Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.</p>`;
-  return`<h3>Historique</h3><div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
+  if(!DB)return`<h3 id="sheetTitle">Historique</h3><p class="hint">L'historique partagé n'est pas encore configuré (Firebase).</p>`;
+  if(HERR)return`<h3 id="sheetTitle">Historique</h3><p class="hint">Impossible de charger l'historique pour le moment.</p>`;
+  if(!HIST)return`<h3 id="sheetTitle">Historique</h3><p class="hint">Chargement…</p>`;
+  if(!HIST.length)return`<h3 id="sheetTitle">Historique</h3><p class="hint">Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.</p>`;
+  return`<h3 id="sheetTitle">Historique</h3><div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
     <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div></li>`).join("")}</ul>`;
 }
@@ -623,6 +646,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(window.firebase&&cfg&&cfg.projectId&&cfg.projectId!=="A_REMPLACER"){
       if(!firebase.apps.length)firebase.initializeApp(cfg);
       DB=firebase.firestore();
+      // hors connexion : les parties finies sont gardées et envoyées au retour du réseau
+      DB.enablePersistence({synchronizeTabs:true}).catch(()=>{});
     }else DB=null;
   }catch(e){DB=null}
   if(!DB){refreshHist();return}
@@ -635,6 +660,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
   document.getElementById("btnPlay").onclick=hide;})();
 render();
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))
+  addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>
 </body>
 </html>

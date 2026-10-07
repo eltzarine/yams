@@ -1,0 +1,18 @@
+{
+  "name": "Yam’s Gaillon",
+  "short_name": "Yam’s",
+  "description": "Feuille de score du Yams, avec calcul automatique et historique partagé.",
+  "lang": "fr",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1F4D3A",
+  "theme_color": "#1F4D3A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
