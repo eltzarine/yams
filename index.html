@@ -3,13 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <title>Yam’s Gaillon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WQ8CDEPL7G"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-WQ8CDEPL7G');
+</script>
 <!-- Firebase (historique partagé) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ⬇️ Colle ici la config de TON projet Firebase (Console Firebase > Paramètres du projet > Tes applis > Web) */
 window.FIREBASE_CONFIG = {
@@ -47,7 +56,9 @@ window.FIREBASE_CONFIG = {
 html,body{margin:0;height:100%}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;-webkit-tap-highlight-color:transparent}
-button{font:inherit;color:inherit;cursor:pointer}
+html,body{touch-action:manipulation}
+button,input,a{touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none}
 button:focus-visible,input:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
 .wrap{max-width:720px;margin:0 auto;padding:12px 12px 32px}
 
@@ -72,7 +83,6 @@ header h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:28
 
 /* grid */
 .scroller{overflow:clip;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface)}
-thead th.cat{z-index:4}
 table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;font-family:"Barlow Condensed",sans-serif}
 th,td{border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:center;padding:0}
 tr:last-child td,tr:last-child th{border-bottom:0}
@@ -122,8 +132,7 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .hist .hd small{color:var(--muted);font-size:13px}
 .hist .rk{color:var(--muted);font-size:15px;margin-top:2px}
 .hist .rk strong{color:var(--ink)}
-.hist .del{border:0;background:transparent;color:var(--zero);font-size:13px;padding:2px 4px}
-.hist .del{margin-top:4px;min-height:32px}
+.hist .del{border:0;background:transparent;color:var(--zero);font-size:13px;padding:2px 4px;margin-top:4px;min-height:32px}
 .hist .del.arm{background:var(--pip);color:#fff;border-radius:8px;padding:4px 10px;font-weight:600}
 .sheet .sub{color:var(--muted);margin:2px 0 14px;font-size:15px}
 .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
@@ -423,7 +432,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 function setupHTML(){
   return `<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnHist">Historique</button></header>
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
-  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" placeholder="Joueur ${i+1}" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
+  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
   <button class="add" id="addP">Ajouter un joueur</button>
   <button class="primary" id="go">Commencer la partie</button></div>`;
 }
@@ -431,9 +440,9 @@ function bindSetup(){
   document.querySelectorAll("#plist input").forEach(inp=>inp.oninput=()=>{S.players[+inp.dataset.i]=inp.value;save()});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(S.players.length>1){S.players.splice(+b.dataset.del,1);save();render()}});
   bindDrag();
-  document.getElementById("addP").onclick=()=>{S.players.push("");save();render();const ins=document.querySelectorAll("#plist input");ins[ins.length-1].focus()};
+  document.getElementById("addP").onclick=()=>{if(S.players.length>=12)return;S.players.push("");save();render();const ins=document.querySelectorAll("#plist input");ins[ins.length-1].focus()};
   document.getElementById("go").onclick=()=>{
-    S.players=S.players.map(n=>n.trim()).filter(Boolean);
+    S.players=S.players.map(n=>String(n).trim().slice(0,30)).filter(Boolean).slice(0,12);
     if(!S.players.length){S.players=[""];render();return}
     S.scores={};S.gid=null;S.savedSig=null;S.dice=[];S.last=null;ui.turnOpen=true;S.started=true;save();render();
   };
@@ -476,7 +485,7 @@ function openSheet(html,bind){
   if(ui.sheet==="hist")ui.sheet=null;sh.innerHTML=html;bd.classList.add("open");requestAnimationFrame(()=>sh.classList.add("open"));
   bd.onclick=closeSheet;bind&&bind(sh);
 }
-function closeSheet(){document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
+function closeSheet(){if(ui.sheet==="hist"&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
 
 function openCell(p,k){
   ui.sheet={p,k,dice:[]};
@@ -557,7 +566,7 @@ function openEnd(){
 /* ---------- historique partagé ---------- */
 let DB=null,HIST=null,HERR=false;
 function gameData(){
-  const r=S.players.map((n,p)=>({n,t:totals(p).total})).sort((a,b)=>b.t-a.t);
+  const r=S.players.slice(0,12).map((n,p)=>({n:String(n).slice(0,30),t:Math.max(0,Math.min(2000,totals(p).total|0))})).sort((a,b)=>b.t-a.t);
   return{date:new Date().toISOString(),winner:r[0].n,top:r[0].t,ranking:r};
 }
 let syncing=false,syncAgain=false,syncState=null;
@@ -576,7 +585,10 @@ async function syncGame(){
   if(S.savedSig===sig)return;
   if(!S.gid)S.gid="g"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const prev=S.savedSig;S.savedSig=sig;syncing=true;
-  try{const d=gameData();if(S.gdate)d.date=S.gdate;else S.gdate=d.date;await DB.collection("parties").doc(S.gid).set(d);syncState="ok"}
+  try{const d=gameData();if(S.gdate)d.date=S.gdate;else S.gdate=d.date;
+    const ref=DB.collection("parties").doc(S.gid);
+    if(prev)await ref.set(d,{merge:true});
+    else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();await ref.set(d)}syncState="ok";if(!prev&&window.gtag)gtag("event","partie_terminee",{joueurs:S.players.length})}
   catch(e){S.savedSig=prev;syncState=e&&(e.code==="invalid_argument"||e.code==="not_granted"||e.code==="permission_denied"||e.code==="permission-denied")?"denied":"error"}
   finally{syncing=false;persist();showSync();if(syncAgain){syncAgain=false;if(S.started&&finished())syncGame()}}
 }
@@ -592,10 +604,18 @@ function histHTML(){
     <button class="del" data-del="${esc(g.id)}">Supprimer</button></li>`).join("")}</ul>`;
 }
 let histSub=null;
+const num=v=>{v=Math.round(+v);return Number.isFinite(v)?v:0};
+const txt=v=>String(v==null?"":v).slice(0,40);
+function cleanGame(doc){
+  const g=doc.data()||{};
+  if(!/^[A-Za-z0-9_-]{1,40}$/.test(doc.id))return null;
+  const ranking=Array.isArray(g.ranking)?g.ranking.slice(0,12).map(x=>({n:txt(x&&x.n),t:num(x&&x.t)})):[];
+  return{id:doc.id,date:txt(g.date),winner:txt(g.winner),top:num(g.top),ranking};
+}
 function watchHist(){
   if(!DB||histSub)return;
   histSub=DB.collection("parties").orderBy("date","desc").limit(50).onSnapshot(
-    snap=>{HIST=snap.docs.map(d=>({id:d.id,...d.data()}));HERR=false;refreshHist()},
+    snap=>{HIST=snap.docs.map(cleanGame).filter(Boolean);HERR=false;refreshHist()},
     ()=>{HERR=true;histSub=null;refreshHist()});
 }
 function openHist(){watchHist();openSheet(histHTML(),bindHist);ui.sheet="hist"}
@@ -620,7 +640,7 @@ function bindHist(sh){
   });
 }
 function refreshHist(){if(ui.sheet==="hist")openHist()}
-(async()=>{
+document.addEventListener("DOMContentLoaded",()=>{
   try{
     const cfg=window.FIREBASE_CONFIG;
     if(window.firebase&&cfg&&cfg.projectId&&cfg.projectId!=="A_REMPLACER"){
@@ -631,7 +651,7 @@ function refreshHist(){if(ui.sheet==="hist")openHist()}
   if(!DB){refreshHist();return}
   if(ui.sheet==="hist")watchHist();
   if(S.started&&finished())syncGame();
-})();
+});
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
