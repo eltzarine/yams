@@ -19,7 +19,8 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap"></noscript>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQ8CDEPL7G"></script>
 <script>
@@ -101,7 +102,6 @@ thead th{position:sticky!important;top:env(safe-area-inset-top,0px);z-index:3}
 thead th.cat{z-index:4}
 thead th{background:var(--felt);color:var(--felt-ink);font-size:17px;font-weight:600;height:46px;padding:0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left-color:rgba(255,255,255,.18);position:relative}
 thead th.now{background:var(--gold);color:#1B2620}
-.iconbtn.jump{background:var(--gold);color:#1B2620;border-color:var(--gold);max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes flash{from{background:color-mix(in srgb,var(--gold) 45%,transparent)}to{background:transparent}}
 td.cell button.flash{animation:flash 1.4s ease-out}
 @media (prefers-reduced-motion:reduce){td.cell button.flash{animation:none;background:color-mix(in srgb,var(--gold) 25%,transparent)}}
@@ -117,7 +117,6 @@ td.cell button.empty{color:transparent}
 td.cell button.zero{color:var(--zero);text-decoration:line-through}
 td.cell button:active{background:var(--bg)}
 tr.sum th.cat, tr.sum td{background:var(--bg);font-weight:700;font-size:18px;height:38px}
-tr.sum th.cat{background:var(--bg)}
 tr.bonus td{font-size:15px;color:var(--muted);height:34px}
 tr.bonus td.got{color:var(--felt);font-weight:700;font-size:18px}
 :root[data-theme="dark"] tr.bonus td.got{color:#7ED1A6}
@@ -143,6 +142,13 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .hist .hd small{color:var(--muted);font-size:13px}
 .hist .rk{color:var(--muted);font-size:15px;margin-top:2px}
 .hist .rk strong{color:var(--ink)}
+.hist .see{border:0;background:transparent;color:var(--pen);font-weight:600;font-size:14px;padding:6px 0 0;min-height:32px}
+/* feuille d'une partie de l'historique (lecture seule) */
+.hv .back{border:0;background:transparent;color:var(--pen);font-weight:600;font-size:15px;padding:0 0 8px;min-height:36px}
+.hv .scroller{margin-top:4px}
+.hv td.cell{font-size:22px;font-weight:600;color:var(--pen)}
+.hv td.cell.zero{color:var(--zero);text-decoration:line-through}
+.hv thead th{top:0}
 .sheet .sub{color:var(--muted);margin:2px 0 14px;font-size:15px}
 .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
 .slot{aspect-ratio:1;border:2px dashed var(--line-strong);border-radius:12px;background:transparent;padding:0}
@@ -184,13 +190,11 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .hint{color:var(--muted);font-size:14px;text-align:center;margin:12px 4px 0}
 
 /* écran du joueur en cours */
-.turn{position:fixed;inset:0;z-index:8;background:var(--sheet);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);overflow-y:auto;overscroll-behavior:contain;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(14px + env(safe-area-inset-bottom,0px))}
-.tcard{max-width:560px;margin:0 auto;background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.tcard{max-width:560px;margin:0 auto;background:var(--surface);border-radius:20px;overflow:hidden;overflow:clip;box-shadow:0 10px 40px rgba(0,0,0,.25)}
 .thead{background:var(--felt);color:var(--felt-ink);padding:14px 16px 16px;display:flex;align-items:flex-start;gap:10px}
 .thead .who{flex:1;min-width:0}
 .thead small{opacity:.8;font-size:14px}
 .thead h2{font-family:"Barlow Condensed",sans-serif;font-size:34px;line-height:1.05;margin:2px 0 0;overflow-wrap:anywhere}
-.thead .peek{border:1px solid rgba(255,255,255,.4);background:transparent;color:var(--felt-ink);border-radius:10px;height:38px;padding:0 10px;font-weight:600;font-size:14px;flex:none}
 .tstats{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .tstats span{background:rgba(255,255,255,.14);border-radius:8px;padding:4px 8px;font-size:14px}
 .tstats span.ok{background:var(--gold);color:#1B2620;font-weight:700}
@@ -212,7 +216,8 @@ tr.gap td,tr.gap th{height:8px;background:var(--line);border:0}
 .opt.sel{border-color:var(--pen);background:color-mix(in srgb,var(--pen) 12%,transparent);box-shadow:inset 0 0 0 1.5px var(--pen)}
 .opt.gone{border-style:dashed;color:var(--zero);font-weight:500}
 .opt.gone .v{color:var(--zero);font-size:17px}
-.confirm{margin-top:14px}
+/* bouton d'inscription toujours visible en bas de l'écran pendant le défilement */
+.confirm{position:sticky;bottom:0;z-index:2;margin:14px -14px -16px;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 18px rgba(0,0,0,.10)}
 .confirm .why{color:var(--muted);font-size:14px;text-align:center;margin-top:6px}
 /* onglets */
 .tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin:0 0 12px}
@@ -285,6 +290,9 @@ addEventListener("pagehide",()=>{if(saveT)persist()});
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&saveT)persist()});
 
 const DIE_CACHE={};
+function diceHTML(d){const full=d.length===5;
+  return`<div class="slots">${[0,1,2,3,4].map(i=>`<button class="slot ${d[i]?"filled":""}" data-slot="${i}" aria-label="${d[i]?"Retirer le dé "+d[i]:"Dé vide"}">${d[i]?dieHTML(d[i]):""}</button>`).join("")}</div>
+  <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled":""}>${dieHTML(n)}</button>`).join("")}</div>`}
 function dieHTML(n,cls="die"){
   const key=cls+n;if(DIE_CACHE[key])return DIE_CACHE[key];
   const on=PIPS[n]||[];
@@ -330,10 +338,9 @@ function render(){
   const anyScore=tot.some(t=>t.total>0);
   const cp=finished()?-1:curPlayer().p;
   const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${p===cp?"▶ ":""}${esc(n)}</th>`).join("");
-  const row=(k,label)=>`<tr><th class="cat" scope="row">${label}</th>${S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
+  const row=k=>`${S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
     const cls=v==null?"empty":v===0?"zero":"";
-    return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}</tr>`;
-  const sumRow=(label,f,cls="sum")=>`<tr class="${cls}"><th class="cat" scope="row">${label}</th>${tot.map(f).join("")}</tr>`;
+    return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}`;
   app.innerHTML=`
   <header><h1>Yam’s Gaillon</h1>
     <button class="iconbtn" id="btnHist">Historique</button>
@@ -342,17 +349,7 @@ function render(){
   ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
     <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
     <button id="tabTurn" aria-pressed="${ui.turnOpen}">▶ ${esc(S.players[cp])}</button></div>`:""}
-  <div class="scroller"><table>
-    <thead><tr><th class="cat" scope="col">Case</th>${head}</tr></thead>
-    <tbody>
-    ${UPPER.map(u=>row(u[0],`<span class="catlabel">${dieHTML(u[2],"mdie")} Les ${u[1]}</span>`)).join("")}
-    ${sumRow("Total haut",t=>`<td>${t.haut}</td>`)}
-    ${sumRow(`<span class="catlabel">Prime <small>${S.settings.seuil}+</small></span>`,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,"bonus")}
-    <tr class="gap"><th class="cat"></th><td colspan="${S.players.length}"></td></tr>
-    ${LOWER.map(l=>row(l[0],l[1])).join("")}
-    ${sumRow("Total bas",t=>`<td>${t.bas}</td>`)}
-    ${sumRow("Total",t=>`<td>${t.total}</td>`,"grand")}
-    </tbody></table></div>
+  ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}
   <p class="hint">Touche une case du tableau pour corriger un score.</p>`;
   document.getElementById("btnSettings").onclick=openSettings;
   document.getElementById("btnHist").onclick=openHist;
@@ -364,11 +361,21 @@ function render(){
   renderTurn();
 }
 
+function boardHTML(head,upRows,lowRows,tot,primeCell,primeLabel){
+  const sumRow=(label,f,cls="sum")=>`<tr class="${cls}"><th class="cat" scope="row">${label}</th>${tot.map(f).join("")}</tr>`;
+  return`<div class="scroller"><table>
+    <thead><tr><th class="cat" scope="col">Case</th>${head}</tr></thead>
+    <tbody>
+    ${UPPER.map((u,i)=>`<tr><th class="cat" scope="row"><span class="catlabel">${dieHTML(u[2],"mdie")} Les ${u[1]}</span></th>${upRows[i]}</tr>`).join("")}
+    ${sumRow("Total haut",t=>`<td>${t.haut}</td>`)}
+    ${sumRow(`<span class="catlabel">${primeLabel}</span>`,primeCell,"bonus")}
+    <tr class="gap"><th class="cat"></th><td colspan="${tot.length}"></td></tr>
+    ${LOWER.map((l,i)=>`<tr><th class="cat" scope="row">${l[1]}</th>${lowRows[i]}</tr>`).join("")}
+    ${sumRow("Total bas",t=>`<td>${t.bas}</td>`)}
+    ${sumRow("Total",t=>`<td>${t.total}</td>`,"grand")}
+    </tbody></table></div>`;
+}
 function jumpTo(p){
-  const sc=document.querySelector(".scroller"),th=document.querySelector(`th[data-col="${p}"]`),cat=document.querySelector("thead th.cat");
-  if(!sc||!th)return;
-  const smooth=!matchMedia("(prefers-reduced-motion: reduce)").matches;
-  sc.scrollTo({left:Math.max(0,th.offsetLeft-(cat?cat.offsetWidth:0)-8),top:0,behavior:smooth?"smooth":"auto"});
   document.querySelectorAll(`td.cell button[data-p="${p}"]`).forEach(b=>{b.classList.remove("flash");void b.offsetWidth;b.classList.add("flash")});
 }
 /* ---------- écran du joueur en cours ---------- */
@@ -412,8 +419,7 @@ function renderTurn(){
     <div class="tbody">
       ${last?`<div class="done"><span>✓ ${esc(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}</span><button id="tUndo">Annuler</button></div>`:""}
       <div class="tlabel">Tes dés <span>${d.length?`<button id="tClear">Vider</button>`:`<em>${5-d.length} à entrer</em>`}</span></div>
-      <div class="slots">${[0,1,2,3,4].map(i=>`<button class="slot ${d[i]?"filled":""}" data-slot="${i}" aria-label="${d[i]?"Retirer le dé "+d[i]:"Dé vide"}">${d[i]?dieHTML(d[i]):""}</button>`).join("")}</div>
-      <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled":""}>${dieHTML(n)}</button>`).join("")}</div>
+      ${diceHTML(d)}
       <div class="tlabel">Il te reste à faire <em>${left.length} case${pl} · ${upLeft} en haut, ${lowLeft} en bas</em></div>
       <div class="cats">${UPPER.map(u=>opt(u[0])).join("")}</div>
       <div class="cats">${LOWER.map(l=>opt(l[0])).join("")}</div>
@@ -441,6 +447,7 @@ document.getElementById("turn").addEventListener("click",e=>{
 document.getElementById("app").addEventListener("click",e=>{
   const b=e.target.closest("td.cell button");if(b)openCell(+b.dataset.p,b.dataset.k);
 });
+function resetGame(){S.scores={};S.gid=null;S.gdate=null;S.savedSig=null;S.dice=[];S.last=null;ui.sel=null;ui.turnOpen=true}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function clamp(v,a,b){v=Math.round(+v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):a}
 
@@ -459,7 +466,7 @@ function bindSetup(){
   document.getElementById("go").onclick=()=>{
     S.players=S.players.map(n=>String(n).trim().slice(0,30)).filter(Boolean).slice(0,12);
     if(!S.players.length){S.players=[""];render();return}
-    S.scores={};S.gid=null;S.savedSig=null;S.dice=[];S.last=null;ui.turnOpen=true;S.started=true;save();render();
+    resetGame();S.started=true;save();render();
   };
 }
 
@@ -499,14 +506,14 @@ function openSheet(html,bind){
   const sh=document.getElementById("sheet"),bd=document.getElementById("backdrop");
   const wasOpen=!sh.inert;
   if(!wasOpen)lastFocus=document.activeElement;
-  if(ui.sheet==="hist")ui.sheet=null;sh.innerHTML=html;sh.inert=false;bd.classList.add("open");requestAnimationFrame(()=>sh.classList.add("open"));
+  if(ui.sheet==="hist"||ui.sheet==="histview")ui.sheet=null;sh.innerHTML=html;sh.inert=false;bd.classList.add("open");requestAnimationFrame(()=>sh.classList.add("open"));
   if(!wasOpen)sh.focus({preventScroll:true});
   bd.onclick=closeSheet;bind&&bind(sh);
 }
 let lastFocus=null;
 function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;
   if(lastFocus&&lastFocus.isConnected)lastFocus.focus({preventScroll:true});lastFocus=null;
-  if(ui.sheet==="hist"&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
+  if((ui.sheet==="hist"||ui.sheet==="histview")&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
 
 function openCell(p,k){
   ui.sheet={p,k,dice:[]};
@@ -516,8 +523,7 @@ function openCell(p,k){
     openSheet(`
       <h3 id="sheetTitle">${esc(S.players[p])} · ${LABEL[k]}</h3>
       <div class="sub">${cur!=null?`Actuellement ${cur} point${cur>1?"s":""}. `:""}Touche les faces pour entrer tes 5 dés.</div>
-      <div class="slots">${[0,1,2,3,4].map(i=>`<button class="slot ${d[i]?"filled":""}" data-slot="${i}" aria-label="${d[i]?"Retirer le dé "+d[i]:"Dé vide"}">${d[i]?dieHTML(d[i]):""}</button>`).join("")}</div>
-      <div class="faces">${[1,2,3,4,5,6].map(n=>`<button class="facebtn" data-face="${n}" aria-label="Ajouter un ${n}" ${full?"disabled":""}>${dieHTML(n)}</button>`).join("")}</div>
+      ${diceHTML(d)}
       <div class="result">${r?`<span class="pts">${r.pts} pt${r.pts>1?"s":""}</span><span class="why">${r.why}</span>`:`<span class="why" style="text-align:left">${5-d.length} dé${5-d.length>1?"s":""} à entrer</span>`}</div>
       <div class="actions">
         <button class="primary" id="ok" ${r?"":"disabled"}>${r?`Inscrire ${r.pts}`:"Inscrire"}</button>
@@ -566,20 +572,20 @@ function openNew(){
     <button class="primary" id="change">Créer la nouvelle partie</button>
     <button class="secondary" id="keep">Continuer cette partie</button>`,
   sh=>{
-    sh.querySelector("#change").onclick=()=>{S.scores={};S.gid=null;S.savedSig=null;S.dice=[];S.last=null;ui.turnOpen=true;S.started=false;save();closeSheet();render()};
+    sh.querySelector("#change").onclick=()=>{resetGame();S.started=false;save();closeSheet();render()};
     sh.querySelector("#keep").onclick=closeSheet;
   });
 }
 
 function openEnd(){
   const r=S.players.map((n,p)=>({n,t:totals(p).total})).sort((a,b)=>b.t-a.t);
-  openSheet(`<h3 id="sheetTitle">${esc(r[0].n)} gagne avec ${r[0].t} points</h3><div class="sub">Classement final</div>
+  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${esc(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final</div>
     <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em></li>`).join("")}</ol>
     <p class="hint" id="syncSt">${esc(syncMsg())}</p>
     <button class="primary" id="again">Rejouer avec les mêmes joueurs</button>
     <button class="secondary" id="look">Voir la feuille</button>`,
   sh=>{
-    sh.querySelector("#again").onclick=()=>{S.scores={};S.gid=null;S.savedSig=null;S.dice=[];S.last=null;ui.turnOpen=true;save();closeSheet();render()};
+    sh.querySelector("#again").onclick=()=>{resetGame();save();closeSheet();render()};
     sh.querySelector("#look").onclick=closeSheet;
   });
 }
@@ -588,7 +594,9 @@ function openEnd(){
 let DB=null,HIST=null,HERR=false;
 function gameData(){
   const r=S.players.slice(0,12).map((n,p)=>({n:String(n).slice(0,30),t:Math.max(0,Math.min(2000,totals(p).total|0))})).sort((a,b)=>b.t-a.t);
-  return{date:new Date().toISOString(),winner:r[0].n,top:r[0].t,ranking:r};
+  const sheet=S.players.slice(0,12).map((n,p)=>{const sc=S.scores[p]||{};
+    return{n:String(n).slice(0,30),v:ALL.map(k=>Math.max(0,Math.min(500,sc[k]|0))),prime:Math.max(0,Math.min(500,totals(p).prime|0))}});
+  return{date:new Date().toISOString(),winner:r[0].n,top:r[0].t,ranking:r,sheet};
 }
 let syncing=false,syncAgain=false,syncState=null;
 function syncMsg(){
@@ -606,10 +614,11 @@ async function syncGame(){
   if(S.savedSig===sig)return;
   if(!S.gid)S.gid="g"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const prev=S.savedSig;S.savedSig=sig;syncing=true;
-  try{const d=gameData();if(S.gdate)d.date=S.gdate;else S.gdate=d.date;
+  try{const d=gameData();if(prev&&S.gdate)d.date=S.gdate;else S.gdate=d.date;
     const ref=DB.collection("parties").doc(S.gid);
-    if(prev)await ref.set(d,{merge:true});
-    else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();await ref.set(d)}syncState="ok";if(!prev&&window.gtag)gtag("event","partie_terminee",{joueurs:S.players.length})}
+    const write=x=>prev?ref.set(x,{merge:true}):ref.set({...x,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    try{await write(d)}
+    catch(e){if(e&&(e.code==="permission-denied"||e.code==="permission_denied")){const{sheet,...light}=d;await write(light)}else throw e}syncState="ok";if(!prev&&window.gtag)gtag("event","partie_terminee",{joueurs:S.players.length})}
   catch(e){S.savedSig=prev;syncState=e&&(e.code==="invalid_argument"||e.code==="not_granted"||e.code==="permission_denied"||e.code==="permission-denied")?"denied":"error"}
   finally{syncing=false;persist();showSync();if(syncAgain){syncAgain=false;if(S.started&&finished())syncGame()}}
 }
@@ -621,7 +630,9 @@ function histHTML(){
   if(!HIST.length)return`<h3 id="sheetTitle">Historique</h3><p class="hint">Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.</p>`;
   return`<h3 id="sheetTitle">Historique</h3><div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
-    <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div></li>`).join("")}</ul>`;
+    <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
+    ${g.sheet?`<button class="see" data-see="${esc(g.id)}">Voir la feuille →</button>`:""}</li>`).join("")}</ul>
+  ${HIST.some(g=>!g.sheet)?`<p class="hint">La feuille détaillée est disponible pour les parties jouées à partir de maintenant.</p>`:""}`;
 }
 let histSub=null;
 const num=v=>{v=Math.round(+v);return Number.isFinite(v)?v:0};
@@ -630,7 +641,9 @@ function cleanGame(doc){
   const g=doc.data()||{};
   if(!/^[A-Za-z0-9_-]{1,40}$/.test(doc.id))return null;
   const ranking=Array.isArray(g.ranking)?g.ranking.slice(0,12).map(x=>({n:txt(x&&x.n),t:num(x&&x.t)})):[];
-  return{id:doc.id,date:txt(g.date),winner:txt(g.winner),top:num(g.top),ranking};
+  const sheet=Array.isArray(g.sheet)?g.sheet.slice(0,12).map(x=>({n:txt(x&&x.n),
+    v:ALL.map((_,i)=>Array.isArray(x&&x.v)?Math.max(0,num(x.v[i])):0),prime:Math.max(0,num(x&&x.prime))})):null;
+  return{id:doc.id,date:txt(g.date),winner:txt(g.winner),top:num(g.top),ranking,sheet:sheet&&sheet.length?sheet:null};
 }
 function watchHist(){
   if(!DB||histSub)return;
@@ -638,8 +651,19 @@ function watchHist(){
     snap=>{HIST=snap.docs.map(cleanGame).filter(Boolean);HERR=false;refreshHist()},
     ()=>{HERR=true;histSub=null;refreshHist()});
 }
-function openHist(){watchHist();openSheet(histHTML());ui.sheet="hist"}
-function refreshHist(){if(ui.sheet==="hist")openHist()}
+function openHist(){watchHist();openSheet(histHTML(),sh=>sh.querySelectorAll("[data-see]").forEach(b=>b.onclick=()=>{
+  const g=(HIST||[]).find(x=>x.id===b.dataset.see);if(g)openPastSheet(g)}));ui.sheet="hist"}
+function openPastSheet(g){
+  const P=g.sheet, tot=P.map(x=>{const haut=x.v.slice(0,6).reduce((a,b)=>a+b,0),bas=x.v.slice(6).reduce((a,b)=>a+b,0);return{haut,bas,prime:x.prime,total:haut+x.prime+bas}});
+  const best=Math.max(...tot.map(t=>t.total));
+  const cells=i=>P.map(x=>`<td class="cell ${x.v[i]===0?"zero":""}">${x.v[i]}</td>`).join("");
+  openSheet(`<div class="hv"><button class="back" id="hvBack">← Historique</button>
+    <h3 id="sheetTitle">🏆 ${esc(g.winner)} · ${g.top}</h3><div class="sub">${esc(fmtDate(g.date))}</div>
+    ${boardHTML(P.map((x,p)=>`<th scope="col" class="${tot[p].total===best?"lead":""}">${esc(x.n)}</th>`).join(""),UPPER.map((_,i)=>cells(i)),LOWER.map((_,i)=>cells(i+6)),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>–</td>`,"Prime")}</div>`,
+  sh=>{sh.querySelector("#hvBack").onclick=openHist;sh.scrollTop=0});
+  ui.sheet="histview";
+}
+function refreshHist(){if(ui.sheet!=="hist")return;const sh=document.getElementById("sheet"),y=sh.scrollTop;openHist();sh.scrollTop=y}
 document.addEventListener("DOMContentLoaded",()=>{
   try{
     const cfg=window.FIREBASE_CONFIG;
