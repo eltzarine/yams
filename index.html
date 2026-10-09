@@ -252,6 +252,29 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 .splash .install[hidden],.splash .ihelp[hidden]{display:none}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.splash *{animation:none!important}}
+
+/* stats de l'historique */
+.stats{background:var(--bg);border-radius:14px;padding:4px 12px;margin:0 0 14px}
+.stat{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.stat:last-child{border-bottom:0}
+.stat .ic{font-size:24px;width:30px;text-align:center;flex:none}
+.stat .tx{flex:1;min-width:0}
+.stat .tx span{display:block;font-weight:700;font-size:15px}
+.stat .tx small,.stat .tx i{display:block;color:var(--muted);font-size:13px}
+.stat .tx i{margin-top:2px}
+.stat b{font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;color:var(--pen);line-height:1}
+.hsec{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;margin:0 0 6px}
+/* commentaires de fin de partie */
+.rank li{flex-wrap:wrap}
+.rank .quip{flex-basis:100%;padding-left:40px;margin-top:-2px;font-size:14px;color:var(--muted);font-weight:400}
+.rank .quip strong{color:var(--felt)}
+:root[data-theme="dark"] .rank .quip strong{color:#7ED1A6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rank .quip strong{color:#7ED1A6}}
+/* blague après un score */
+.done .jk{display:block;color:var(--muted);font-size:13px;font-style:italic;margin-top:2px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:40;max-width:min(92vw,460px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 16px;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:opacity .25s,transform .25s;pointer-events:none;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
 <body>
@@ -433,7 +456,7 @@ function renderTurn(){
     <div class="thead"><div class="who"><small>Tour ${round} sur ${ALL.length}</small><h2>À toi, ${esc(name)}</h2>
       <div class="tstats"><span>Total ${t.total}</span><span>Haut ${t.haut}</span>${prime}</div></div></div>
     <div class="tbody">
-      ${last?`<div class="done"><span>✓ ${esc(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}</span><button id="tUndo">Annuler</button></div>`:""}
+      ${last?`<div class="done"><span>✓ ${esc(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}${last.j?`<span class="jk">${esc(last.j)}</span>`:""}</span><button id="tUndo">Annuler</button></div>`:""}
       <div class="tlabel">Tes dés <span>${d.length?`<button id="tClear">Vider</button>`:`<em>${5-d.length} à entrer</em>`}</span></div>
       ${diceHTML(d)}
       <div class="tlabel">Il te reste à faire <em>${left.length} case${pl} · ${upLeft} en haut, ${lowLeft} en bas</em></div>
@@ -453,10 +476,10 @@ document.getElementById("turn").addEventListener("click",e=>{
   else if(b.id==="tClear"){S.dice=[];ui.sel=null;save();renderTurn()}
   else if(b.id==="tOk"){
     const k=ui.sel,v=(res[k]||{pts:0}).pts;
-    (S.scores[p]=S.scores[p]||{})[k]=v;
-    S.last={p,k,v};S.dice=[];ui.sel=null;ui.turnOpen=true;save();render();
+    const j=scoreJoke(p,k,v);
+    S.last={p,k,v,j};S.dice=[];ui.sel=null;ui.turnOpen=true;save();render();
     window.scrollTo(0,0);
-    if(finished())setTimeout(openEnd,250);
+    if(finished())setTimeout(openEnd,250);else toast(j);
   }
   else if(b.id==="tUndo"&&last){delete S.scores[last.p][last.k];S.last=null;save();render()}
 });
@@ -466,6 +489,86 @@ document.getElementById("app").addEventListener("click",e=>{
 function resetGame(){S.scores={};S.gid=null;S.gdate=null;S.savedSig=null;S.dice=[];S.last=null;ui.sel=null;ui.turnOpen=true}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function clamp(v,a,b){v=Math.round(+v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):a}
+
+/* ---------- blagues ---------- */
+const rnd=a=>a[Math.random()*a.length|0];
+const J={
+  yams:["Cinq dés identiques : même les dés font du copier-coller.","Yam’s, ça vient de « igname ». Tu viens de faire une patate.","Yam’s ! Quelque part, un statisticien vient de tomber de sa chaise."],
+  zero:["Zéro. Les dés sont partis en RTT.","Barré. Le crayon demande un arrêt maladie.","Zéro ! Un pigeon aurait fait mieux, et il n’a pas de mains."],
+  grande:["À l’hôtel, une grande suite coûte 400 €. Ici, 40 points. Bonne affaire.","1-2-3-4-5 : les dés ont fait la queue à la Poste."],
+  petite:["Petite suite. Le studio, pas la suite présidentielle.","Quatre qui se suivent, un qui fait le malin."],
+  full:["Full ! Ça veut dire « plein », comme toi à la fin du repas.","Full : trois dés et un couple. C’est plus un tirage, c’est un vaudeville."],
+  carre:["Carré ! Le cinquième dé n’a pas été invité à la réunion.","Quatre pareils. Le cinquième jure qu’il n’a rien vu."],
+  brelan:["Brelan ! Trois dés ont formé un groupe de rock. Les deux autres font les roadies."],
+  chanceHi:["Achète un ticket à gratter avant que ça s’épuise.","Cette chance a été prélevée sur ton compte de chance annuel."],
+  chanceLo:["Chance ? La chance a pris son après-midi.","Ce n’est pas de la chance, c’est de la malchance en promo."],
+  upHi:["Ce n’est plus du Yam’s, c’est de la sorcellerie.","Quatre pareils en haut : les dés ont un abonnement salle de sport."],
+  upOk:["Trois. Ni trop, ni trop peu. Comme le sel dans les pâtes."],
+  upLo:["Même ce dé-là a l’air gêné.","Il se sent un peu seul, le pauvre."],
+  prime:["Prime ! Le seul bonus que tu toucheras cette année.","+37 ! Les maths viennent de t’adopter."],
+  record:"Ce score est en cours d’homologation par la NASA.",
+  worst:"Ce score a été retrouvé au fond d’un tiroir, avec des piles usées.",
+  avg:"La moitié de la table est sous la moyenne. Regardez à gauche. Non, plus à gauche.",
+  newRec:"On fait contrôler les dés par un huissier.",
+  newLow:"Record battu… dans le sous-sol.",
+  persoRec:"Toi-même tu ne te reconnais pas.",
+  tiers:[[300,"Les dés demandent une augmentation."],[250,"Très belle partie. On t’aurait applaudi, mais on était occupés à perdre."],
+    [200,"Une partie de milieu de tableau. Comme un rôti de dimanche : ça fait le job."],[150,"Ce score a été validé par un comité de canards."],
+    [-Infinity,"Ton score tient sur un ticket de métro. Et il reste de la place."]]
+};
+const NB=["","Un seul","Deux","Trois","Quatre","Cinq"];
+function quip(k,v,gotPrime){
+  if(gotPrime)return rnd(J.prime);
+  if(!v)return rnd(J.zero);
+  const u=UPPER.find(x=>x[0]===k);
+  if(u){const n=v/u[2];return n===3?rnd(J.upOk):`${NB[n]||n} ${u[2]} ? ${rnd(n>3?J.upHi:J.upLo)}`}
+  if(k==="chance")return rnd(v>=24?J.chanceHi:J.chanceLo);
+  return rnd(J[k]);
+}
+let toastT=0;
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){t=document.createElement("div");t.id="toast";t.className="toast";t.setAttribute("role","status");document.body.appendChild(t)}
+  t.textContent=msg;t.classList.remove("show");void t.offsetWidth;t.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),3800);
+}
+/* inscrit un score et renvoie la blague du coup */
+function scoreJoke(p,k,v){
+  const before=totals(p).prime;
+  (S.scores[p]=S.scores[p]||{})[k]=v;
+  return quip(k,v,!before&&totals(p).prime>0);
+}
+
+/* ---------- stats de l'historique ---------- */
+function histStats(excludeId){
+  if(!Array.isArray(HIST))return null;
+  let best=null,worst=null,sum=0,count=0;const perso=new Map();
+  for(const g of HIST){if(g.id===excludeId)continue;
+    for(const x of g.ranking||[]){const t=+x.t;if(!Number.isFinite(t))continue;
+      const e={n:String(x.n??"").trim()||"?",t,date:g.date};
+      if(!best||t>best.t)best=e;if(!worst||t<worst.t)worst=e;sum+=t;count++;
+      const key=e.n.toLowerCase();perso.set(key,Math.max(perso.get(key)??-Infinity,t))}}
+  return count?{best,worst,avg:sum/count,count,perso}:null;
+}
+const fmtAvg=v=>(Math.round(v*10)/10).toLocaleString("fr-FR");
+function fmtDay(iso){try{return new Date(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}catch(e){return""}}
+function statsHTML(st){
+  if(!st)return"";
+  const row=(ic,label,val,sub,joke)=>`<div class="stat"><span class="ic" aria-hidden="true">${ic}</span><div class="tx"><span>${label}</span><small>${sub}</small><i>${joke}</i></div><b>${val}</b></div>`;
+  const who=e=>`${esc(e.n)} · ${esc(fmtDay(e.date))}`;
+  return`<div class="stats">${row("🏆","Meilleur score",st.best.t,who(st.best),J.record)}${row("🥄","Moins bon score",st.worst.t,who(st.worst),J.worst)}${row("⚖️","Moyenne",fmtAvg(st.avg),`sur ${st.count} score${st.count>1?"s":""}`,J.avg)}</div>
+  <div class="hsec">Parties</div>`;
+}
+/* commentaire sur un total de fin de partie (st = stats sans la partie en cours) */
+function endQuip(name,t,st){
+  const base=J.tiers.find(x=>t>=x[0])[1];
+  if(!st)return esc(base);
+  const pb=st.perso.get(String(name).trim().toLowerCase());
+  if(t>st.best.t)return`<strong>Nouveau record de la maison !</strong> (ancien : ${st.best.t}) ${J.newRec}`;
+  if(t<st.worst.t)return`<strong>Nouveau pire score.</strong> ${J.newLow}`;
+  if(pb!=null&&t>pb)return`<strong>Record perso battu !</strong> (ancien : ${pb}) ${J.persoRec}`;
+  return`${t>=st.avg?"Au-dessus de":"Sous"} la moyenne (${fmtAvg(st.avg)}). ${esc(base)}`;
+}
 
 function setupHTML(){
   return `<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnHist">Historique</button></header>
@@ -552,7 +655,7 @@ function openCell(p,k){
     sh=>{
       sh.querySelectorAll("[data-face]").forEach(b=>b.onclick=()=>{if(d.length<5){d.push(+b.dataset.face);d.sort((a,b)=>a-b);draw()}});
       sh.querySelectorAll("[data-slot]").forEach(b=>b.onclick=()=>{const i=+b.dataset.slot;if(d[i]){d.splice(i,1);draw()}});
-      const set=v=>{(S.scores[p]=S.scores[p]||{})[k]=v;save();closeSheet();render();if(finished())setTimeout(openEnd,250)};
+      const set=v=>{const j=scoreJoke(p,k,v);save();closeSheet();render();if(finished())setTimeout(openEnd,250);else toast(j)};
       sh.querySelector("#ok").onclick=()=>r&&set(r.pts);
       sh.querySelector("#cross").onclick=()=>set(0);
       const c=sh.querySelector("#clear");if(c)c.onclick=()=>{delete S.scores[p][k];save();closeSheet();render()};
@@ -597,8 +700,9 @@ function openNew(){
 
 function openEnd(){
   const r=S.players.map((n,p)=>({n,t:totals(p).total})).sort((a,b)=>b.t-a.t);
-  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${esc(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final</div>
-    <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em></li>`).join("")}</ol>
+  const st=histStats(S.gid);
+  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${esc(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final${st?` · record de la maison ${st.best.t}, moyenne ${fmtAvg(st.avg)}`:""}</div>
+    <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em><small class="quip">${endQuip(x.n,x.t,st)}</small></li>`).join("")}</ol>
     <p class="hint" id="syncSt">${esc(syncMsg())}</p>
     <button class="primary" id="again">Rejouer avec les mêmes joueurs</button>
     <button class="secondary" id="look">Voir la feuille</button>`,
@@ -696,12 +800,15 @@ async function syncGame(){
   finally{inflight.delete(gid);persist();showSync();if(syncAgain&&gid===S.gid){syncAgain=false;if(S.started&&finished())syncGame()}}
 }
 function fmtDate(iso){try{return new Date(iso).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){return""}}
+const CLOSE=`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`;
 function histHTML(){
-  if(!DB)return`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button><h3 id="sheetTitle">Historique</h3><p class="hint">L'historique partagé n'est pas encore configuré (Firebase).</p>`;
-  if(HERR)return`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button><h3 id="sheetTitle">Historique</h3><p class="hint">Impossible de charger l'historique pour le moment.</p>`;
-  if(!HIST)return`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button><h3 id="sheetTitle">Historique</h3><p class="hint">Chargement…</p>`;
-  if(!HIST.length)return`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button><h3 id="sheetTitle">Historique</h3><p class="hint">Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.</p>`;
-  return`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button><h3 id="sheetTitle">Historique</h3><div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
+  const head=`${CLOSE}<h3 id="sheetTitle">Historique</h3>`,msg=t=>`${head}<p class="hint">${t}</p>`;
+  if(!DB)return msg("L'historique partagé n'est pas encore configuré (Firebase).");
+  if(HERR)return msg("Impossible de charger l'historique pour le moment.");
+  if(!HIST)return msg("Chargement…");
+  if(!HIST.length)return msg("Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.");
+  return`${head}<div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
+  ${statsHTML(histStats())}
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
     <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
     ${g.sheet?`<button class="see" data-see="${esc(g.id)}">Voir la feuille →</button>`:""}</li>`).join("")}</ul>
@@ -730,7 +837,7 @@ function openPastSheet(g){
   const P=g.sheet, tot=P.map(x=>{const haut=x.v.slice(0,6).reduce((a,b)=>a+b,0),bas=x.v.slice(6).reduce((a,b)=>a+b,0);return{haut,bas,prime:x.prime,total:haut+x.prime+bas}});
   const best=Math.max(...tot.map(t=>t.total));
   const cells=i=>P.map(x=>`<td class="cell ${x.v[i]===0?"zero":""}">${x.v[i]}</td>`).join("");
-  openSheet(`<div class="hv"><button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button><button class="back" id="hvBack">← Historique</button>
+  openSheet(`<div class="hv">${CLOSE}<button class="back" id="hvBack">← Historique</button>
     <h3 id="sheetTitle">🏆 ${esc(g.winner)} · ${g.top}</h3><div class="sub">${esc(fmtDate(g.date))}</div>
     ${boardHTML(P.map((x,p)=>`<th scope="col" class="${tot[p].total===best?"lead":""}">${esc(x.n)}</th>`).join(""),UPPER.map((_,i)=>cells(i)),LOWER.map((_,i)=>cells(i+6)),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>–</td>`,"Prime")}</div>`,
   sh=>{sh.querySelector("#hvBack").onclick=openHist;sh.scrollTop=0});
@@ -748,7 +855,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     }else DB=null;
   }catch(e){DB=null}
   if(!DB){refreshHist();return}
-  if(ui.sheet==="hist")watchHist();
+  watchHist(); // chargé dès le départ pour comparer les scores en fin de partie
   if(S.started&&finished())syncGame();
   flushOutbox();
   setTimeout(checkCurrent,8000); // laisse d'abord Firebase envoyer ce qu'il avait gardé
