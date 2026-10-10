@@ -601,21 +601,25 @@ function bindDrag(){
     g.onpointerdown=e=>{
       e.preventDefault();
       const row=g.closest(".prow");row.classList.add("dragging");
-      try{g.setPointerCapture(e.pointerId)}catch(_){}
+      const pid=e.pointerId;let done=false;
+      // Écoute sur window : déplacer la ligne dans le DOM fait perdre la capture du pointeur,
+      // et le « lâcher » n'arrivait alors jamais → l'ordre n'était pas enregistré.
       const move=ev=>{
+        if(ev.pointerId!==pid)return;
         const rows=[...list.querySelectorAll(".prow")].filter(r=>r!==row);
         const before=rows.find(r=>{const b=r.getBoundingClientRect();return ev.clientY<b.top+b.height/2});
         if(before){if(row.nextElementSibling!==before)list.insertBefore(row,before)}
         else if(list.lastElementChild!==row)list.appendChild(row);
       };
-      const end=()=>{
-        g.removeEventListener("pointermove",move);g.removeEventListener("pointerup",end);g.removeEventListener("pointercancel",end);
+      const end=ev=>{
+        if(done||(ev&&ev.pointerId!==pid))return;done=true;
+        removeEventListener("pointermove",move);removeEventListener("pointerup",end);removeEventListener("pointercancel",end);
         row.classList.remove("dragging");
         const order=[...list.querySelectorAll(".prow")].map(r=>+r.dataset.row);
         if(order.some((v,k)=>v!==k)){S.players=order.map(k=>S.players[k]);save()}
         render();
       };
-      g.addEventListener("pointermove",move);g.addEventListener("pointerup",end);g.addEventListener("pointercancel",end);
+      addEventListener("pointermove",move);addEventListener("pointerup",end);addEventListener("pointercancel",end);
     };
   });
 }
