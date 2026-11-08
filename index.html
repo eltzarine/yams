@@ -897,7 +897,11 @@ document.addEventListener("DOMContentLoaded",()=>{
    Les spectateurs ouvrent ?partie=CODE et voient le tableau se mettre à jour, sans pouvoir modifier. */
 let liveT=0,liveErr=null;
 function newCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ23456789",r=new Uint32Array(5);crypto.getRandomValues(r);return Array.from(r,x=>A[x%A.length]).join("")}
-function liveURL(){return location.origin+location.pathname+"?partie="+S.live}
+function liveURL(c){return location.origin+location.pathname+"?partie="+(c||S.live)}
+async function shareLink(url){
+  if(navigator.share){try{await navigator.share({title:"Yam’s Gaillon",text:"Suis notre partie de Yam’s en direct",url})}catch(e){}return}
+  try{await navigator.clipboard.writeText(url);toast("Lien copié")}catch(e){toast(url)}
+}
 function liveData(){
   const scores={};if(S.started)S.players.forEach((_,p)=>{const r=S.scores[p];if(r)scores[p]={...r}});
   return{players:S.players.slice(0,12).map(n=>String(n).slice(0,30)),scores,settings:{...S.settings},started:!!S.started,
@@ -930,10 +934,7 @@ function openInvite(){
     <button class="primary" id="share">Envoyer le lien</button>
     <button class="secondary danger" id="stopLive">Arrêter le direct</button>`,
   sh=>{
-    sh.querySelector("#share").onclick=async()=>{
-      if(navigator.share){try{await navigator.share({title:"Yam’s Gaillon",text:"Suis notre partie de Yam’s en direct",url})}catch(e){}return}
-      try{await navigator.clipboard.writeText(url);toast("Lien copié")}catch(e){toast(url)}
-    };
+    sh.querySelector("#share").onclick=()=>shareLink(url);
     sh.querySelector("#stopLive").onclick=()=>{
       const code=S.live;S.live=null;clearTimeout(liveT);persist();closeSheet();render();
       if(DB&&code)DB.collection("direct").doc(code).delete().catch(()=>{});
@@ -982,7 +983,7 @@ function watchLive(){
 }
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
-  const top=`<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnQuit">Quitter</button></header>`;
+  const top=`<header><h1>Yam’s Gaillon</h1>${VS==="ok"?`<button class="iconbtn" id="btnShareView">Partager</button>`:""}<button class="iconbtn" id="btnQuit">Quitter</button></header>`;
   const box=(t,m)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p></div>`;
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
@@ -1011,6 +1012,16 @@ function renderView(){
       <p class="hint">Tu regardes la partie : seul celui qui tient la feuille peut inscrire les scores.</p>`;
   }
   document.getElementById("btnQuit").onclick=()=>{location.href=location.pathname};
+  const bs=document.getElementById("btnShareView");if(bs)bs.onclick=openShareView;
+}
+function openShareView(){
+  const url=liveURL(VIEW);
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Partager la partie</h3><div class="sub">Fais scanner ce QR code pour qu'un autre suive aussi la partie en direct.</div>
+    <div class="qr">${qrSVG(url)}</div>
+    <div class="code" aria-label="Code de la partie">${esc(VIEW)}</div>
+    <p class="hint" style="margin:0 0 14px">ou « Suivre une partie avec un code » dans l'appli</p>
+    <button class="primary" id="share">Envoyer le lien</button>`,
+  sh=>{sh.querySelector("#share").onclick=()=>shareLink(url)});
 }
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
