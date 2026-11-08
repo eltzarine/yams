@@ -290,7 +290,14 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 .live td.cell{font-size:22px;font-weight:600;color:var(--pen)}
 .live td.cell.zero{color:var(--zero);text-decoration:line-through}
 .live td.cell.flash{animation:flash 1.4s ease-out}
-.iconbtn.liveon{border-color:var(--pip);color:var(--pip)}
+.iconbtn.invite{display:inline-flex;align-items:center;gap:7px;background:var(--gold);border-color:var(--gold);color:#1B2620;font-weight:700;box-shadow:0 2px 10px color-mix(in srgb,var(--gold) 40%,transparent)}
+.iconbtn.invite svg{width:18px;height:18px;flex:none}
+.iconbtn.invite:active{transform:scale(.97)}
+.iconbtn.invite.fresh{animation:nudge 2.4s ease-in-out 1s 2}
+@keyframes nudge{0%,70%,100%{box-shadow:0 2px 10px color-mix(in srgb,var(--gold) 40%,transparent)}35%{box-shadow:0 0 0 6px color-mix(in srgb,var(--gold) 30%,transparent)}}
+.iconbtn.liveon{display:inline-flex;align-items:center;gap:7px;border-color:var(--pip);color:var(--pip)}
+.iconbtn.liveon i{width:9px;height:9px;border-radius:50%;background:var(--pip);animation:pulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.iconbtn.invite.fresh,.iconbtn.liveon i{animation:none}}
 .follow input{width:100%;height:56px;border:1px solid var(--line-strong);border-radius:12px;text-align:center;font-family:"Barlow Condensed",sans-serif;font-size:32px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:var(--bg);color:var(--ink);margin:0 0 12px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
@@ -405,7 +412,7 @@ function render(){
     <button class="iconbtn" id="btnHist">Historique</button>
     <button class="iconbtn" id="btnSettings">Règles</button>
     <button class="iconbtn" id="btnNew">Nouvelle partie</button>
-    <button class="iconbtn ${S.live?"liveon":""}" id="btnLive">${S.live?"● Direct":"Inviter"}</button></header>
+    <button class="iconbtn ${S.live?"liveon":"invite"+(S.invited?"":" fresh")}" id="btnLive">${S.live?`<i aria-hidden="true"></i>Direct`:`${QR_ICON}Inviter`}</button></header>
   ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
     <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
     <button id="tabTurn" aria-pressed="${ui.turnOpen}">▶ ${esc(S.players[cp])}</button></div>`:""}
@@ -920,10 +927,11 @@ function liveMsg(){
 }
 function showLive(){const el=document.getElementById("liveSt");if(el)el.textContent=liveMsg()}
 function qrSVG(t){try{const q=qrcode(0,"M");q.addData(t);q.make();return q.createSvgTag({cellSize:4,margin:4,scalable:true,title:"QR code de la partie"})}catch(e){return""}}
+const QR_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>`;
 function openInvite(){
   if(!DB){toast("Le direct a besoin de la base Firebase.");return}
   const fresh=!S.live;
-  if(fresh){S.live=newCode();persist();render();if(window.gtag)gtag("event","direct_ouvert")}
+  if(fresh){S.live=newCode();S.invited=true;persist();render();if(window.gtag)gtag("event","direct_ouvert")}
   pushLive(true);
   const url=liveURL();
   openSheet(`${CLOSE}<h3 id="sheetTitle">Suivre la partie</h3><div class="sub">Les autres scannent ce QR code avec l'appareil photo pour voir le tableau et les scores en direct.</div>
