@@ -395,7 +395,20 @@ function totals(p){
 function finished(){return S.players.every((_,p)=>ALL.every(k=>(S.scores[p]||{})[k]!=null))}
 
 /* ---------- rendu ---------- */
-function render(){
+/* ---------- écran toujours allumé pendant une partie ---------- */
+/* Empêche la mise en veille tant qu'une partie est en cours, pour celui qui tient la feuille comme pour les spectateurs. */
+let wakeLock=null;
+function wantWake(){return !!S.started&&!finished()&&(!VIEW||VS==="ok")}
+async function syncWake(){
+  if(!("wakeLock" in navigator))return;
+  if(wantWake()&&!document.hidden){
+    if(wakeLock)return;
+    try{wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null})}catch(e){wakeLock=null}
+  }else if(wakeLock){const w=wakeLock;wakeLock=null;w.release().catch(()=>{})}
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncWake()});
+function render(){try{return renderMain()}finally{syncWake()}}
+function renderMain(){
   if(VIEW)return renderView();
   const app=document.getElementById("app");
   if(!S.started){document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();document.getElementById("btnHist").onclick=openHist;window.scrollTo(0,0);return}
