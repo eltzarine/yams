@@ -314,6 +314,8 @@ html.has-update body{padding-top:var(--updh)}
 .iconbtn.liveon{display:inline-flex;align-items:center;gap:7px;border-color:var(--pip);color:var(--pip)}
 .iconbtn.liveon i{width:9px;height:9px;border-radius:50%;background:var(--pip);animation:pulse 1.6s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.iconbtn.invite.fresh,.iconbtn.liveon i{animation:none}}
+.scan{position:relative;width:min(72vw,280px);aspect-ratio:1;margin:0 auto 12px;border-radius:14px;overflow:hidden;background:#000}.scan video{width:100%;height:100%;object-fit:cover;display:block}.scan::after{content:"";position:absolute;inset:14%;border:3px solid rgba(255,255,255,.85);border-radius:12px}.scan[hidden]{display:none}
+.follow .ghost,.sheet button.ghost.wide{width:100%;height:46px;border:1px solid var(--line-strong);border-radius:12px;background:transparent;color:var(--ink);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 12px}.follow .ghost svg{width:20px;height:20px}
 .follow input{width:100%;height:56px;border:1px solid var(--line-strong);border-radius:12px;text-align:center;font-family:"Barlow Condensed",sans-serif;font-size:32px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:var(--bg);color:var(--ink);margin:0 0 12px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
@@ -642,7 +644,7 @@ function setupHTML(){
   <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
   <button class="add" id="addP">Ajouter un joueur</button>
   <button class="primary" id="go">Commencer la partie</button>
-  <button class="secondary" id="btnFollow">Suivre une partie avec un code</button></div>`;
+  <button class="secondary" id="btnFollow">Suivre une partie</button></div>`;
 }
 function bindSetup(){
   document.querySelectorAll("#plist input").forEach(inp=>inp.oninput=()=>{S.players[+inp.dataset.i]=inp.value;save()});
@@ -704,7 +706,7 @@ function openSheet(html,bind){
 let lastFocus=null,lockY=0;
 function lockPage(){if(document.body.classList.contains("locked"))return;lockY=window.scrollY;document.body.style.top=-lockY+"px";document.body.classList.add("locked")}
 function unlockPage(){if(!document.body.classList.contains("locked"))return;document.body.classList.remove("locked");document.body.style.top="";window.scrollTo(0,lockY)}
-function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;unlockPage();
+function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;unlockPage();if(scanStream||scanRAF)stopScan();
   if(lastFocus&&lastFocus.isConnected)lastFocus.focus({preventScroll:true});lastFocus=null;
   if((ui.sheet==="hist"||ui.sheet==="histview")&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
 
@@ -973,7 +975,7 @@ function openInvite(){
   openSheet(`${CLOSE}<h3 id="sheetTitle">Suivre la partie</h3><div class="sub">Les autres scannent ce QR code avec l'appareil photo pour voir le tableau et les scores en direct.</div>
     <div class="qr">${qrSVG(url)}</div>
     <div class="code" aria-label="Code de la partie">${S.live}</div>
-    <p class="hint" style="margin:0 0 14px">ou « Suivre une partie avec un code » dans l'appli</p>
+    <p class="hint" style="margin:0 0 14px">ou « Suivre une partie » dans l'appli (scan ou code)</p>
     <p class="hint" id="liveSt" style="margin:0 0 14px">${esc(liveMsg())}</p>
     <button class="primary" id="share">Envoyer le lien</button>
     <button class="secondary danger" id="stopLive">Arrêter le direct</button>`,
@@ -987,14 +989,48 @@ function openInvite(){
   });
 }
 function openFollow(){
-  openSheet(`${CLOSE}<h3 id="sheetTitle">Suivre une partie</h3><div class="sub">Entre le code affiché sur le téléphone de celui qui tient la feuille.</div>
-    <div class="follow"><input id="fcode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="Code de la partie" placeholder="K7P2Q"></div>
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Suivre une partie</h3><div class="sub">Scanne le QR code ou entre le code affiché sur le téléphone de celui qui tient la feuille.</div>
+    <div class="follow"><div class="scan" id="scan" hidden><video id="scanVid" playsinline muted autoplay></video></div>
+    <button class="ghost" id="fscan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/></svg>Scanner le QR code</button>
+    <input id="fcode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="Code de la partie" placeholder="K7P2Q"></div>
     <button class="primary" id="fgo">Suivre</button>`,
   sh=>{
-    const inp=sh.querySelector("#fcode");setTimeout(()=>inp.focus(),250);
-    const go=()=>{const c=inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");if(c.length>=4)location.href=location.pathname+"?partie="+c;else inp.focus()};
+    const inp=sh.querySelector("#fcode");
+    const follow=c=>{stopScan();location.href=location.pathname+"?partie="+c};
+    const go=()=>{const c=inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");if(c.length>=4)follow(c);else inp.focus()};
     sh.querySelector("#fgo").onclick=go;inp.onkeydown=e=>{if(e.key==="Enter")go()};
+    const bs=sh.querySelector("#fscan");
+    bs.onclick=()=>{if(scanStream){stopScan();return}startScan(sh,follow)};
   });
+}
+/* scanner de QR code dans l'appli (caméra arrière) : BarcodeDetector si dispo, sinon jsQR chargé à la demande */
+let scanStream=null,scanRAF=0;
+function codeFromQR(t){t=String(t||"").trim();
+  try{const u=new URL(t);const c=u.searchParams.get("partie");if(c&&/^[A-Za-z0-9]{4,8}$/.test(c))return c.toUpperCase()}catch(e){}
+  return/^[A-Za-z0-9]{4,8}$/.test(t)?t.toUpperCase():null}
+function loadJsQR(){if(window.jsQR)return Promise.resolve();return new Promise((ok,ko)=>{const sc=document.createElement("script");sc.src="jsqr.js";sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc)})}
+function stopScan(){cancelAnimationFrame(scanRAF);scanRAF=0;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null}
+  const box=document.getElementById("scan"),b=document.getElementById("fscan");if(box)box.hidden=true;if(b)b.lastChild.textContent="Scanner le QR code"}
+async function startScan(sh,done){
+  const box=sh.querySelector("#scan"),vid=sh.querySelector("#scanVid"),b=sh.querySelector("#fscan");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast("Caméra indisponible : entre le code");return}
+  if(window.gtag)gtag("event","scanner_qr");
+  try{
+    const det=("BarcodeDetector" in window)?await BarcodeDetector.getSupportedFormats().then(f=>f.includes("qr_code")?new BarcodeDetector({formats:["qr_code"]}):null).catch(()=>null):null;
+    if(!det)await loadJsQR();
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+    if(sh.inert){stopScan();return} // feuille fermée pendant la demande d'accès
+    vid.srcObject=scanStream;box.hidden=false;b.lastChild.textContent="Arrêter le scan";await vid.play().catch(()=>{});
+    const cv=document.createElement("canvas"),cx=cv.getContext("2d",{willReadFrequently:true});let busy=false;
+    const tick=async()=>{if(!scanStream)return;scanRAF=requestAnimationFrame(tick);
+      if(busy||vid.readyState<2)return;busy=true;let txt=null;
+      try{if(det){const r=await det.detect(vid);txt=r[0]&&r[0].rawValue}
+        else{const w=vid.videoWidth,h=vid.videoHeight,k=Math.min(1,640/Math.max(w,h));cv.width=w*k|0;cv.height=h*k|0;cx.drawImage(vid,0,0,cv.width,cv.height);
+          const r=jsQR(cx.getImageData(0,0,cv.width,cv.height).data,cv.width,cv.height,{inversionAttempts:"dontInvert"});txt=r&&r.data}}catch(e){}
+      busy=false;
+      if(txt){const c=codeFromQR(txt);if(c){if(navigator.vibrate)navigator.vibrate(60);done(c)}else toast("Ce QR code n’est pas une partie de Yam’s")}};
+    tick();
+  }catch(e){stopScan();toast(e&&e.name==="NotAllowedError"?"Accès à la caméra refusé : entre le code":"Caméra indisponible : entre le code")}
 }
 /* côté spectateur */
 let VS="loading",lastSeen=null;
@@ -1027,7 +1063,7 @@ function watchLive(){
 }
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
-  const top=`<header><h1>Yam’s Gaillon</h1>${isInstalled()?"":`<button class="iconbtn invite" id="btnInstallView">${DL_ICON}Installer</button>`}${VS==="ok"?`<button class="iconbtn" id="btnShareView">Partager</button>`:""}<button class="iconbtn" id="btnQuit">Quitter</button></header>`;
+  const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn invite" id="btnInstallView">${DL_ICON}Installer</button>`}${VS==="ok"?`<button class="iconbtn" id="btnShareView">Partager</button>`:""}<button class="iconbtn" id="btnQuit">Quitter</button></header>`;
   const box=(t,m)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p></div>`;
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
@@ -1074,6 +1110,10 @@ function installSteps(){
 }
 let installEvt=null;
 function isInstalled(){return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
+/* sur iPhone, Safari ne peut pas savoir que l'appli est installée : on retient « J'ai déjà l'appli » sur ce navigateur */
+const HASAPP_KEY="yams_hasApp";
+function hasApp(){if(isInstalled())return true;try{return localStorage.getItem(HASAPP_KEY)==="1"}catch(e){return false}}
+function setHasApp(){try{localStorage.setItem(HASAPP_KEY,"1")}catch(e){}}
 addEventListener("beforeinstallprompt",e=>{if(!VIEW)return;e.preventDefault();installEvt=e});
 addEventListener("appinstalled",()=>{installEvt=null;if(VIEW){closeSheet();render();toast("Appli installée")}});
 async function installFromView(){
@@ -1083,15 +1123,21 @@ async function installFromView(){
   const st=installSteps();
   openSheet(`${CLOSE}<h3 id="sheetTitle">Installer l’appli</h3><div class="sub">Ajoute Yam’s Gaillon à ton écran d’accueil pour tenir la feuille à ta prochaine partie.</div>
     <ol class="steps">${st.steps}</ol>${st.hint?`<p class="hint" style="margin:0 0 14px">${st.hint}</p>`:""}
-    <button class="primary" id="ihDone">Compris</button>`,
-  sh=>{sh.querySelector("#ihDone").onclick=closeSheet});
+    <button class="primary" id="ihDone">Compris</button>
+    <button class="ghost wide" id="ihHave" style="margin:10px 0 0">J’ai déjà l’appli</button>`,
+  sh=>{sh.querySelector("#ihDone").onclick=closeSheet;
+    sh.querySelector("#ihHave").onclick=()=>{setHasApp();if(window.gtag)gtag("event","deja_appli");render();
+      openSheet(`${CLOSE}<h3 id="sheetTitle">Ouvre l’appli</h3><div class="sub">Pour suivre cette partie dans l’appli :</div>
+        <ol class="steps"><li>Ouvre <b>Yam’s Gaillon</b> depuis ton écran d’accueil</li><li>Touche <b>Suivre une partie</b></li><li>Scanne le QR code, ou entre ce code :</li></ol>
+        <div class="code" aria-label="Code de la partie">${esc(VIEW)}</div>
+        <button class="primary" id="ihOk">Compris</button>`,sh2=>{sh2.querySelector("#ihOk").onclick=closeSheet})}});
 }
 function openShareView(){
   const url=liveURL(VIEW);
   openSheet(`${CLOSE}<h3 id="sheetTitle">Partager la partie</h3><div class="sub">Fais scanner ce QR code pour qu'un autre suive aussi la partie en direct.</div>
     <div class="qr">${qrSVG(url)}</div>
     <div class="code" aria-label="Code de la partie">${esc(VIEW)}</div>
-    <p class="hint" style="margin:0 0 14px">ou « Suivre une partie avec un code » dans l'appli</p>
+    <p class="hint" style="margin:0 0 14px">ou « Suivre une partie » dans l'appli (scan ou code)</p>
     <button class="primary" id="share">Envoyer le lien</button>`,
   sh=>{sh.querySelector("#share").onclick=()=>shareLink(url)});
 }
@@ -1103,7 +1149,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   document.getElementById("btnPlay").onclick=hide;})();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
 (()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;
-  if(matchMedia("(display-mode: standalone)").matches||navigator.standalone===true)return; // déjà installée
+  if(hasApp())return; // déjà installée (ou « J’ai déjà l’appli » sur ce navigateur)
   let deferred=null;
   addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;b.hidden=false});
   addEventListener("appinstalled",()=>{b.hidden=true;h.hidden=true});

@@ -1,10 +1,11 @@
 /* Yam's Gaillon — service worker (installation + hors connexion) */
-const VERSION = "yams-v19";
+const VERSION = "yams-v20";
 const SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./qrcode.js",
+  "./jsqr.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"
