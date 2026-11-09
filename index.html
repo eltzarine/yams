@@ -99,7 +99,7 @@ header h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:28
 table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;font-family:"Barlow Condensed",sans-serif}
 th,td{border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:center;padding:0}
 tr:last-child td,tr:last-child th{border-bottom:0}
-thead th{position:sticky!important;top:env(safe-area-inset-top,0px);z-index:3}
+thead th{position:sticky!important;top:calc(env(safe-area-inset-top,0px) + var(--updh,0px));z-index:3}
 thead th.cat{z-index:4}
 thead th{background:var(--felt);color:var(--felt-ink);font-size:17px;font-weight:600;height:46px;padding:0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left-color:rgba(255,255,255,.18);position:relative}
 thead th.now{background:var(--gold);color:#1B2620}
@@ -275,6 +275,19 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rank .quip strong{color:#7ED1A6}}
 /* blague après un score */
 .done .jk{display:block;color:var(--muted);font-size:13px;font-style:italic;margin-top:2px}
+/* bandeau « Nouvelle version disponible » (même brique que Midheim) : en haut, sur tous les écrans */
+.updbar{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;justify-content:center;pointer-events:none;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 0}
+.updbar[hidden]{display:none}
+.updbar-in{pointer-events:auto;width:min(560px,100%);display:flex;align-items:center;gap:10px;background:var(--surface);color:var(--ink);border:2px solid var(--gold);border-radius:12px;padding:6px 6px 6px 12px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:updbar-down .3s ease-out both}
+.updbar-dot{width:9px;height:9px;border-radius:50%;background:var(--pip);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--pip) 25%,transparent)}
+.updbar-txt{flex:1;min-width:0;font-size:14px;line-height:1.25}
+.updbar-txt b{display:block}
+.updbar-btn{border:0;border-radius:999px;background:var(--felt);color:var(--felt-ink);font-weight:700;font-size:14px;min-height:40px;padding:0 14px;white-space:nowrap}
+.updbar-btn[aria-busy="true"]{cursor:progress;opacity:.8}
+html.has-update{--updh:62px}
+html.has-update body{padding-top:var(--updh)}
+@keyframes updbar-down{from{transform:translateY(-16px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.updbar-in{animation:none}}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:40;max-width:min(92vw,460px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 16px;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:opacity .25s,transform .25s;pointer-events:none;text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 /* partie en direct */
@@ -306,6 +319,13 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 </style>
 </head>
 <body>
+<div class="updbar" id="updateBanner" role="status" aria-live="polite" hidden>
+  <div class="updbar-in">
+    <span class="updbar-dot" aria-hidden="true"></span>
+    <span class="updbar-txt" id="updTxt"><b>Nouvelle version disponible.</b>Ta partie en cours est gardée.</span>
+    <button type="button" class="updbar-btn" id="updateBtn">Mettre à jour</button>
+  </div>
+</div>
 <div class="splash" id="splash">
   <svg viewBox="0 0 300 100" aria-hidden="true">
     <g class="dd" style="--i:0;--dx:-72px;--rot:0deg;transform-origin:30px 62px"><g transform="rotate(-16 30 62)"><rect x="6" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="19" cy="51" r="4.3"/><circle cx="41" cy="51" r="4.3"/><circle cx="30" cy="62" r="4.3"/><circle cx="19" cy="73" r="4.3"/><circle cx="41" cy="73" r="4.3"/></g></g></g>
@@ -1096,8 +1116,47 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   };
 })();
 render();
-if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))
-  addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+/* ================= Appli installable + bandeau de mise à jour (même brique que Midheim) =================
+   La nouvelle version se télécharge en arrière-plan puis attend : le bandeau « Mettre à jour » apparaît
+   sur tous les écrans (accueil, feuille, spectateur, panneaux). Inactif sans manifeste (version claude.ai) ou hors HTTPS. */
+const Pwa={on:false,waiting:null,reg:null,clicked:false,reloading:false,lastCheck:0,
+  init(){
+    this.on=!!document.querySelector('link[rel="manifest"]')&&("serviceWorker" in navigator)&&window.isSecureContext;
+    if(!this.on)return;
+    if(VIEW)document.getElementById("updTxt").innerHTML="<b>Nouvelle version disponible.</b>Tu retrouves la partie juste après.";
+    navigator.serviceWorker.register("sw.js",{scope:"./",updateViaCache:"none"}).then(reg=>{
+      this.reg=reg;
+      if(reg.waiting&&navigator.serviceWorker.controller)this.offer(reg.waiting);
+      this.track(reg.installing);
+      reg.addEventListener("updatefound",()=>this.track(reg.installing));
+      this.lastCheck=Date.now();
+      setInterval(()=>this.check(),10*60000);
+    }).catch(()=>{/* sans service worker, l'appli marche quand même */});
+    /* retour sur l'appli (onglet réactivé, téléphone déverrouillé, réseau revenu) : on vérifie tout de suite */
+    document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")this.check()});
+    addEventListener("online",()=>this.check());
+    addEventListener("pageshow",e=>{if(e.persisted)this.check()});
+    document.getElementById("updateBtn").addEventListener("click",()=>this.apply());
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{if(this.clicked)this.reload()});
+  },
+  /* « Mettre à jour » : on enregistre la partie, on active la nouvelle version puis on recharge */
+  apply(){const btn=document.getElementById("updateBtn");
+    if(this.clicked)return;this.clicked=true;btn.setAttribute("aria-busy","true");btn.textContent="Mise à jour…";
+    if(window.gtag)gtag("event","mise_a_jour");
+    if(typeof persist==="function")persist();
+    if(!this.waiting||this.waiting.state!=="installed"){this.reload();return} // déjà activée depuis un autre onglet
+    this.waiting.postMessage({type:"SKIP_WAITING"});
+    setTimeout(()=>this.reload(),4000)},
+  reload(){if(this.reloading)return;this.reloading=true;location.reload()},
+  offer(sw){this.waiting=sw;const b=document.getElementById("updateBanner");
+    if(b.hidden){b.hidden=false;document.documentElement.classList.add("has-update")}},
+  /* suit un service worker en cours d'installation jusqu'à ce qu'il attende son tour */
+  track(sw){if(!sw)return;const done=()=>{if(sw.state==="installed"&&navigator.serviceWorker.controller)this.offer(sw)};done();sw.addEventListener("statechange",done)},
+  /* cherche une nouvelle version (au plus une fois par minute) */
+  check(force){if(!this.reg||!navigator.onLine||(!force&&Date.now()-this.lastCheck<60000))return Promise.resolve();
+    this.lastCheck=Date.now();return this.reg.update().catch(()=>{})}
+};
+Pwa.init();
 </script>
 </body>
 </html>
