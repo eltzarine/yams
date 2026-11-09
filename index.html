@@ -291,6 +291,7 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 .live td.cell.zero{color:var(--zero);text-decoration:line-through}
 .live td.cell.flash{animation:flash 1.4s ease-out}
 .iconbtn.invite{display:inline-flex;align-items:center;gap:7px;background:var(--gold);border-color:var(--gold);color:#1B2620;font-weight:700;box-shadow:0 2px 10px color-mix(in srgb,var(--gold) 40%,transparent)}
+.sheet ol.steps{margin:0 0 16px;padding-left:22px;line-height:1.5}.sheet ol.steps li{margin:4px 0}
 .iconbtn.invite svg{width:18px;height:18px;flex:none}
 .iconbtn.invite:active{transform:scale(.97)}
 .iconbtn.invite.fresh{animation:nudge 2.4s ease-in-out 1s 2}
@@ -1004,7 +1005,7 @@ function watchLive(){
 }
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
-  const top=`<header><h1>Yam’s Gaillon</h1>${VS==="ok"?`<button class="iconbtn" id="btnShareView">Partager</button>`:""}<button class="iconbtn" id="btnQuit">Quitter</button></header>`;
+  const top=`<header><h1>Yam’s Gaillon</h1>${isInstalled()?"":`<button class="iconbtn invite" id="btnInstallView">${DL_ICON}Installer</button>`}${VS==="ok"?`<button class="iconbtn" id="btnShareView">Partager</button>`:""}<button class="iconbtn" id="btnQuit">Quitter</button></header>`;
   const box=(t,m)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p></div>`;
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
@@ -1034,6 +1035,25 @@ function renderView(){
   }
   document.getElementById("btnQuit").onclick=()=>{location.href=location.pathname};
   const bs=document.getElementById("btnShareView");if(bs)bs.onclick=openShareView;
+  const bi=document.getElementById("btnInstallView");if(bi)bi.onclick=installFromView;
+}
+/* installation de l'appli depuis l'écran spectateur (bouton visible tant que l'appli n'est pas installée) */
+const DL_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>`;
+let installEvt=null;
+function isInstalled(){return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
+addEventListener("beforeinstallprompt",e=>{if(!VIEW)return;e.preventDefault();installEvt=e});
+addEventListener("appinstalled",()=>{installEvt=null;if(VIEW){closeSheet();render();toast("Appli installée")}});
+async function installFromView(){
+  if(window.gtag)gtag("event","installer_spectateur");
+  if(installEvt){const e=installEvt;installEvt=null;e.prompt();const r=await e.userChoice.catch(()=>null);
+    if(r&&r.outcome==="accepted"){render();return}}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Installer l’appli</h3><div class="sub">Ajoute Yam’s Gaillon à ton écran d’accueil pour tenir la feuille à ta prochaine partie.</div>
+    ${ios
+      ?`<ol class="steps"><li>Ouvre le lien dans <b>Safari</b></li><li>Touche le bouton <b>Partager</b> (carré avec une flèche vers le haut)</li><li>Choisis <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b></li></ol>`
+      :`<ol class="steps"><li>Ouvre le lien dans <b>Chrome</b></li><li>Touche le menu <b>⋮</b> en haut à droite</li><li>Choisis <b>Installer l’application</b> (ou <b>Ajouter à l’écran d’accueil</b>)</li></ol>`}
+    <button class="primary" id="ihDone">Compris</button>`,
+  sh=>{sh.querySelector("#ihDone").onclick=closeSheet});
 }
 function openShareView(){
   const url=liveURL(VIEW);
