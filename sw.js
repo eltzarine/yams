@@ -1,5 +1,5 @@
 /* Yam's Gaillon — service worker (installation + hors connexion) */
-const VERSION = "yams-v17";
+const VERSION = "yams-v18";
 const SHELL = [
   "./",
   "./index.html",
@@ -46,7 +46,7 @@ self.addEventListener("fetch", event => {
   // Page : réseau d'abord (dernière version), copie de secours si hors connexion
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: "no-cache", credentials: "same-origin" })
         .then(res => {
           if (res.ok) { const copy = res.clone(); event.waitUntil(caches.open(VERSION).then(c => c.put("./index.html", copy))); }
           return res;

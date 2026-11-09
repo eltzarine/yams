@@ -1043,9 +1043,13 @@ function renderView(){
 const DL_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>`;
 /* étapes d'installation selon l'appareil et le navigateur */
 function installSteps(){
-  const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-  if(ios&&/CriOS/i.test(ua))return{title:"Sur iPhone ou iPad (Chrome)",steps:`<li>Touche le bouton <b>Partager</b> dans la barre d’adresse, en haut à droite (carré avec une flèche vers le haut)</li><li>Fais défiler et choisis <b>Sur l’écran d’accueil</b></li><li>Touche <b>Ajouter</b></li>`,hint:`Pas de bouton Partager ? Touche <b>•••</b> en bas à droite, puis <b>Partager</b>.`};
-  if(ios)return{title:"Sur iPhone ou iPad",steps:`<li>Ouvre le lien dans <b>Safari</b></li><li>Touche le bouton <b>Partager</b> (carré avec une flèche vers le haut)</li><li>Choisis <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b></li>`};
+  const ua=navigator.userAgent,
+    ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),
+    chrome=/CriOS/i.test(ua)||typeof window.__gCrWeb!=="undefined", // Chrome iOS, même en mode « version ordinateur »
+    autre=/FxiOS|EdgiOS|OPiOS|GSA\/|DuckDuckGo|YaBrowser/i.test(ua);
+  if(ios&&chrome)return{title:"Sur iPhone ou iPad (Chrome)",steps:`<li>Touche le bouton <b>Partager</b> dans la barre d’adresse, en haut à droite (carré avec une flèche vers le haut)</li><li>Fais défiler et choisis <b>Sur l’écran d’accueil</b></li><li>Touche <b>Ajouter</b></li>`,hint:`Pas de bouton Partager ? Touche <b>•••</b> en bas à droite, puis <b>Partager</b>.`};
+  if(ios&&autre)return{title:"Sur iPhone ou iPad",steps:`<li>Ouvre le menu du navigateur et touche <b>Partager</b></li><li>Choisis <b>Sur l’écran d’accueil</b></li><li>Touche <b>Ajouter</b></li>`,hint:`Si l’option n’apparaît pas, ouvre le lien dans Safari.`};
+  if(ios)return{title:"Sur iPhone ou iPad",steps:`<li>Touche le bouton <b>Partager</b> (carré avec une flèche vers le haut)</li><li>Choisis <b>Sur l’écran d’accueil</b></li><li>Touche <b>Ajouter</b></li>`,hint:`Dans Chrome : bouton Partager en haut à droite de la barre d’adresse.`};
   return{title:"Sur Android",steps:`<li>Ouvre le lien dans <b>Chrome</b></li><li>Touche le menu <b>⋮</b> en haut à droite</li><li>Choisis <b>Installer l’application</b> (ou <b>Ajouter à l’écran d’accueil</b>)</li>`};
 }
 let installEvt=null;
