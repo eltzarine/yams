@@ -2,7 +2,26 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>
+/* Feuille toujours ajustée à l'écran :
+   si le navigateur d'un téléphone affiche la page dézoomée (zoom Chrome < 100 %, « version ordinateur »…),
+   on remet la page à la taille d'un écran de téléphone (~400 px). Les tablettes et ordinateurs ne sont pas touchés. */
+(function(){
+  var d=document.documentElement,last="";
+  function fit(){
+    var w=window.innerWidth,phys=w*(window.devicePixelRatio||1),
+        tactile=window.matchMedia&&matchMedia("(pointer:coarse)").matches,
+        dezoome=tactile&&w>520&&phys<=1440,
+        z=dezoome?String(Math.round(w/400*100)/100):"";
+    if(z===last)return;last=z;
+    d.style.zoom=z;d.classList.toggle("fitz",!!z);
+  }
+  fit();addEventListener("resize",fit);addEventListener("orientationchange",fit);
+  /* iOS ignore user-scalable=no : on bloque aussi le pincement */
+  ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
+})();
+</script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="manifest" href="manifest.json">
@@ -109,6 +128,7 @@ td.cell button.flash{animation:flash 1.4s ease-out}
 thead th.lead::after{content:"";position:absolute;left:50%;bottom:5px;width:18px;height:3px;margin-left:-9px;border-radius:2px;background:var(--gold)}
 th.cat{background:var(--surface);text-align:left;font-weight:600;font-size:17px;padding:0 8px;border-left:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:118px}
 @media (max-width:420px){th.cat{width:96px;font-size:15px;padding:0 6px}.catlabel{gap:5px}thead th{font-size:15px}td.cell button{font-size:20px}}
+html.fitz th.cat{width:96px;font-size:15px;padding:0 6px}html.fitz .catlabel{gap:5px}html.fitz thead th{font-size:15px}html.fitz td.cell button{font-size:20px}
 thead th.cat{background:var(--felt);color:var(--felt-ink);font-size:15px;font-weight:500}
 .catlabel{display:flex;align-items:center;gap:8px}
 .catlabel small{color:var(--muted);font-weight:500;font-size:13px}
