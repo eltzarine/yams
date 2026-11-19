@@ -391,12 +391,18 @@ html.has-update body{padding-top:var(--updh)}
 .lmk{display:inline-flex;align-items:center;vertical-align:middle;margin-left:6px;line-height:1}
 thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .srank li span small{display:block;font-size:13px;color:var(--muted);font-weight:400}
-.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 10px}
 .tiles div{background:var(--bg);border-radius:12px;padding:10px 4px;text-align:center}
 .tiles b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:700;color:var(--pen);line-height:1}
 .tiles small{display:block;font-size:13px;color:var(--muted);margin-top:4px}
 .tiles .rh{color:var(--ink);font-weight:700}
-.tiles div:last-child:nth-child(odd){grid-column:1/-1}
+@media (max-width:374px){.tiles b{font-size:22px}.tiles small{font-size:12px}}
+.allrec{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:0 0 14px}
+.allrec>div{min-width:0;flex:1}
+.allrec .tag{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line-strong);border-radius:999px;padding:1px 8px}
+.allrec .lb{display:block;font-size:14px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.allrec .lb strong{color:var(--ink)}
+.allrec b{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:700;color:var(--pen);line-height:1}
 .replay{display:block;margin:4px auto 0;border:0;background:transparent;color:var(--pen);font-weight:600;font-size:14px;min-height:40px}
 /* écrans de saison (lancement et podium) */
 .sov{position:fixed;inset:0;z-index:55;background:#1F4D3A;color:#FFFFFF;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transition:opacity .35s}
@@ -1215,7 +1221,8 @@ function histHTML(){
   <div class="hsec">Classement · meilleur score de chacun</div>
   <ol class="rank srank">${(ui.rankAll?r:r.slice(0,3)).map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
   ${r.length>3?`<button class="replay" id="rankAll" style="margin:-6px auto 10px">${ui.rankAll?"Réduire le classement":`Voir tout le classement (${r.length} joueurs)`}</button>`:""}
-  <div class="tiles"><div><b>${HIST.length}</b><small>Partie${HIST.length>1?"s":""} jouée${HIST.length>1?"s":""}</small></div><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div><div><b>${rec?rec.t:"–"}</b><small>Record absolu${rec&&rec.n?`<br><strong class="rh">${esc(rec.n)}</strong>`:""}</small></div>${st?`<div><b>${st.worst.t}</b><small>Pire score de la saison<br><strong class="rh">${esc(niceName(st.worst.n))}</strong></small></div>`:""}</div>
+  <div class="tiles"><div><b>${HIST.length}</b><small>Partie${HIST.length>1?"s":""} jouée${HIST.length>1?"s":""}</small></div><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div></div>
+  ${rec?`<div class="allrec"><div><span class="tag">Toutes saisons</span><span class="lb">Record absolu${rec.n?` · <strong>${esc(rec.n)}</strong>`:""}</span></div><b>${rec.t}</b></div>`:""}
   <div class="hsec">Parties de la saison</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
     <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
