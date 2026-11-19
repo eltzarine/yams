@@ -1102,7 +1102,7 @@ const CLOSE=`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 
 function histHTML(){
   const s=SEASON,th=s.th;
   const head=`${CLOSE}<h3 id="sheetTitle">Saison ${esc(th.n)}</h3>`;
-  const sub=n=>`<div class="sub"><span id="seasonLeft">Fin dans ${leftText(s)}</span>${n?` · ${n} partie${n>1?"s":""} jouée${n>1?"s":""}`:""}</div>`;
+  const sub=n=>`<div class="sub"><span id="seasonLeft">Fin dans ${leftText(s)}</span></div>`;
   const replay=`<button class="replay" id="seasonReplay">Revoir la présentation de la saison</button>`;
   const msg=t=>`${head}${sub()}<p class="hint">${t}</p>${replay}`;
   if(!DB)return msg("L'historique partagé n'est pas encore configuré (Firebase).");
@@ -1113,7 +1113,7 @@ function histHTML(){
   const yams=HIST.reduce((a,g)=>a+(g.sheet?g.sheet.filter(x=>x.v[yi]>0).length:0),0);
   return`${head}${sub(HIST.length)}
   <div class="hsec">Classement · meilleur score de chacun</div>
-  <ol class="rank srank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))} · ${x.games} partie${x.games>1?"s":""}</small></span><em>${x.t}</em></li>`).join("")}</ol>
+  <ol class="rank srank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
   <div class="tiles"><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div><div><b>${rec?rec.t:"–"}</b><small>Record maison</small></div></div>
   <div class="hsec">Parties de la saison</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
