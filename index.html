@@ -338,6 +338,80 @@ html.has-update body{padding-top:var(--updh)}
 .follow .ghost,.sheet button.ghost.wide{width:100%;height:46px;border:1px solid var(--line-strong);border-radius:12px;background:transparent;color:var(--ink);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 12px}.follow .ghost svg{width:20px;height:20px}
 .follow input{width:100%;height:56px;border:1px solid var(--line-strong);border-radius:12px;text-align:center;font-family:"Barlow Condensed",sans-serif;font-size:32px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:var(--bg);color:var(--ink);margin:0 0 12px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+/* ---------- saisons ---------- */
+.sbar{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;border:0;border-radius:14px;background:var(--felt);color:var(--felt-ink);padding:8px 14px;text-align:left;margin:0 0 12px}
+.sbar .mk{flex:none;display:inline-flex;align-items:center;line-height:1}
+.sbar .nm{flex:1;min-width:0}
+.sbar .nm b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:20px;font-weight:700;line-height:1.1}
+.sbar .nm small{display:block;font-size:13px;opacity:.85}
+.sbar .j{background:var(--gold);color:#1B2620;border-radius:8px;padding:5px 9px;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;white-space:nowrap}
+.sbar.last{background:var(--surface);color:var(--ink);border:2px solid var(--pip)}
+.sbar.last .nm b{color:var(--pip)}.sbar.last .nm small{color:var(--muted);opacity:1}
+.sbar.last .j{background:var(--pip);color:#FFFFFF}
+.sbar .dot{width:10px;height:10px;border-radius:50%;background:var(--pip);flex:none;animation:pulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.sbar .dot{animation:none}}
+.lmk{display:inline-flex;align-items:center;vertical-align:middle;margin-left:6px;line-height:1}
+thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
+.srank li span small{display:block;font-size:13px;color:var(--muted);font-weight:400}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.tiles div{background:var(--bg);border-radius:12px;padding:10px 4px;text-align:center}
+.tiles b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:700;color:var(--pen);line-height:1}
+.tiles small{display:block;font-size:13px;color:var(--muted);margin-top:4px}
+.replay{display:block;margin:4px auto 0;border:0;background:transparent;color:var(--pen);font-weight:600;font-size:14px;min-height:40px}
+/* écrans de saison (lancement et podium) */
+.sov{position:fixed;inset:0;z-index:55;background:#1F4D3A;color:#FFFFFF;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transition:opacity .35s}
+.sov.hide{opacity:0}
+.sov .in{position:relative;min-height:100vh;min-height:100dvh;box-sizing:border-box;max-width:440px;margin:0 auto;padding:calc(52px + env(safe-area-inset-top,0px)) 26px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;text-align:center}
+.sov .kick{margin:0;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.sov .sdice{display:flex;gap:14px;margin:30px 0 4px;align-items:flex-end}
+.sov .mark{margin-top:-6px;min-height:66px;display:flex;align-items:center;justify-content:center}
+.sov .emo{font-size:64px;line-height:1}
+.sov h1{margin:16px 0 0;font-family:"Barlow Condensed",sans-serif;font-size:58px;line-height:.95;font-weight:700}
+.sov .lead{margin:14px 0 0;font-size:17px;line-height:1.4;opacity:.88;max-width:320px}
+.sov .cdl{margin:28px 0 10px;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.sov .cd{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%}
+.sov .cd div{background:rgba(255,255,255,.12);border-radius:14px;padding:12px 0 10px}
+.sov .cd b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:40px;font-weight:700;line-height:1}
+.sov .cd b.g{color:var(--gold)}
+.sov .cd small{display:block;font-size:13px;opacity:.8;margin-top:4px}
+.sov .tip{display:flex;align-items:center;gap:10px;margin-top:20px;background:rgba(0,0,0,.18);border-radius:12px;padding:10px 14px;font-size:15px;width:100%;box-sizing:border-box;text-align:left}
+.sov .tip svg,.sov .tip>span:first-child{flex:none}
+.sov .grow{flex:1;min-height:24px}
+.sov .go{width:100%;height:58px;border:0;border-radius:999px;background:var(--gold);color:#1B2620;font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:700;letter-spacing:.03em;box-shadow:0 8px 22px rgba(0,0,0,.3)}
+.sov .go:active{transform:scale(.98)}
+.sov .again{margin-top:8px;min-height:44px;border:0;background:transparent;color:#FFFFFF;opacity:.8;font-size:15px;font-weight:600}
+.sov .pod{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;align-items:end;margin-top:20px}
+.sov .col{display:flex;flex-direction:column;align-items:center;min-width:0}
+.sov .nmx{margin-bottom:8px;max-width:100%}
+.sov .nmx .who{font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sov .nmx .pts{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;color:var(--gold)}
+.sov .col.c1 .who{font-size:19px}.sov .col.c1 .pts{font-size:30px}
+.sov .step{width:100%;border-radius:12px 12px 0 0;display:flex;justify-content:center;padding-top:10px;box-sizing:border-box;font-family:"Barlow Condensed",sans-serif;font-weight:700;color:#1B2620;transform-origin:bottom}
+.sov .step.st1{height:200px;background:var(--gold);font-size:56px}
+.sov .step.st2{height:145px;background:#D9E2DC;font-size:44px}
+.sov .step.st3{height:105px;background:#C9A27A;font-size:40px}
+.sov .conf{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.sov .cf{position:absolute;top:0;width:8px;height:14px;border-radius:2px;animation:s-drop linear 2 both}
+@keyframes s-fall{from{transform:translateY(-120px) rotate(-200deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes s-stache{0%{transform:scale(0) rotate(-25deg);opacity:0}60%{transform:scale(1.15) rotate(4deg);opacity:1}100%{transform:none;opacity:1}}
+@keyframes s-wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes s-up{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes s-pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08);opacity:1}100%{transform:none;opacity:1}}
+@keyframes s-rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes s-drop{0%{transform:translateY(-60px) rotate(0);opacity:0}10%{opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:1}}
+.s-d1{animation:s-fall .7s .05s cubic-bezier(.2,.8,.3,1) both}
+.s-d2{animation:s-fall .7s .15s cubic-bezier(.2,.8,.3,1) both}
+.s-d3{animation:s-fall .7s .25s cubic-bezier(.2,.8,.3,1) both}
+.s-st{animation:s-stache .8s .75s cubic-bezier(.2,.8,.3,1) both}
+.s-wg{display:inline-flex;animation:s-wiggle .5s 1.6s ease-in-out 2}
+.s-u1{animation:s-up .5s 1.1s both}.s-u2{animation:s-up .5s 1.3s both}
+.s-p1{animation:s-pop .45s 1.55s both}.s-p2{animation:s-pop .45s 1.65s both}.s-p3{animation:s-pop .45s 1.75s both}
+.s-u3{animation:s-up .5s 2s both}.s-u4{animation:s-up .5s 2.2s both}
+.s-b3{animation:s-rise .55s .3s cubic-bezier(.2,.8,.3,1) both}.s-b2{animation:s-rise .55s .9s cubic-bezier(.2,.8,.3,1) both}.s-b1{animation:s-rise .7s 1.5s cubic-bezier(.2,.8,.3,1) both}
+.s-n3{animation:s-up .4s .8s both}.s-n2{animation:s-up .4s 1.4s both}.s-n1{animation:s-up .4s 2.15s both}
+.s-sm{display:inline-flex;animation:s-stache .7s 2.3s cubic-bezier(.2,.8,.3,1) both}
+.s-t0{animation:s-up .5s .05s both}.s-t1{animation:s-up .5s 2.4s both}.s-t2{animation:s-up .5s 2.8s both}
+@media (prefers-reduced-motion:reduce){.sov *{animation:none!important}.sov .conf{display:none}.sov{transition:none}}
 </style>
 </head>
 <body>
@@ -461,16 +535,18 @@ function renderMain(){
   const best=Math.max(...tot.map(t=>t.total));
   const anyScore=tot.some(t=>t.total>0);
   const cp=finished()?-1:curPlayer().p;
-  const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${p===cp?"▶ ":""}${esc(n)}</th>`).join("");
+  const lk=leaderKey();
+  const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${lk&&String(n).trim().toLowerCase()===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,p===cp?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${p===cp?"▶ ":""}${esc(n)}</th>`).join("");
   const row=k=>`${S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
     const cls=v==null?"empty":v===0?"zero":"";
     return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}`;
   app.innerHTML=`
   <header><h1>Yam’s Gaillon</h1>
-    <button class="iconbtn" id="btnHist">Historique</button>
+    <button class="iconbtn" id="btnHist">Saison</button>
     <button class="iconbtn" id="btnSettings">Règles</button>
     <button class="iconbtn" id="btnNew">Nouvelle partie</button>
     <button class="iconbtn ${S.live?"liveon":"invite"+(S.invited?"":" fresh")}" id="btnLive">${S.live?`<i aria-hidden="true"></i>Direct`:`${QR_ICON}Inviter`}</button></header>
+  ${seasonBarHTML()}
   ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
     <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
     <button id="tabTurn" aria-pressed="${ui.turnOpen}">▶ ${esc(S.players[cp])}</button></div>`:""}
@@ -571,6 +647,7 @@ document.getElementById("turn").addEventListener("click",e=>{
   else if(b.id==="tUndo"&&last){delete S.scores[last.p][last.k];S.last=null;save();render()}
 });
 document.getElementById("app").addEventListener("click",e=>{
+  if(e.target.closest("[data-season]")){openHist();return}
   if(VIEW)return;
   const b=e.target.closest("td.cell button");if(b)openCell(+b.dataset.p,b.dataset.k);
 });
@@ -640,26 +717,21 @@ function histStats(excludeId){
 }
 const fmtAvg=v=>(Math.round(v*10)/10).toLocaleString("fr-FR");
 function fmtDay(iso){try{return new Date(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}catch(e){return""}}
-function statsHTML(st){
-  if(!st)return"";
-  const row=(ic,label,val,sub,joke)=>`<div class="stat"><span class="ic" aria-hidden="true">${ic}</span><div class="tx"><span>${label}</span><small>${sub}</small><i>${joke}</i></div><b>${val}</b></div>`;
-  const who=e=>`${esc(e.n)} · ${esc(fmtDay(e.date))}`;
-  return`<div class="stats">${row("🏆","Meilleur score",st.best.t,who(st.best),J.record)}${row("🥄","Moins bon score",st.worst.t,who(st.worst),J.worst)}${row("⚖️","Moyenne",fmtAvg(st.avg),`sur ${st.count} score${st.count>1?"s":""}`,J.avg)}</div>
-  <div class="hsec">Parties</div>`;
-}
 /* commentaire sur un total de fin de partie (st = stats sans la partie en cours) */
-function endQuip(name,t,st){
+function endQuip(name,t,st,rec){
   const base=J.tiers.find(x=>t>=x[0])[1];
+  if(rec&&t>rec.t)return`<strong>Nouveau record de la maison !</strong> (ancien : ${rec.t}) ${J.newRec}`;
   if(!st)return esc(base);
   const pb=st.perso.get(String(name).trim().toLowerCase());
-  if(t>st.best.t)return`<strong>Nouveau record de la maison !</strong> (ancien : ${st.best.t}) ${J.newRec}`;
-  if(t<st.worst.t)return`<strong>Nouveau pire score.</strong> ${J.newLow}`;
-  if(pb!=null&&t>pb)return`<strong>Record perso battu !</strong> (ancien : ${pb}) ${J.persoRec}`;
+  if(t>st.best.t)return`<strong>Nouveau record de la saison !</strong> (ancien : ${st.best.t}) ${esc(base)}`;
+  if(t<st.worst.t)return`<strong>Nouveau pire score de la saison.</strong> ${J.newLow}`;
+  if(pb!=null&&t>pb)return`<strong>Record perso de la saison battu !</strong> (ancien : ${pb}) ${J.persoRec}`;
   return`${t>=st.avg?"Au-dessus de":"Sous"} la moyenne (${fmtAvg(st.avg)}). ${esc(base)}`;
 }
 
 function setupHTML(){
-  return `<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnHist">Historique</button></header>
+  return `<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnHist">Saison</button></header>
+  ${seasonBarHTML()}
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
   <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
   <button class="add" id="addP">Ajouter un joueur</button>
@@ -728,7 +800,7 @@ function lockPage(){if(document.body.classList.contains("locked"))return;lockY=w
 function unlockPage(){if(!document.body.classList.contains("locked"))return;document.body.classList.remove("locked");document.body.style.top="";window.scrollTo(0,lockY)}
 function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;unlockPage();if(scanStream||scanRAF)stopScan();
   if(lastFocus&&lastFocus.isConnected)lastFocus.focus({preventScroll:true});lastFocus=null;
-  if((ui.sheet==="hist"||ui.sheet==="histview")&&histSub){histSub();histSub=null}document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
+  document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
 
 function openCell(p,k){
   ui.sheet={p,k,dice:[]};
@@ -794,9 +866,9 @@ function openNew(){
 
 function openEnd(){
   const r=S.players.map((n,p)=>({n,t:totals(p).total})).sort((a,b)=>b.t-a.t);
-  const st=histStats(S.gid);
-  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${esc(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final${st?` · record de la maison ${st.best.t}, moyenne ${fmtAvg(st.avg)}`:""}</div>
-    <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em><small class="quip">${endQuip(x.n,x.t,st)}</small></li>`).join("")}</ol>
+  const st=histStats(S.gid),rec=houseRecord(S.gid);
+  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${esc(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final${st?` · record de la saison ${st.best.t}, moyenne ${fmtAvg(st.avg)}`:""}</div>
+    <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em><small class="quip">${endQuip(x.n,x.t,st,rec)}</small></li>`).join("")}</ol>
     <p class="hint" id="syncSt">${esc(syncMsg())}</p>
     <button class="primary" id="again">Rejouer avec les mêmes joueurs</button>
     <button class="secondary" id="look">Voir la feuille</button>`,
@@ -804,6 +876,138 @@ function openEnd(){
     sh.querySelector("#again").onclick=()=>{resetGame();save();closeSheet();render()};
     sh.querySelector("#look").onclick=closeSheet;
   });
+}
+
+/* ---------- saisons : 1 saison = 1 mois calendaire ---------- */
+/* Le classement de la saison retient le meilleur score de chaque joueur sur le mois.
+   À la première ouverture d'un mois : podium de la saison précédente, puis présentation de la nouvelle. */
+const SEASON0="2026-11"; // premier mois joué en mode saison (pas de podium pour les mois d'avant)
+const SEEN_KEY="yams-saison-vue",POD_KEY="yams-podium-vu";
+const STACHE=(c,w,h,lbl)=>`<svg viewBox="0 0 100 34" width="${w}" height="${h}" ${lbl?`role="img" aria-label="${lbl}"`:`aria-hidden="true"`}><path d="M50 18C44 6 30 4 20 11C14 15 8 16 3 11C2 22 14 31 28 29C38 28 45 24 50 23C55 24 62 28 72 29C86 31 98 22 97 11C92 16 86 15 80 11C70 4 56 6 50 18Z" fill="${c}"/></svg>`;
+const THEMES=[
+  {n:"Galette des rois",e:"👑",tip:"Le leader porte la couronne tout le mois."},
+  {n:"Carnaval",e:"🎭",tip:"Le leader porte le masque tout le mois."},
+  {n:"Printemps",e:"🌱",tip:"Le leader a sa pousse verte tout le mois."},
+  {n:"Poisson d’avril",e:"🐟",tip:"Le leader se balade avec un poisson tout le mois."},
+  {n:"Muguet",e:"🌼",tip:"Le leader porte la fleur tout le mois."},
+  {n:"Fête de la musique",e:"🎸",tip:"Le leader a la guitare tout le mois."},
+  {n:"Tour de France",e:"🟡",tip:"Le leader porte le maillot jaune tout le mois."},
+  {n:"Vacances",e:"🏖️",tip:"Le leader est en vacances tout le mois. Enfin presque."},
+  {n:"Rentrée",e:"🎒",tip:"Le leader porte le cartable tout le mois."},
+  {n:"Halloween",e:"🎃",tip:"Le leader porte la citrouille tout le mois."},
+  {n:"Movember",st:true,tip:"Le leader du classement porte la moustache tout le mois."},
+  {n:"Noël",e:"🎅",tip:"Le leader porte le bonnet tout le mois."}
+];
+function markHTML(th,color,w,h,lbl){return th.st?STACHE(color,w,h,lbl):`<span style="font-size:${Math.round(h*1.7)}px;line-height:1" ${lbl?`role="img" aria-label="${lbl}"`:`aria-hidden="true"`}>${th.e}</span>`}
+function seasonOf(d){d=d||new Date();const y=d.getFullYear(),m=d.getMonth(),start=new Date(y,m,1),end=new Date(y,m+1,1);
+  return{key:`${y}-${String(m+1).padStart(2,"0")}`,y,m,start,end,th:THEMES[m],label:start.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})}}
+const prevSeason=s=>seasonOf(new Date(s.y,s.m-1,15));
+let SEASON=seasonOf();
+const p2=n=>String(n).padStart(2,"0");
+function leftParts(s){const mins=Math.floor(Math.max(0,s.end-Date.now())/60000);return{d:Math.floor(mins/1440),h:Math.floor(mins/60)%24,m:mins%60}}
+function leftText(s){const l=leftParts(s);return l.d?`${l.d} j ${p2(l.h)} h`:`${p2(l.h)} h ${p2(l.m)} min`}
+function fmtDayShort(iso){try{return new Date(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}catch(e){return""}}
+function fmtDayLong(iso){try{return new Date(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}catch(e){return""}}
+/* classement : meilleur score de chaque joueur (à égalité, le premier à l'avoir fait passe devant) */
+function seasonRank(games){
+  const m=new Map();
+  for(const g of games||[])for(const x of g.ranking||[]){
+    const n=String(x.n??"").trim(),t=+x.t;if(!n||!Number.isFinite(t))continue;
+    const k=n.toLowerCase();let e=m.get(k);
+    if(!e){e={n,t,date:g.date,games:0};m.set(k,e)}
+    e.games++;
+    if(t>e.t||(t===e.t&&String(g.date)<String(e.date))){e.t=t;e.n=n;e.date=g.date}
+  }
+  return[...m.values()].sort((a,b)=>b.t-a.t||String(a.date).localeCompare(String(b.date)));
+}
+function leaderKey(){const r=seasonRank(HIST);return r[0]?r[0].n.toLowerCase():null}
+/* bandeau de saison (accueil et feuille) */
+function seasonBarHTML(){
+  const s=SEASON,th=s.th,l=leftParts(s),lead=seasonRank(HIST)[0];
+  if(l.d===0)return`<button class="sbar last" id="seasonBar" data-season><span class="dot" aria-hidden="true"></span><span class="nm"><b>Dernier jour de ${esc(th.n)} !</b><small>${lead?`Dernière chance de battre ${lead.t}`:"Dernière chance de marquer la saison"}</small></span><span class="j" aria-label="Fin dans ${l.h} heures ${l.m} minutes">${p2(l.h)}:${p2(l.m)}</span></button>`;
+  return`<button class="sbar" id="seasonBar" data-season><span class="mk">${markHTML(th,"#E9B949",38,13)}</span><span class="nm"><b>Saison ${esc(th.n)}</b><small>${lead?`Leader : ${esc(lead.n)} · ${lead.t}`:"Aucune partie encore : à toi d’ouvrir le bal"}</small></span><span class="j" aria-label="Fin dans ${l.d} jour${l.d>1?"s":""}">J-${l.d}</span></button>`;
+}
+function refreshBar(){const b=document.getElementById("seasonBar");if(b)b.outerHTML=seasonBarHTML()}
+/* nouvelles données de saison : bandeau et moustache du leader à jour */
+function seasonDataChanged(){if(VIEW){if(VS==="ok")render();return}if(S.started)render();else refreshBar()}
+/* changement de mois pendant que l'appli est ouverte */
+setInterval(()=>{
+  const now=seasonOf();
+  if(now.key!==SEASON.key){SEASON=now;if(histSub){histSub();histSub=null}HIST=null;watchHist();render();return}
+  refreshBar();
+  const sl=document.getElementById("seasonLeft");if(sl)sl.textContent="Fin dans "+leftText(SEASON);
+},30000);
+/* record de la maison, toutes saisons confondues */
+let RECS=null,recSub=null;
+function watchRecord(){
+  if(!DB||recSub)return;
+  recSub=DB.collection("parties").orderBy("top","desc").limit(3).onSnapshot(
+    snap=>{RECS=snap.docs.map(cleanGame).filter(Boolean);refreshHist()},()=>{recSub=null});
+}
+function houseRecord(excl){const g=(RECS||[]).find(x=>x.id!==excl);return g?{t:g.top,n:g.winner,date:g.date}:null}
+/* saison précédente, pour le podium (lue sur le serveur : hors ligne, on réessaiera à la prochaine ouverture) */
+let prevPromise=null;
+function loadPrev(){
+  const p=prevSeason(SEASON);
+  if(!DB||p.key<SEASON0)return null;
+  let seen=null;try{seen=localStorage.getItem(POD_KEY)}catch(e){}
+  if(seen===p.key)return null;
+  return DB.collection("parties").where("date",">=",p.start.toISOString()).where("date","<",p.end.toISOString()).get({source:"server"})
+    .then(snap=>({s:p,r:seasonRank(snap.docs.map(cleanGame).filter(Boolean))})).catch(()=>null);
+}
+function overlay(html){const o=document.createElement("div");o.className="sov";o.setAttribute("role","dialog");o.setAttribute("aria-modal","true");o.innerHTML=html;document.body.appendChild(o);lockPage();return o}
+function closeOverlay(o){o.classList.add("hide");unlockPage();setTimeout(()=>o.remove(),350)}
+const SDICE=`<svg class="s-d1" width="54" height="54" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C2362F"><circle cx="14" cy="14" r="4"/><circle cx="34" cy="34" r="4"/></g></svg><svg class="s-d2" width="64" height="64" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="10" fill="#E9B949" stroke="#1B2620" stroke-width="2.5"/><g fill="#1B2620"><circle cx="14" cy="13" r="4"/><circle cx="34" cy="13" r="4"/><circle cx="14" cy="24" r="4"/><circle cx="34" cy="24" r="4"/><circle cx="14" cy="35" r="4"/><circle cx="34" cy="35" r="4"/></g></svg><svg class="s-d3" width="54" height="54" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C2362F"><circle cx="14" cy="14" r="4"/><circle cx="24" cy="24" r="4"/><circle cx="34" cy="34" r="4"/></g></svg>`;
+/* écran de lancement de la saison */
+function showIntro(){return new Promise(done=>{
+  const s=SEASON,th=s.th,l=leftParts(s);
+  const o=overlay(`<div class="in"><p class="kick s-u1">Nouvelle saison · ${esc(s.label)}</p>
+    <div class="sdice" aria-hidden="true">${SDICE}</div>
+    <div class="mark s-st"><span class="s-wg">${th.st?STACHE("#1B2620",190,66,"Moustache, thème Movember"):`<span class="emo" aria-hidden="true">${th.e}</span>`}</span></div>
+    <h1 class="s-u1">Saison<br>${esc(th.n)}</h1>
+    <p class="lead s-u2">Tout le mois, chaque partie compte. Ton meilleur score de la saison te place au classement.</p>
+    <p class="cdl s-u2">Fin de la saison dans</p>
+    <div class="cd" id="introCd"><div class="s-p1"><b class="g">${l.d}</b><small>jour${l.d>1?"s":""}</small></div><div class="s-p2"><b>${p2(l.h)}</b><small>heures</small></div><div class="s-p3"><b>${p2(l.m)}</b><small>minutes</small></div></div>
+    <div class="tip s-u3">${markHTML(th,"#E9B949",34,12)}<span>${esc(th.tip)}</span></div>
+    <div class="grow"></div>
+    <button class="go s-u4" id="introGo">C’est parti</button>
+    <button class="again s-u4" id="introAgain">Revoir l’animation</button></div>`);
+  const tick=setInterval(()=>{const x=leftParts(s),b=o.querySelectorAll("#introCd b");if(b.length===3){b[0].textContent=x.d;b[1].textContent=p2(x.h);b[2].textContent=p2(x.m)}},30000);
+  try{localStorage.setItem(SEEN_KEY,s.key)}catch(e){}
+  o.querySelector("#introGo").onclick=()=>{clearInterval(tick);closeOverlay(o);done()};
+  o.querySelector("#introAgain").onclick=()=>{clearInterval(tick);o.remove();unlockPage();showIntro().then(done)};
+  o.querySelector("#introGo").focus({preventScroll:true});
+  if(window.gtag)gtag("event","saison_presentation",{saison:s.key});
+})}
+/* podium de fin de saison */
+const CONF_COLORS=["#E9B949","#FFFFFF","#C2362F","#8EA8FF","#E9B949","#7ED1A6"];
+function showPodium(s,r){return new Promise(done=>{
+  const th=s.th,top=r.slice(0,3),ch=top[0];
+  const col=(x,pl)=>x?`<div class="col c${pl}"><div class="nmx s-n${pl}">${pl===1?`<span class="s-sm">${markHTML(th,"#E9B949",60,20,"Champion de la saison")}</span>`:""}<div class="who">${esc(x.n)}</div><div class="pts">${x.t}</div></div><div class="step st${pl} s-b${pl}">${pl}</div></div>`:`<div class="col"></div>`;
+  const conf=Array.from({length:36},(_,i)=>`<span class="cf" style="left:${(i*37)%100}%;background:${CONF_COLORS[i%6]};animation-delay:${(2.3+((i*7)%20)/10).toFixed(1)}s;animation-duration:${(2.6+((i*13)%15)/10).toFixed(1)}s"></span>`).join("");
+  const o=overlay(`<div class="conf" aria-hidden="true">${conf}</div><div class="in">
+    <p class="kick s-t0">Fin de la saison ${esc(th.n)}</p>
+    <h1 class="s-t1">${esc(ch.n)} remporte<br>${esc(th.n)}</h1>
+    <p class="lead s-t2">${ch.t} points le ${esc(fmtDayLong(ch.date))}. ${esc(J.tiers.find(x=>ch.t>=x[0])[1])}</p>
+    <div class="grow"></div>
+    <div class="pod">${col(top[1],2)}${col(top[0],1)}${col(top[2],3)}</div>
+    <button class="go s-t2" id="podGo" style="margin-top:22px">Découvrir la saison ${esc(SEASON.th.n)}</button>
+    <button class="again s-t2" id="podAgain">Revoir l’animation</button></div>`);
+  o.querySelector("#podGo").onclick=()=>{closeOverlay(o);done()};
+  o.querySelector("#podAgain").onclick=()=>{o.remove();unlockPage();showPodium(s,r).then(done)};
+  o.querySelector("#podGo").focus({preventScroll:true});
+  if(window.gtag)gtag("event","saison_podium",{saison:s.key});
+})}
+/* à l'ouverture (bouton Jouer) : podium de la saison finie, puis présentation de la nouvelle */
+async function seasonFlow(){
+  if(VIEW)return;
+  if(prevPromise){
+    const res=await Promise.race([prevPromise,new Promise(ok=>setTimeout(()=>ok(null),2500))]);
+    if(res){prevPromise=null;try{localStorage.setItem(POD_KEY,res.s.key)}catch(e){}
+      if(res.r.length)await showPodium(res.s,res.r)}
+  }
+  let seen=null;try{seen=localStorage.getItem(SEEN_KEY)}catch(e){}
+  if(seen!==SEASON.key)await showIntro();
 }
 
 /* ---------- historique partagé ---------- */
@@ -896,17 +1100,27 @@ async function syncGame(){
 function fmtDate(iso){try{return new Date(iso).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){return""}}
 const CLOSE=`<button class="x" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`;
 function histHTML(){
-  const head=`${CLOSE}<h3 id="sheetTitle">Historique</h3>`,msg=t=>`${head}<p class="hint">${t}</p>`;
+  const s=SEASON,th=s.th;
+  const head=`${CLOSE}<h3 id="sheetTitle">Saison ${esc(th.n)}</h3>`;
+  const sub=n=>`<div class="sub"><span id="seasonLeft">Fin dans ${leftText(s)}</span>${n?` · ${n} partie${n>1?"s":""} jouée${n>1?"s":""}`:""}</div>`;
+  const replay=`<button class="replay" id="seasonReplay">Revoir la présentation de la saison</button>`;
+  const msg=t=>`${head}${sub()}<p class="hint">${t}</p>${replay}`;
   if(!DB)return msg("L'historique partagé n'est pas encore configuré (Firebase).");
-  if(HERR)return msg("Impossible de charger l'historique pour le moment.");
+  if(HERR)return msg("Impossible de charger la saison pour le moment.");
   if(!HIST)return msg("Chargement…");
-  if(!HIST.length)return msg("Aucune partie terminée pour l'instant. Les parties s'enregistrent automatiquement à la fin.");
-  return`${head}<div class="sub">${HIST.length>=50?"50 dernières parties":`${HIST.length} partie${HIST.length>1?"s":""} enregistrée${HIST.length>1?"s":""}`}</div>
-  ${statsHTML(histStats())}
+  if(!HIST.length)return msg("Aucune partie cette saison pour l'instant. Les parties s'enregistrent automatiquement à la fin.");
+  const r=seasonRank(HIST),st=histStats(),yi=ALL.indexOf("yams"),rec=houseRecord();
+  const yams=HIST.reduce((a,g)=>a+(g.sheet?g.sheet.filter(x=>x.v[yi]>0).length:0),0);
+  return`${head}${sub(HIST.length)}
+  <div class="hsec">Classement · meilleur score de chacun</div>
+  <ol class="rank srank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))} · ${x.games} partie${x.games>1?"s":""}</small></span><em>${x.t}</em></li>`).join("")}</ol>
+  <div class="tiles"><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div><div><b>${rec?rec.t:"–"}</b><small>Record maison</small></div></div>
+  <div class="hsec">Parties de la saison</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
     <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
     ${g.sheet?`<button class="see" data-see="${esc(g.id)}">Voir la feuille →</button>`:""}</li>`).join("")}</ul>
-  ${HIST.some(g=>!g.sheet)?`<p class="hint">La feuille détaillée est disponible pour les parties jouées à partir de maintenant.</p>`:""}`;
+  ${HIST.some(g=>!g.sheet)?`<p class="hint">La feuille détaillée n'existe pas pour les plus anciennes parties.</p>`:""}
+  ${replay}`;
 }
 let histSub=null;
 const num=v=>{v=Math.round(+v);return Number.isFinite(v)?v:0};
@@ -921,17 +1135,19 @@ function cleanGame(doc){
 }
 function watchHist(){
   if(!DB||histSub)return;
-  histSub=DB.collection("parties").orderBy("date","desc").limit(50).onSnapshot(
-    snap=>{HIST=snap.docs.map(cleanGame).filter(Boolean);HERR=false;refreshHist()},
+  const s=SEASON;
+  histSub=DB.collection("parties").where("date",">=",s.start.toISOString()).where("date","<",s.end.toISOString()).orderBy("date","desc").onSnapshot(
+    snap=>{HIST=snap.docs.map(cleanGame).filter(Boolean);HERR=false;refreshHist();seasonDataChanged()},
     ()=>{HERR=true;histSub=null;refreshHist()});
 }
-function openHist(){watchHist();openSheet(histHTML(),sh=>sh.querySelectorAll("[data-see]").forEach(b=>b.onclick=()=>{
-  const g=(HIST||[]).find(x=>x.id===b.dataset.see);if(g)openPastSheet(g)}));ui.sheet="hist"}
+function openHist(){watchHist();watchRecord();openSheet(histHTML(),sh=>{sh.querySelectorAll("[data-see]").forEach(b=>b.onclick=()=>{
+  const g=(HIST||[]).find(x=>x.id===b.dataset.see);if(g)openPastSheet(g)});
+  const rp=sh.querySelector("#seasonReplay");if(rp)rp.onclick=()=>{closeSheet();showIntro()}});ui.sheet="hist"}
 function openPastSheet(g){
   const P=g.sheet, tot=P.map(x=>{const haut=x.v.slice(0,6).reduce((a,b)=>a+b,0),bas=x.v.slice(6).reduce((a,b)=>a+b,0);return{haut,bas,prime:x.prime,total:haut+x.prime+bas}});
   const best=Math.max(...tot.map(t=>t.total));
   const cells=i=>P.map(x=>`<td class="cell ${x.v[i]===0?"zero":""}">${x.v[i]}</td>`).join("");
-  openSheet(`<div class="hv">${CLOSE}<button class="back" id="hvBack">← Historique</button>
+  openSheet(`<div class="hv">${CLOSE}<button class="back" id="hvBack">← Saison</button>
     <h3 id="sheetTitle">🏆 ${esc(g.winner)} · ${g.top}</h3><div class="sub">${esc(fmtDate(g.date))}</div>
     ${boardHTML(P.map((x,p)=>`<th scope="col" class="${tot[p].total===best?"lead":""}">${esc(x.n)}</th>`).join(""),UPPER.map((_,i)=>cells(i)),LOWER.map((_,i)=>cells(i+6)),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>–</td>`,"Prime")}</div>`,
   sh=>{sh.querySelector("#hvBack").onclick=openHist;sh.scrollTop=0});
@@ -948,10 +1164,12 @@ document.addEventListener("DOMContentLoaded",()=>{
       DB.enablePersistence({synchronizeTabs:true}).catch(()=>{});
     }else DB=null;
   }catch(e){DB=null}
-  if(VIEW){watchLive();return}
+  if(VIEW){watchLive();watchHist();watchRecord();return} // spectateurs : partie en direct + saison en cours
   if(!DB){refreshHist();return}
   if(S.live)pushLive(true);
-  watchHist(); // chargé dès le départ pour comparer les scores en fin de partie
+  watchHist(); // saison en cours, chargée dès le départ (bandeau, leader, scores de fin de partie)
+  watchRecord();
+  prevPromise=loadPrev();
   if(S.started&&finished())syncGame();
   flushOutbox();
   setTimeout(checkCurrent,8000); // laisse d'abord Firebase envoyer ce qu'il avait gardé
@@ -1093,7 +1311,8 @@ function renderView(){
   }else{
     const tot=S.players.map((_,p)=>totals(p)),best=Math.max(...tot.map(t=>t.total)),anyScore=tot.some(t=>t.total>0);
     const over=finished(),cur=over?null:curPlayer();
-    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${cur&&p===cur.p?"▶ ":""}${esc(n)}</th>`).join("");
+    const lk=leaderKey();
+    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${lk&&String(n).trim().toLowerCase()===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${esc(n)}</th>`).join("");
     const row=k=>S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
       return`<td class="cell ${v===0?"zero":""}" data-p="${p}" data-k="${k}">${v==null?"":v}</td>`}).join("");
     const L=S.last;
@@ -1107,7 +1326,7 @@ function renderView(){
         <div class="who">Au tour de ${esc(S.players[cur.p])} <small style="font-size:16px;color:var(--muted);font-weight:500">· tour ${cur.round}/${ALL.length}</small></div>
         ${L?`<div class="lst">Dernier coup : ${esc(S.players[L.p])}, ${L.v?`${L.v} en ${LABEL[L.k]}`:`${LABEL[L.k]} barré`}</div>`:""}`;
     }
-    app.innerHTML=`${top}<div class="livebar" aria-live="polite">${bar}</div><div class="live">
+    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div><div class="live">
       ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}</div>
       <p class="hint">Tu regardes la partie : seul celui qui tient la feuille peut inscrire les scores.</p>`;
   }
@@ -1166,7 +1385,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   if(VIEW){sp.remove();return}
   const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
-  document.getElementById("btnPlay").onclick=hide;})();
+  document.getElementById("btnPlay").onclick=()=>{hide();seasonFlow()};})();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
 (()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;
   if(hasApp())return; // déjà installée (ou « J’ai déjà l’appli » sur ce navigateur)
