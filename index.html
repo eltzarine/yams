@@ -536,7 +536,7 @@ function renderMain(){
   const anyScore=tot.some(t=>t.total>0);
   const cp=finished()?-1:curPlayer().p;
   const lk=leaderKey();
-  const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${lk&&String(n).trim().toLowerCase()===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,p===cp?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${p===cp?"▶ ":""}${esc(n)}</th>`).join("");
+  const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,p===cp?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${p===cp?"▶ ":""}${esc(n)}</th>`).join("");
   const row=k=>`${S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
     const cls=v==null?"empty":v===0?"zero":"";
     return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}`;
@@ -712,7 +712,7 @@ function histStats(excludeId){
     for(const x of g.ranking||[]){const t=+x.t;if(!Number.isFinite(t))continue;
       const e={n:String(x.n??"").trim()||"?",t,date:g.date};
       if(!best||t>best.t)best=e;if(!worst||t<worst.t)worst=e;sum+=t;count++;
-      const key=e.n.toLowerCase();perso.set(key,Math.max(perso.get(key)??-Infinity,t))}}
+      const key=pkey(e.n);perso.set(key,Math.max(perso.get(key)??-Infinity,t))}}
   return count?{best,worst,avg:sum/count,count,perso}:null;
 }
 const fmtAvg=v=>(Math.round(v*10)/10).toLocaleString("fr-FR");
@@ -722,7 +722,7 @@ function endQuip(name,t,st,rec){
   const base=J.tiers.find(x=>t>=x[0])[1];
   if(rec&&t>rec.t)return`<strong>Nouveau record de la maison !</strong> (ancien : ${rec.t}) ${J.newRec}`;
   if(!st)return esc(base);
-  const pb=st.perso.get(String(name).trim().toLowerCase());
+  const pb=st.perso.get(pkey(name));
   if(t>st.best.t)return`<strong>Nouveau record de la saison !</strong> (ancien : ${st.best.t}) ${esc(base)}`;
   if(t<st.worst.t)return`<strong>Nouveau pire score de la saison.</strong> ${J.newLow}`;
   if(pb!=null&&t>pb)return`<strong>Record perso de la saison battu !</strong> (ancien : ${pb}) ${J.persoRec}`;
@@ -908,19 +908,24 @@ function leftParts(s){const mins=Math.floor(Math.max(0,s.end-Date.now())/60000);
 function leftText(s){const l=leftParts(s);return l.d?`${l.d} j ${p2(l.h)} h`:`${p2(l.h)} h ${p2(l.m)} min`}
 function fmtDayShort(iso){try{return new Date(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}catch(e){return""}}
 function fmtDayLong(iso){try{return new Date(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}catch(e){return""}}
+/* même joueur sans tenir compte des accents, majuscules et espaces : cesar = César = CÉSAR */
+const sansAccent=n=>String(n??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function pkey(n){return sansAccent(n).trim().replace(/\s+/g," ").toLowerCase()}
+const hasAccent=n=>sansAccent(n)!==String(n);
 /* classement : meilleur score de chaque joueur (à égalité, le premier à l'avoir fait passe devant) */
 function seasonRank(games){
   const m=new Map();
   for(const g of games||[])for(const x of g.ranking||[]){
     const n=String(x.n??"").trim(),t=+x.t;if(!n||!Number.isFinite(t))continue;
-    const k=n.toLowerCase();let e=m.get(k);
+    const k=pkey(n);let e=m.get(k);
     if(!e){e={n,t,date:g.date,games:0};m.set(k,e)}
     e.games++;
-    if(t>e.t||(t===e.t&&String(g.date)<String(e.date))){e.t=t;e.n=n;e.date=g.date}
+    if(t>e.t||(t===e.t&&String(g.date)<String(e.date))){e.t=t;e.date=g.date}
+    if(hasAccent(n)&&!hasAccent(e.n))e.n=n; // on affiche la version avec accents si quelqu'un l'a écrite
   }
   return[...m.values()].sort((a,b)=>b.t-a.t||String(a.date).localeCompare(String(b.date)));
 }
-function leaderKey(){const r=seasonRank(HIST);return r[0]?r[0].n.toLowerCase():null}
+function leaderKey(){const r=seasonRank(HIST);return r[0]?pkey(r[0].n):null}
 /* bandeau de saison (accueil et feuille) */
 function seasonBarHTML(){
   const s=SEASON,th=s.th,l=leftParts(s),lead=seasonRank(HIST)[0];
@@ -1314,7 +1319,7 @@ function renderView(){
     const tot=S.players.map((_,p)=>totals(p)),best=Math.max(...tot.map(t=>t.total)),anyScore=tot.some(t=>t.total>0);
     const over=finished(),cur=over?null:curPlayer();
     const lk=leaderKey();
-    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${lk&&String(n).trim().toLowerCase()===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${esc(n)}</th>`).join("");
+    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${esc(n)}</th>`).join("");
     const row=k=>S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
       return`<td class="cell ${v===0?"zero":""}" data-p="${p}" data-k="${k}">${v==null?"":v}</td>`}).join("");
     const L=S.last;

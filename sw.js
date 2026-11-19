@@ -1,5 +1,5 @@
 /* Yam's Gaillon — service worker (installation + hors connexion) */
-const VERSION = "yams-v24";
+const VERSION = "yams-v25";
 const SHELL = [
   "./",
   "./index.html",
