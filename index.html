@@ -357,6 +357,7 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .tiles div{background:var(--bg);border-radius:12px;padding:10px 4px;text-align:center}
 .tiles b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:700;color:var(--pen);line-height:1}
 .tiles small{display:block;font-size:13px;color:var(--muted);margin-top:4px}
+.tiles .rh{color:var(--ink);font-weight:700}
 .replay{display:block;margin:4px auto 0;border:0;background:transparent;color:var(--pen);font-weight:600;font-size:14px;min-height:40px}
 /* écrans de saison (lancement et podium) */
 .sov{position:fixed;inset:0;z-index:55;background:#1F4D3A;color:#FFFFFF;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transition:opacity .35s}
@@ -949,7 +950,9 @@ function watchRecord(){
   recSub=DB.collection("parties").orderBy("top","desc").limit(3).onSnapshot(
     snap=>{RECS=snap.docs.map(cleanGame).filter(Boolean);refreshHist()},()=>{recSub=null});
 }
-function houseRecord(excl){const g=(RECS||[]).find(x=>x.id!==excl);return g?{t:g.top,n:g.winner,date:g.date}:null}
+function houseRecord(excl){const g=(RECS||[]).find(x=>x.id!==excl);if(!g)return null;
+  const same=seasonRank(HIST).find(x=>pkey(x.n)===pkey(g.winner)); // même orthographe que dans le classement (accents)
+  return{t:g.top,n:same?same.n:g.winner,date:g.date}}
 /* saison précédente, pour le podium (lue sur le serveur : hors ligne, on réessaiera à la prochaine ouverture) */
 let prevPromise=null;
 function loadPrev(){
@@ -1120,7 +1123,7 @@ function histHTML(){
   <div class="hsec">Classement · meilleur score de chacun</div>
   <ol class="rank srank">${(ui.rankAll?r:r.slice(0,3)).map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
   ${r.length>3?`<button class="replay" id="rankAll" style="margin:-6px auto 10px">${ui.rankAll?"Réduire le classement":`Voir tout le classement (${r.length} joueurs)`}</button>`:""}
-  <div class="tiles"><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div><div><b>${rec?rec.t:"–"}</b><small>Record maison</small></div></div>
+  <div class="tiles"><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div><div><b>${rec?rec.t:"–"}</b><small>Record maison${rec&&rec.n?`<br><strong class="rh">${esc(rec.n)}</strong>`:""}</small></div></div>
   <div class="hsec">Parties de la saison</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
     <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
