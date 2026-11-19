@@ -666,11 +666,11 @@ document.getElementById("turn").addEventListener("click",e=>{
   else if(b.id==="tOk"){
     const k=ui.sel,v=(res[k]||{pts:0}).pts;
     const j=scoreJoke(p,k,v);
-    S.last={p,k,v,j};S.dice=[];ui.sel=null;ui.turnOpen=true;save();render();
+    S.last={p,k,v,j};S.dice=[];ui.sel=null;ui.turnOpen=true;save();pushLive(true);render();
     window.scrollTo(0,0);
     if(finished())setTimeout(openEnd,250);else toast(j);
   }
-  else if(b.id==="tUndo"&&last){delete S.scores[last.p][last.k];S.last=null;save();render()}
+  else if(b.id==="tUndo"&&last){delete S.scores[last.p][last.k];S.last=null;save();pushLive(true);render()}
 });
 document.getElementById("app").addEventListener("click",e=>{
   if(e.target.closest("[data-season]")){openHist();return}
@@ -849,10 +849,10 @@ function openCell(p,k){
     sh=>{
       sh.querySelectorAll("[data-face]").forEach(b=>b.onclick=()=>{if(d.length<5){d.push(+b.dataset.face);d.sort((a,b)=>a-b);draw()}});
       sh.querySelectorAll("[data-slot]").forEach(b=>b.onclick=()=>{const i=+b.dataset.slot;if(d[i]){d.splice(i,1);draw()}});
-      const set=v=>{const j=scoreJoke(p,k,v);save();closeSheet();render();if(finished())setTimeout(openEnd,250);else toast(j)};
+      const set=v=>{const j=scoreJoke(p,k,v);save();pushLive(true);closeSheet();render();if(finished())setTimeout(openEnd,250);else toast(j)};
       sh.querySelector("#ok").onclick=()=>r&&set(r.pts);
       sh.querySelector("#cross").onclick=()=>set(0);
-      const c=sh.querySelector("#clear");if(c)c.onclick=()=>{delete S.scores[p][k];save();closeSheet();render()};
+      const c=sh.querySelector("#clear");if(c)c.onclick=()=>{delete S.scores[p][k];save();pushLive(true);closeSheet();render()};
       const cn=sh.querySelector("#cancel");if(cn)cn.onclick=closeSheet;
       sh.querySelector("#manOk").onclick=()=>{const v=parseInt(sh.querySelector("#man").value,10);if(v>=0&&v<=100)set(v)};
     });
@@ -1280,12 +1280,20 @@ function liveData(){
   return{players:S.players.slice(0,12).map(n=>String(n).slice(0,30)),scores,settings:{...S.settings},started:!!S.started,
     last:S.started&&S.last?{p:S.last.p,k:S.last.k,v:S.last.v}:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
 }
+function sendLive(){
+  clearTimeout(liveT);liveT=0;const code=S.live;if(!code||VIEW||!DB)return;
+  DB.collection("direct").doc(code).set(liveData()).then(()=>{liveErr=null;showLive()},e=>{liveErr=isDenied(e)?"denied":"error";showLive()});
+}
+/* now=true : envoi immédiat (score inscrit, appli mise en arrière-plan) ; sinon on regroupe les touches de dés. */
 function pushLive(now){
   if(!S.live||VIEW||!DB)return;
-  clearTimeout(liveT);
-  liveT=setTimeout(()=>{const code=S.live;if(!code)return;
-    DB.collection("direct").doc(code).set(liveData()).then(()=>{liveErr=null;showLive()},e=>{liveErr=isDenied(e)?"denied":"error";showLive()})},now?0:400);
+  if(now){sendLive();return}
+  clearTimeout(liveT);liveT=setTimeout(sendLive,400);
 }
+/* Si l'appli de l'hôte passe en arrière-plan (écran éteint, autre appli), on envoie tout de suite ce qui attendait :
+   sinon Android met le minuteur en pause et les spectateurs ne voient le coup qu'au retour. */
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&liveT&&S.live&&!VIEW)pushLive(true)});
+window.addEventListener("pagehide",()=>{if(liveT&&S.live&&!VIEW)pushLive(true)});
 function liveMsg(){
   if(liveErr==="denied")return"⚠️ Direct refusé par Firebase : il faut autoriser la collection « direct » dans les règles Firestore.";
   if(liveErr)return"Connexion perdue : le direct reprendra tout seul.";
@@ -1365,7 +1373,7 @@ async function startScan(sh,done){
   }catch(e){stopScan();toast(e&&e.name==="NotAllowedError"?"Accès à la caméra refusé : entre le code":"Caméra indisponible : entre le code")}
 }
 /* côté spectateur */
-let VS="loading",lastSeen=null;
+let VS="loading",lastSeen=null,lastRaw=null;
 function cleanLive(d){
   if(!d||!Array.isArray(d.players)||!d.players.length)return null;
   const players=d.players.slice(0,12).map(n=>txt(n).slice(0,30));
@@ -1381,9 +1389,11 @@ function cleanLive(d){
 }
 function watchLive(){
   if(!DB){VS="error";render();return}
-  DB.collection("direct").doc(VIEW).onSnapshot(snap=>{
+  const onSnap=snap=>{
     if(!snap.exists){VS="missing";S.players=[];S.started=false;render();return}
-    const g=cleanLive(snap.data());
+    const raw=snap.data(),js=JSON.stringify({...raw,updatedAt:null});
+    if(js===lastRaw&&VS==="ok")return;lastRaw=js; // relecture identique : rien à redessiner
+    const g=cleanLive(raw);
     if(!g){VS="missing";render();return}
     Object.assign(S,g);VS="ok";
     const sig=g.started&&g.last?`${g.last.p}|${g.last.k}|${g.last.v}`:"";
@@ -1391,7 +1401,15 @@ function watchLive(){
     render();
     if(changed){const c=document.querySelector(`.live td.cell[data-p="${g.last.p}"][data-k="${g.last.k}"]`);if(c)c.classList.add("flash");
       if(finished())toast("Partie terminée !")}
-  },e=>{VS=isDenied(e)?"denied":"error";render()});
+  };
+  DB.collection("direct").doc(VIEW).onSnapshot(onSnap,e=>{VS=isDenied(e)?"denied":"error";render()});
+  /* Filet de sécurité : Safari (iPhone) rate parfois une mise à jour en temps réel.
+     On relit la partie sur le serveur toutes les 10 s pendant le jeu et au retour sur l'appli ;
+     si la relecture apporte du nouveau, l'écran est mis à jour comme pour l'écoute en direct. */
+  const resync=()=>{if(document.hidden||VS!=="ok"||!S.started||finished())return;
+    DB.collection("direct").doc(VIEW).get({source:"server"}).then(onSnap,()=>{})};
+  setInterval(resync,10000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)resync()});
 }
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
