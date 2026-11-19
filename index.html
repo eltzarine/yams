@@ -113,6 +113,25 @@ header h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:cl
 .prow .grip:active{cursor:grabbing}
 .prow input{flex:1;min-width:0;height:46px;border:1px solid var(--line-strong);border-radius:10px;padding:0 12px;font:inherit;font-size:17px;background:var(--bg);color:var(--ink)}
 .prow button{width:46px;border:1px solid var(--line);border-radius:10px;background:transparent;font-size:20px;color:var(--muted)}
+.who1{width:100%;height:50px;border:1.5px solid var(--gold);border-radius:12px;background:transparent;color:var(--ink);font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 10px}
+.who1 svg{width:22px;height:22px;color:var(--gold)}
+.prow{position:relative}
+.startchip{position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--gold);color:#1B2620;border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;pointer-events:none}
+/* roulette « Qui commence ? » */
+.rwl{display:grid;gap:10px;width:100%}
+.rwl.two{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rw{height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:0 10px;background:rgba(255,255,255,.1);color:#FFFFFF;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .08s,transform .08s}
+.rwl.two .rw{height:48px;font-size:21px}
+.rw.on{background:var(--gold);color:#1B2620;transform:scale(1.06);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.rw.dim{opacity:.4}
+.rw.win{background:var(--gold);color:#1B2620;font-size:30px;animation:s-win .7s cubic-bezier(.2,.8,.3,1) both}
+@keyframes s-win{0%{transform:scale(1)}40%{transform:scale(1.18)}70%{transform:scale(.97)}100%{transform:scale(1.08)}}
+.sov .snd{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2;width:44px;height:44px;border:1.5px solid rgba(255,255,255,.35);border-radius:50%;background:transparent;color:#FFFFFF;display:grid;place-items:center}
+.sov .snd svg{width:20px;height:20px}
+.rbtns{width:100%;display:flex;flex-direction:column;align-items:center}.rbtns[hidden]{display:none}
+.rres{min-height:70px;margin-top:20px;text-align:center}
+.rres b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:34px;font-weight:700;color:var(--gold)}
+.rres small{display:block;font-size:15px;opacity:.85;margin-top:4px}
 .add{width:100%;height:46px;border:1px dashed var(--line-strong);border-radius:10px;background:transparent;font-weight:600;color:var(--muted);margin:4px 0 16px}
 .primary{width:100%;height:52px;border:0;border-radius:12px;background:var(--felt);color:var(--felt-ink);font-weight:700;font-size:18px}
 .secondary{width:100%;height:48px;border:1px solid var(--line-strong);border-radius:12px;background:transparent;font-weight:600;margin-top:10px}
@@ -740,8 +759,9 @@ function setupHTML(){
   return `<header><h1>Yam’s Gaillon</h1></header>
   ${seasonBarHTML()}
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
-  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
+  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next">${i===0&&ui.starter&&pkey(n)===pkey(ui.starter)?`<span class="startchip">commence</span>`:""}<button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
   <button class="add" id="addP">Ajouter un joueur</button>
+  <button class="who1" id="btnWho">${DIE_ICON}Qui commence ?</button>
   <button class="primary" id="go">Commencer la partie</button>
   <button class="secondary" id="btnFollow">Suivre une partie</button></div>`;
 }
@@ -750,11 +770,12 @@ function bindSetup(){
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(S.players.length>1){S.players.splice(+b.dataset.del,1);save();render()}});
   bindDrag();
   document.getElementById("btnFollow").onclick=openFollow;
+  document.getElementById("btnWho").onclick=openRoulette;
   document.getElementById("addP").onclick=()=>{if(S.players.length>=12)return;S.players.push("");save();render();const ins=document.querySelectorAll("#plist input");ins[ins.length-1].focus()};
   document.getElementById("go").onclick=()=>{
     S.players=S.players.map(n=>String(n).trim().slice(0,30)).filter(Boolean).slice(0,12);
     if(!S.players.length){S.players=[""];render();return}
-    resetGame();S.started=true;save();render();
+    ui.starter=null;resetGame();S.started=true;save();render();
   };
 }
 
@@ -883,6 +904,58 @@ function openEnd(){
     sh.querySelector("#again").onclick=()=>{resetGame();save();closeSheet();render()};
     sh.querySelector("#look").onclick=closeSheet;
   });
+}
+
+/* ---------- « Qui commence ? » : roulette des joueurs ---------- */
+/* Tirage équitable (crypto.getRandomValues), jingle joué par le synthétiseur du navigateur (aucun fichier son). */
+const DIE_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="16" cy="16" r="1.4" fill="currentColor"/></svg>`;
+const SND_ON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>`;
+const SND_OFF=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6M22 9l-6 6"/></svg>`;
+const SOUND_KEY="yams-son";
+function soundOn(){try{return localStorage.getItem(SOUND_KEY)!=="0"}catch(e){return true}}
+let AC=null;
+function audioCtx(){if(!soundOn())return null;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC}catch(e){return null}}
+function tone(f,at,dur,type,vol){const a=audioCtx();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}
+function fanfare(){[[523,0,.14],[659,.14,.14],[784,.28,.14],[1047,.44,.55]].forEach(([f,a,d])=>{tone(f,a,d,"triangle",.18);tone(f/2,a,d,"sine",.08)})}
+function openRoulette(){
+  const names=S.players.map(n=>String(n).trim().slice(0,30)).filter(Boolean).slice(0,12);
+  if(names.length<2){toast("Ajoute au moins deux joueurs pour le tirage.");return}
+  audioCtx(); // débloque le son sur iPhone (il faut un toucher)
+  const n=names.length,two=n>6;
+  const o=overlay(`<div class="conf" aria-hidden="true" id="rlConf"></div><button class="snd" id="rlSnd" aria-label="${soundOn()?"Couper le son":"Activer le son"}">${soundOn()?SND_ON:SND_OFF}</button>
+    <div class="in"><p class="kick">Tirage au sort</p><h1 style="font-size:44px;margin:8px 0 24px">Qui commence ?</h1>
+    <div class="rwl${two?" two":""}">${names.map((x,i)=>`<div class="rw" data-i="${i}">${esc(x)}</div>`).join("")}</div>
+    <div class="rres" id="rlRes" aria-live="polite"></div><div class="grow"></div>
+    <div id="rlBtns" class="rbtns" hidden><button class="go" id="rlGo">C’est parti</button><button class="again" id="rlAgain">Relancer la roulette</button></div></div>`);
+  const cells=[...o.querySelectorAll(".rw")];let timers=[],idx=0,winner=-1;
+  const clear=()=>{timers.forEach(clearTimeout);timers=[]};
+  const show=i=>cells.forEach((c,k)=>c.classList.toggle("on",k===i));
+  const spin=()=>{
+    clear();winner=-1;cells.forEach(c=>c.classList.remove("win","dim","on"));
+    o.querySelector("#rlRes").innerHTML="";o.querySelector("#rlBtns").hidden=true;o.querySelector("#rlConf").innerHTML="";
+    const r=new Uint32Array(1);crypto.getRandomValues(r);const w=r[0]%n;
+    const steps=n*3+((w-idx+n)%n)+n;let t=0;
+    for(let s=1;s<=steps;s++){const p=s/steps;t+=45+330*p*p*p+(s===steps?220:0);
+      timers.push(setTimeout(()=>{idx=(idx+1)%n;show(idx);tone(900+500*(1-s/steps),0,.045,"square",.05)},t))}
+    timers.push(setTimeout(()=>{
+      winner=w;cells.forEach((c,k)=>{c.classList.remove("on");c.classList.toggle("win",k===w);c.classList.toggle("dim",k!==w)});
+      const order=names.slice(w).concat(names.slice(0,w));
+      o.querySelector("#rlRes").innerHTML=`<b>${esc(names[w])} commence !</b><small>Ordre : ${order.map(esc).join(" → ")}</small>`;
+      o.querySelector("#rlConf").innerHTML=Array.from({length:30},(_,i)=>`<span class="cf" style="left:${(i*37)%100}%;background:${CONF_COLORS[i%6]};animation-delay:${((i*7)%10)/10}s;animation-duration:${(2.2+((i*13)%12)/10).toFixed(1)}s"></span>`).join("");
+      o.querySelector("#rlBtns").hidden=false;fanfare();
+      try{navigator.vibrate&&navigator.vibrate([60,40,120])}catch(e){}
+      o.querySelector("#rlGo").focus({preventScroll:true});
+    },t+120));
+  };
+  o.querySelector("#rlSnd").onclick=e=>{const on=!soundOn();try{localStorage.setItem(SOUND_KEY,on?"1":"0")}catch(_){}
+    const b=e.currentTarget;b.innerHTML=on?SND_ON:SND_OFF;b.setAttribute("aria-label",on?"Couper le son":"Activer le son");if(on)audioCtx()};
+  o.querySelector("#rlAgain").onclick=spin;
+  o.querySelector("#rlGo").onclick=()=>{clear();if(winner<0)return;
+    S.players=names.slice(winner).concat(names.slice(0,winner));ui.starter=names[winner];save();closeOverlay(o);render();toast(`${names[winner]} commence !`)};
+  if(window.gtag)gtag("event","qui_commence",{joueurs:n});
+  spin();
 }
 
 /* ---------- saisons : 1 saison = 1 mois calendaire ---------- */
