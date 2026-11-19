@@ -1113,7 +1113,8 @@ function histHTML(){
   const yams=HIST.reduce((a,g)=>a+(g.sheet?g.sheet.filter(x=>x.v[yi]>0).length:0),0);
   return`${head}${sub(HIST.length)}
   <div class="hsec">Classement · meilleur score de chacun</div>
-  <ol class="rank srank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
+  <ol class="rank srank">${(ui.rankAll?r:r.slice(0,3)).map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
+  ${r.length>3?`<button class="replay" id="rankAll" style="margin:-6px auto 10px">${ui.rankAll?"Réduire le classement":`Voir tout le classement (${r.length} joueurs)`}</button>`:""}
   <div class="tiles"><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div><div><b>${rec?rec.t:"–"}</b><small>Record maison</small></div></div>
   <div class="hsec">Parties de la saison</div>
   <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
@@ -1140,9 +1141,10 @@ function watchHist(){
     snap=>{HIST=snap.docs.map(cleanGame).filter(Boolean);HERR=false;refreshHist();seasonDataChanged()},
     ()=>{HERR=true;histSub=null;refreshHist()});
 }
-function openHist(){watchHist();watchRecord();openSheet(histHTML(),sh=>{sh.querySelectorAll("[data-see]").forEach(b=>b.onclick=()=>{
+function openHist(fresh){if(fresh!==false&&ui.sheet!=="hist")ui.rankAll=false;watchHist();watchRecord();openSheet(histHTML(),sh=>{sh.querySelectorAll("[data-see]").forEach(b=>b.onclick=()=>{
   const g=(HIST||[]).find(x=>x.id===b.dataset.see);if(g)openPastSheet(g)});
-  const rp=sh.querySelector("#seasonReplay");if(rp)rp.onclick=()=>{closeSheet();showIntro()}});ui.sheet="hist"}
+  const rp=sh.querySelector("#seasonReplay");if(rp)rp.onclick=()=>{closeSheet();showIntro()};
+  const ra=sh.querySelector("#rankAll");if(ra)ra.onclick=()=>{ui.rankAll=!ui.rankAll;refreshHist()}});ui.sheet="hist"}
 function openPastSheet(g){
   const P=g.sheet, tot=P.map(x=>{const haut=x.v.slice(0,6).reduce((a,b)=>a+b,0),bas=x.v.slice(6).reduce((a,b)=>a+b,0);return{haut,bas,prime:x.prime,total:haut+x.prime+bas}});
   const best=Math.max(...tot.map(t=>t.total));
