@@ -9,14 +9,25 @@
    on remet la page à la taille d'un écran de téléphone (~400 px). Les tablettes et ordinateurs ne sont pas touchés. */
 (function(){
   var d=document.documentElement,last="";
+  function mesure(){
+    var w=window.innerWidth,dpr=window.devicePixelRatio||1,phys=w*dpr,
+        sw=Math.min(screen.width||0,screen.height||0)||w,
+        coarse=!!(window.matchMedia&&matchMedia("(pointer:coarse)").matches),
+        tactile=coarse||(navigator.maxTouchPoints||0)>0,
+        /* A : page plus large que l'écran d'un téléphone (« version ordinateur », zoom du navigateur…) */
+        a=tactile&&sw>0&&sw<600&&w>sw*1.15,
+        /* B : ancienne règle (zoom qui agrandit aussi screen.width) */
+        b=tactile&&w>520&&phys<=1440,
+        z=(a||b)?String(Math.round(w/400*100)/100):"";
+    return {w:w,h:window.innerHeight,dpr:dpr,phys:Math.round(phys),sw:screen.width,sh:screen.height,coarse:coarse,
+            touch:navigator.maxTouchPoints||0,a:a,b:b,z:z};
+  }
   function fit(){
-    var w=window.innerWidth,phys=w*(window.devicePixelRatio||1),
-        tactile=window.matchMedia&&matchMedia("(pointer:coarse)").matches,
-        dezoome=tactile&&w>520&&phys<=1440,
-        z=dezoome?String(Math.round(w/400*100)/100):"";
+    var z=mesure().z;
     if(z===last)return;last=z;
     d.style.zoom=z;d.classList.toggle("fitz",!!z);
   }
+  window.__yamsMesure=mesure;
   fit();addEventListener("resize",fit);addEventListener("orientationchange",fit);
   /* iOS ignore user-scalable=no : on bloque aussi le pincement */
   ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
@@ -1554,6 +1565,34 @@ const Pwa={on:false,waiting:null,reg:null,clicked:false,reloading:false,lastChec
     this.lastCheck=Date.now();return this.reg.update().catch(()=>{})}
 };
 Pwa.init();
+</script>
+<script>
+/* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le titre « Yam’s Gaillon » */
+(function(){
+  function show(){
+    var old=document.getElementById("diagbox");if(old){old.remove();return}
+    var m=window.__yamsMesure?window.__yamsMesure():{},de=document.documentElement,
+        wrap=document.querySelector(".wrap,#turn,header"),
+        sa=(matchMedia("(display-mode: standalone)").matches||navigator.standalone)?"oui":"non",
+        vv=window.visualViewport,
+        L=[["Version","v32"],["Appli installée",sa],["Page (CSS px)",m.w+" × "+m.h],["Écran (CSS px)",m.sw+" × "+m.sh],
+           ["Densité (DPR)",m.dpr],["Largeur physique",m.phys+" px"],["Tactile","coarse="+m.coarse+" · points="+m.touch],
+           ["Règle A / B",(m.a?"oui":"non")+" / "+(m.b?"oui":"non")],["Zoom appliqué",de.style.zoom||"aucun"],
+           ["Zoom visuel",vv?Math.round(vv.scale*100)/100:"?"],["Largeur contenu",wrap?Math.round(wrap.getBoundingClientRect().width)+" px":"?"],
+           ["Navigateur",navigator.userAgent]];
+    var b=document.createElement("div");b.id="diagbox";
+    b.style.cssText="position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:9999;background:#111;color:#fff;border:2px solid #E8B44A;border-radius:12px;padding:12px 14px;font:13px/1.4 system-ui,sans-serif;word-break:break-word;box-shadow:0 10px 30px rgba(0,0,0,.5)";
+    b.innerHTML="<b style='font-size:15px'>Diagnostic affichage</b> <span style='opacity:.7'>(toucher pour fermer)</span><br>"+
+      L.map(function(r){return "<span style='opacity:.7'>"+r[0]+" :</span> "+String(r[1]).replace(/</g,"&lt;")}).join("<br>");
+    b.onclick=function(){b.remove()};document.body.appendChild(b);
+  }
+  if(/[?&]diag\b/.test(location.search))addEventListener("load",function(){setTimeout(show,800)});
+  var n=0,t=0;
+  document.addEventListener("click",function(e){
+    if(!e.target.closest||!e.target.closest("header h1"))return;
+    var now=Date.now();n=(now-t<600)?n+1:1;t=now;if(n>=5){n=0;show()}
+  });
+})();
 </script>
 </body>
 </html>
