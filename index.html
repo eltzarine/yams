@@ -95,9 +95,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--pen);outline-of
 .wrap{max-width:720px;margin:0 auto;padding:12px 12px 32px}
 
 /* header */
-header{display:flex;align-items:center;gap:8px;padding:6px 2px 12px;flex-wrap:wrap}
-header h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:28px;margin:0;flex:1;letter-spacing:.01em}
-.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;height:40px;padding:0 12px;font-weight:600;font-size:15px}
+header{display:flex;align-items:center;gap:6px;padding:4px 2px 10px;flex-wrap:nowrap}
+header h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:clamp(22px,6.6vw,28px);margin:0;flex:1;min-width:0;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;height:44px;padding:0 12px;font-weight:600;font-size:15px;flex:none;white-space:nowrap}
+.iconbtn.sq{width:44px;padding:0;display:inline-grid;place-items:center}
+.iconbtn.sq svg{width:22px;height:22px}
+/* petits écrans (iPhone SE, petits Android) : Inviter / Direct en icône seule */
+@media (max-width:374px){.iconbtn.invite .lbl,.iconbtn.liveon .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.iconbtn.invite,.iconbtn.liveon{width:44px;padding:0;justify-content:center}}
 
 /* setup */
 .setup{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
@@ -214,11 +218,13 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 
 /* écran du joueur en cours */
 .tcard{max-width:560px;margin:0 auto;background:var(--surface);border-radius:20px;overflow:hidden;overflow:clip;box-shadow:0 10px 40px rgba(0,0,0,.25)}
-.thead{background:var(--felt);color:var(--felt-ink);padding:14px 16px 16px;display:flex;align-items:flex-start;gap:10px}
+.thead{background:var(--felt);color:var(--felt-ink);padding:12px 14px 12px;display:flex;align-items:flex-start;gap:10px}
+.trow{display:flex;align-items:baseline;gap:10px}
+.trow small{flex:none;white-space:nowrap}
 .thead .who{flex:1;min-width:0}
 .thead small{opacity:.8;font-size:14px}
-.thead h2{font-family:"Barlow Condensed",sans-serif;font-size:34px;line-height:1.05;margin:2px 0 0;overflow-wrap:anywhere}
-.tstats{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.thead h2{flex:1;min-width:0;font-family:"Barlow Condensed",sans-serif;font-size:28px;line-height:1.05;margin:0;overflow-wrap:anywhere}
+.tstats{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .tstats span{background:rgba(255,255,255,.14);border-radius:8px;padding:4px 8px;font-size:14px}
 .tstats span.ok{background:var(--gold);color:#1B2620;font-weight:700}
 .tbody{padding:14px 14px 16px}
@@ -243,7 +249,8 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 .confirm{position:sticky;bottom:0;z-index:2;margin:14px -14px -16px;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 18px rgba(0,0,0,.10)}
 .confirm .why{color:var(--muted);font-size:14px;text-align:center;margin-top:6px}
 /* onglets */
-.tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin:0 0 12px}
+.tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px;margin:0 0 10px}
+.wrap.mode-turn{padding-bottom:0}
 .tabs button{flex:1;min-width:0;height:42px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
 .tabs button[aria-pressed="true"]{background:var(--felt);color:var(--felt-ink)}
 .wrap.mode-turn .scroller,.wrap.mode-turn .hint{display:none}
@@ -339,12 +346,13 @@ html.has-update body{padding-top:var(--updh)}
 .follow input{width:100%;height:56px;border:1px solid var(--line-strong);border-radius:12px;text-align:center;font-family:"Barlow Condensed",sans-serif;font-size:32px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:var(--bg);color:var(--ink);margin:0 0 12px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 /* ---------- saisons ---------- */
-.sbar{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;border:0;border-radius:14px;background:var(--felt);color:var(--felt-ink);padding:8px 14px;text-align:left;margin:0 0 12px}
+.sbar{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;border:0;border-radius:12px;background:var(--felt);color:var(--felt-ink);padding:5px 6px 5px 12px;text-align:left;margin:0 0 8px}
 .sbar .mk{flex:none;display:inline-flex;align-items:center;line-height:1}
 .sbar .nm{flex:1;min-width:0}
-.sbar .nm b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:20px;font-weight:700;line-height:1.1}
-.sbar .nm small{display:block;font-size:13px;opacity:.85}
-.sbar .j{background:var(--gold);color:#1B2620;border-radius:8px;padding:5px 9px;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;white-space:nowrap}
+.sbar .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.sbar .nm b{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700}
+.sbar .nm small{font-size:15px;opacity:.85}
+.sbar .j{flex:none;background:var(--gold);color:#1B2620;border-radius:8px;padding:3px 9px;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;white-space:nowrap}
 .sbar.last{background:var(--surface);color:var(--ink);border:2px solid var(--pip)}
 .sbar.last .nm b{color:var(--pip)}.sbar.last .nm small{color:var(--muted);opacity:1}
 .sbar.last .j{background:var(--pip);color:#FFFFFF}
@@ -531,7 +539,7 @@ function render(){try{return renderMain()}finally{syncWake()}}
 function renderMain(){
   if(VIEW)return renderView();
   const app=document.getElementById("app");
-  if(!S.started){document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();document.getElementById("btnHist").onclick=openHist;window.scrollTo(0,0);return}
+  if(!S.started){document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();window.scrollTo(0,0);return}
   const tot=S.players.map((_,p)=>totals(p));
   const best=Math.max(...tot.map(t=>t.total));
   const anyScore=tot.some(t=>t.total>0);
@@ -543,10 +551,9 @@ function renderMain(){
     return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}`;
   app.innerHTML=`
   <header><h1>Yam’s Gaillon</h1>
-    <button class="iconbtn" id="btnHist">Saison</button>
-    <button class="iconbtn" id="btnSettings">Règles</button>
-    <button class="iconbtn" id="btnNew">Nouvelle partie</button>
-    <button class="iconbtn ${S.live?"liveon":"invite"+(S.invited?"":" fresh")}" id="btnLive">${S.live?`<i aria-hidden="true"></i>Direct`:`${QR_ICON}Inviter`}</button></header>
+    <button class="iconbtn sq" id="btnSettings" aria-label="Règles" title="Règles">${GEAR_ICON}</button>
+    <button class="iconbtn sq" id="btnNew" aria-label="Nouvelle partie" title="Nouvelle partie">${NEW_ICON}</button>
+    <button class="iconbtn ${S.live?"liveon":"invite"+(S.invited?"":" fresh")}" id="btnLive" ${S.live?`aria-label="Direct"`:`aria-label="Inviter"`}>${S.live?`<i aria-hidden="true"></i><span class="lbl">Direct</span>`:`${QR_ICON}<span class="lbl">Inviter</span>`}</button></header>
   ${seasonBarHTML()}
   ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
     <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
@@ -554,7 +561,6 @@ function renderMain(){
   ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}
   <p class="hint">Touche une case du tableau pour corriger un score.</p>`;
   document.getElementById("btnSettings").onclick=openSettings;
-  document.getElementById("btnHist").onclick=openHist;
   document.getElementById("btnNew").onclick=openNew;
   document.getElementById("btnLive").onclick=openInvite;
   app.classList.toggle("mode-turn",cp>=0&&ui.turnOpen);
@@ -617,7 +623,7 @@ function renderTurn(){
   }
   const last=S.last&&S.scores[S.last.p]&&S.scores[S.last.p][S.last.k]===S.last.v?S.last:null;
   el.innerHTML=`<section class="tcard" aria-label="Tour de ${esc(name)}">
-    <div class="thead"><div class="who"><small>Tour ${round} sur ${ALL.length}</small><h2>À toi, ${esc(name)}</h2>
+    <div class="thead"><div class="who"><div class="trow"><h2>À toi, ${esc(name)}</h2><small>Tour ${round}/${ALL.length}</small></div>
       <div class="tstats"><span>Total ${t.total}</span><span>Haut ${t.haut}</span>${prime}</div></div></div>
     <div class="tbody">
       ${last?`<div class="done"><span>✓ ${esc(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}${last.j?`<span class="jk">${esc(last.j)}</span>`:""}</span><button id="tUndo">Annuler</button></div>`:""}
@@ -731,7 +737,7 @@ function endQuip(name,t,st,rec){
 }
 
 function setupHTML(){
-  return `<header><h1>Yam’s Gaillon</h1><button class="iconbtn" id="btnHist">Saison</button></header>
+  return `<header><h1>Yam’s Gaillon</h1></header>
   ${seasonBarHTML()}
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
   <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"><button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
@@ -930,8 +936,8 @@ function leaderKey(){const r=seasonRank(HIST);return r[0]?pkey(r[0].n):null}
 /* bandeau de saison (accueil et feuille) */
 function seasonBarHTML(){
   const s=SEASON,th=s.th,l=leftParts(s),lead=seasonRank(HIST)[0];
-  if(l.d===0)return`<button class="sbar last" id="seasonBar" data-season><span class="dot" aria-hidden="true"></span><span class="nm"><b>Dernier jour de ${esc(th.n)} !</b><small>${lead?`Dernière chance de battre ${lead.t}`:"Dernière chance de marquer la saison"}</small></span><span class="j" aria-label="Fin dans ${l.h} heures ${l.m} minutes">${p2(l.h)}:${p2(l.m)}</span></button>`;
-  return`<button class="sbar" id="seasonBar" data-season><span class="mk">${markHTML(th,"#E9B949",38,13)}</span><span class="nm"><b>Saison ${esc(th.n)}</b><small>${lead?`Leader : ${esc(lead.n)} · ${lead.t}`:"Aucune partie encore : à toi d’ouvrir le bal"}</small></span><span class="j" aria-label="Fin dans ${l.d} jour${l.d>1?"s":""}">J-${l.d}</span></button>`;
+  if(l.d===0)return`<button class="sbar last" id="seasonBar" data-season><span class="dot" aria-hidden="true"></span><span class="nm"><b>Dernier jour !</b> <small>${lead?`· à battre : ${lead.t}`:`· ${esc(th.n)}`}</small></span><span class="j" aria-label="Fin dans ${l.h} heures ${l.m} minutes">${p2(l.h)}:${p2(l.m)}</span></button>`;
+  return`<button class="sbar" id="seasonBar" data-season><span class="mk">${markHTML(th,"#E9B949",34,12)}</span><span class="nm"><b>${esc(th.n)}</b> <small>${lead?`· ${esc(lead.n)} ${lead.t}`:"· à toi d’ouvrir le bal"}</small></span><span class="j" aria-label="Fin dans ${l.d} jour${l.d>1?"s":""}">J-${l.d}</span></button>`;
 }
 function refreshBar(){const b=document.getElementById("seasonBar");if(b)b.outerHTML=seasonBarHTML()}
 /* nouvelles données de saison : bandeau et moustache du leader à jour */
@@ -1214,6 +1220,10 @@ function liveMsg(){
 }
 function showLive(){const el=document.getElementById("liveSt");if(el)el.textContent=liveMsg()}
 function qrSVG(t){try{const q=qrcode(0,"M");q.addData(t);q.make();return q.createSvgTag({cellSize:4,margin:4,scalable:true,title:"QR code de la partie"})}catch(e){return""}}
+const GEAR_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
+const NEW_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>`;
+const SHARE_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>`;
+const QUIT_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
 const QR_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>`;
 function openInvite(){
   if(!DB){toast("Le direct a besoin de la base Firebase.");return}
@@ -1312,7 +1322,7 @@ function watchLive(){
 }
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
-  const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn invite" id="btnInstallView">${DL_ICON}Installer</button>`}${VS==="ok"?`<button class="iconbtn" id="btnShareView">Partager</button>`:""}<button class="iconbtn" id="btnQuit">Quitter</button></header>`;
+  const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn invite" id="btnInstallView" aria-label="Installer">${DL_ICON}<span class="lbl">Installer</span></button>`}${VS==="ok"?`<button class="iconbtn sq" id="btnShareView" aria-label="Partager" title="Partager">${SHARE_ICON}</button>`:""}<button class="iconbtn sq" id="btnQuit" aria-label="Quitter" title="Quitter">${QUIT_ICON}</button></header>`;
   const box=(t,m)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p></div>`;
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
