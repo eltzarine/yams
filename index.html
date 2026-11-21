@@ -55,7 +55,10 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQ8CDEPL7G"></script>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
-gtag('js',new Date());gtag('config','G-WQ8CDEPL7G');
+gtag('js',new Date());
+/* infos jointes à tous les événements : appli installée ou navigateur, joueur ou spectateur */
+try{gtag('set',{mode_appli:(matchMedia('(display-mode: standalone)').matches||navigator.standalone)?'appli':'navigateur',role:/[?&]partie=/.test(location.search)?'spectateur':'joueur'})}catch(e){}
+gtag('config','G-WQ8CDEPL7G');
 </script>
 <!-- Firebase (historique partagé) -->
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -695,7 +698,7 @@ document.getElementById("app").addEventListener("click",e=>{
   if(VIEW)return;
   const b=e.target.closest("td.cell button");if(b)openCell(+b.dataset.p,b.dataset.k);
 });
-function resetGame(){S.scores={};S.gid=null;S.gdate=null;S.savedSig=null;S.dice=[];S.last=null;ui.sel=null;ui.turnOpen=true}
+function resetGame(){S.t0=Date.now();S.scores={};S.gid=null;S.gdate=null;S.savedSig=null;S.dice=[];S.last=null;ui.sel=null;ui.turnOpen=true}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function clamp(v,a,b){v=Math.round(+v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):a}
 
@@ -794,6 +797,7 @@ function bindSetup(){
     S.players=S.players.map(n=>String(n).trim().slice(0,30)).filter(Boolean).slice(0,12);
     if(!S.players.length){S.players=[""];render();return}
     ui.starter=null;resetGame();S.started=true;save();render();
+    if(window.gtag)gtag("event","partie_commencee",{joueurs:S.players.length});
   };
 }
 
@@ -900,12 +904,20 @@ function openSettings(){
   });
 }
 
+/* partie quittée avant la fin : combien de cases étaient remplies */
+function trackAbandon(){
+  if(!window.gtag||!S.started||finished())return;
+  const tot=S.players.length*ALL.length;let n=0;
+  S.players.forEach((_,p)=>ALL.forEach(k=>{if((S.scores[p]||{})[k]!=null)n++}));
+  if(!n)return;
+  gtag("event","partie_abandonnee",{joueurs:S.players.length,remplissage:Math.round(100*n/tot),duree_min:S.t0?Math.round((Date.now()-S.t0)/60000):undefined});
+}
 function openNew(){
   openSheet(`<h3 id="sheetTitle">Nouvelle partie</h3><div class="sub">Les scores actuels seront effacés.</div>
     <button class="primary" id="change">Créer la nouvelle partie</button>
     <button class="secondary" id="keep">Continuer cette partie</button>`,
   sh=>{
-    sh.querySelector("#change").onclick=()=>{resetGame();S.started=false;save();closeSheet();render()};
+    sh.querySelector("#change").onclick=()=>{trackAbandon();resetGame();S.started=false;save();closeSheet();render()};
     sh.querySelector("#keep").onclick=closeSheet;
   });
 }
@@ -919,7 +931,7 @@ function openEnd(){
     <button class="primary" id="again">Rejouer avec les mêmes joueurs</button>
     <button class="secondary" id="look">Voir la feuille</button>`,
   sh=>{
-    sh.querySelector("#again").onclick=()=>{resetGame();save();closeSheet();render()};
+    sh.querySelector("#again").onclick=()=>{resetGame();save();closeSheet();render();if(window.gtag)gtag("event","partie_commencee",{joueurs:S.players.length,rejouer:"oui"})};
     sh.querySelector("#look").onclick=closeSheet;
   });
 }
@@ -1124,6 +1136,13 @@ function gameData(){
     return{n:String(n).slice(0,30),v:ALL.map(k=>Math.max(0,Math.min(500,sc[k]|0))),prime:Math.max(0,Math.min(500,totals(p).prime|0))}});
   return{date:new Date().toISOString(),winner:r[0].n,top:r[0].t,ranking:r,sheet};
 }
+/* détails envoyés à Google Analytics en fin de partie */
+function endInfo(d){
+  const yi=ALL.indexOf("yams"),dur=S.t0?Math.round((Date.now()-S.t0)/60000):null;
+  const o={joueurs:S.players.length,meilleur_score:d.top,nb_yams:yi<0?0:d.sheet.filter(x=>x.v[yi]>0).length,en_direct:S.live?"oui":"non"};
+  if(dur!=null&&dur>0&&dur<600)o.duree_min=dur;
+  return o;
+}
 const inflight=new Map();let syncAgain=false,syncState=null;
 function syncMsg(){
   if(!DB)return"⚠️ Partie non enregistrée : l'historique n'est pas configuré (Firebase).";
@@ -1195,7 +1214,7 @@ async function syncGame(){
     await pushGame(DB.collection("parties").doc(gid),d,!!prev);
     outboxDone(gid,d);
     if(gid===S.gid)syncState="ok";
-    if(!prev&&window.gtag)gtag("event","partie_terminee",{joueurs:S.players.length})}
+    if(!prev&&window.gtag)gtag("event","partie_terminee",endInfo(d))}
   catch(e){
     const denied=isDenied(e)||(e&&(e.code==="invalid_argument"||e.code==="not_granted"));
     if(gid===S.gid){S.savedSig=prev;syncState=denied?"denied":"error"}
