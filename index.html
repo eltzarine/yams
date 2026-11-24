@@ -470,6 +470,26 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .sheet .sfoot .secondary{margin-top:8px}
 /* comptes joueurs */
 .prow.me input{border-color:var(--felt);font-weight:700;padding-right:58px}
+/* invités (#guest), comptes, code pour rejoindre, « Déjà joué avec » */
+.gtag{font-size:.7em;font-weight:500;opacity:.6;margin-left:1px;letter-spacing:0}
+thead th .gtag{display:block;font-size:11px;line-height:1.1;margin:1px 0 0}
+.joined.vg{margin:0 0 12px}.joined.vg .secondary{margin-top:8px;height:42px}
+.prow.g input{padding-right:70px}.prow.ac input{padding-right:84px;font-weight:700}
+.gchip,.acchip{position:absolute;right:62px;top:50%;transform:translateY(-50%);border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;pointer-events:none}
+.gchip{color:var(--muted);border:1px solid var(--line-strong)}
+.acchip{background:color-mix(in srgb,var(--felt) 16%,transparent);color:var(--felt)}
+.joinbox{display:flex;align-items:center;gap:12px;border:1.5px solid var(--gold);border-radius:12px;padding:8px 8px 8px 14px;margin:0 0 16px}
+.joinbox .jt{flex:1;min-width:0;display:flex;flex-direction:column}
+.joinbox small{color:var(--muted);font-size:13px}
+.joinbox b{font-family:"Barlow Condensed",sans-serif;font-size:30px;line-height:1.1;letter-spacing:.12em}
+.joinbox .jqr{height:46px;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:10px;background:var(--gold);color:#1B2620;font-weight:700;font-size:16px;padding:0 14px}
+.joinbox .jqr svg,.who1 svg.qr{width:20px;height:20px}
+.who1>svg{flex:none}
+.mates{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
+.mates .mt{width:100%;font-size:14px;color:var(--muted)}
+.mate{height:38px;border:1px solid var(--felt);border-radius:19px;background:transparent;color:var(--felt);font-weight:700;padding:0 14px;font-size:15px}
+.follow input.jname{height:48px;padding:0 14px;text-align:left;font-family:inherit;font-size:17px;font-weight:500;letter-spacing:0;text-transform:none;margin:0 0 12px}
+.joined{border:1px solid var(--felt);border-radius:12px;padding:10px 12px;margin:0 0 6px;font-size:15px;line-height:1.4}
 .mechip{position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--felt);color:var(--felt-ink);border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;pointer-events:none}
 .prow.me .startchip{right:110px}
 .add.addme{border-color:var(--felt);color:var(--felt);font-weight:700}
@@ -630,13 +650,13 @@ function render(){try{return renderMain()}finally{syncWake()}}
 function renderMain(){
   if(VIEW)return renderView();
   const app=document.getElementById("app");
-  if(!S.started){if(typeof ensureMe==="function")ensureMe();document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();window.scrollTo(0,0);return}
+  if(!S.started){if(typeof ensureMe==="function")ensureMe();ensureLiveCode();document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();window.scrollTo(0,0);return}
   const tot=S.players.map((_,p)=>totals(p));
   const best=Math.max(...tot.map(t=>t.total));
   const anyScore=tot.some(t=>t.total>0);
   const cp=finished()?-1:curPlayer().p;
   const lk=leaderKey();
-  const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,p===cp?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${p===cp?"▶ ":""}${esc(n)}</th>`).join("");
+  const head=S.players.map((n,p)=>`<th scope="col" data-col="${p}" class="${anyScore&&tot[p].total===best?"lead":""} ${p===cp?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,p===cp?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${p===cp?"▶ ":""}${nm(n)}</th>`).join("");
   const row=k=>`${S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
     const cls=v==null?"empty":v===0?"zero":"";
     return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}`;
@@ -648,7 +668,7 @@ function renderMain(){
   ${seasonBarHTML()}
   ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
     <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
-    <button id="tabTurn" aria-pressed="${ui.turnOpen}">▶ ${esc(S.players[cp])}</button></div>`:""}
+    <button id="tabTurn" aria-pressed="${ui.turnOpen}">▶ ${nm(S.players[cp])}</button></div>`:""}
   ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}
   <p class="hint">Touche une case du tableau pour corriger un score.</p>`;
   document.getElementById("btnSettings").onclick=openSettings;
@@ -714,10 +734,10 @@ function renderTurn(){
   }
   const last=S.last&&S.scores[S.last.p]&&S.scores[S.last.p][S.last.k]===S.last.v?S.last:null;
   el.innerHTML=`<section class="tcard" aria-label="Tour de ${esc(name)}">
-    <div class="thead"><div class="who"><div class="trow"><h2>À toi, ${esc(name)}</h2><small>Tour ${round}/${ALL.length}</small></div>
+    <div class="thead"><div class="who"><div class="trow"><h2>À toi, ${nm(name)}</h2><small>Tour ${round}/${ALL.length}</small></div>
       <div class="tstats"><span>Total ${t.total}</span><span>Haut ${t.haut}</span>${prime}</div></div></div>
     <div class="tbody">
-      ${last?`<div class="done"><span>✓ ${esc(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}${last.j?`<span class="jk">${esc(last.j)}</span>`:""}</span><button id="tUndo">Annuler</button></div>`:""}
+      ${last?`<div class="done"><span>✓ ${nm(S.players[last.p])} : ${last.v?`${last.v} en ${LABEL[last.k]}`:`${LABEL[last.k]} barré`}${last.j?`<span class="jk">${esc(last.j)}</span>`:""}</span><button id="tUndo">Annuler</button></div>`:""}
       <div class="tlabel">Tes dés <span>${d.length?`<button id="tClear">Vider</button>`:`<em>${5-d.length} à entrer</em>`}</span></div>
       ${diceHTML(d)}
       <div class="tlabel">Il te reste à faire <em>${left.length} case${pl} · ${upLeft} en haut, ${lowLeft} en bas</em></div>
@@ -751,6 +771,14 @@ document.getElementById("app").addEventListener("click",e=>{
 });
 function resetGame(){S.t0=Date.now();S.scores={};S.gid=null;S.gdate=null;S.savedSig=null;S.dice=[];S.last=null;ui.sel=null;ui.turnOpen=true}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+/* ---------- invités : suffixe #guest ----------
+   Un pseudo de compte ne peut pas contenir « # » : « Marina#guest » ne peut donc jamais être confondu avec un compte. */
+const GUEST="#guest",GUEST_MAX=22;
+const isGuestN=n=>/#guest$/i.test(String(n??"").trim());
+const baseN=n=>String(n??"").trim().replace(/#guest$/i,"").replace(/#/g,"").replace(/\s+/g," ").trim();
+const guestN=n=>{const b=baseN(n).slice(0,GUEST_MAX).trim();return b?b+GUEST:""};
+/* nom affiché : « #guest » en petit et en gris */
+function nm(n){n=String(n??"");return isGuestN(n)?`${esc(baseN(n))}<span class="gtag">${GUEST}</span>`:esc(n)}
 function clamp(v,a,b){v=Math.round(+v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):a}
 
 /* ---------- blagues ---------- */
@@ -827,32 +855,91 @@ function endQuip(name,t,st,rec){
   return`${t>=st.avg?"Au-dessus de":"Sous"} la moyenne (${fmtAvg(st.avg)}). ${esc(base)}`;
 }
 
+/* type de chaque ligne : moi (compte connecté sur ce téléphone), compte (ajouté depuis « Déjà joué avec »
+   ou qui a rejoint avec son compte), sinon invité → suffixe #guest au lancement */
+function rowKinds(){
+  const acc=new Set((S.accts||[]).map(pkey)),used=new Set();
+  return S.players.map(n=>{const k=pkey(n);if(!String(n??"").trim())return"guest";
+    if(typeof isMe==="function"&&isMe(n)&&!used.has(k)){used.add(k);return"me"}
+    if(!isGuestN(n)&&acc.has(k)&&!used.has(k)){used.add(k);return"acct"}
+    return"guest"});
+}
+function finalNames(){const kd=rowKinds();return S.players.map((n,i)=>kd[i]==="guest"?guestN(n):String(n).trim().slice(0,30))}
+function addAcct(n){n=String(n||"").trim();if(!n||n.includes("#"))return;S.accts=(S.accts||[]).filter(x=>pkey(x)!==pkey(n));S.accts.unshift(n);S.accts=S.accts.slice(0,40)}
+function joinOf(n){const J=S.joins||{};return Object.keys(J).find(id=>!J[id].off&&J[id].n===n)||null}
+/* joueurs avec compte déjà croisés : gardés sur ce téléphone + parties de la saison où je figure, vérifiés dans « joueurs » */
+const PART_KEY="yams-partenaires";
+function readPartners(){try{const a=JSON.parse(localStorage.getItem(PART_KEY)||"[]");return Array.isArray(a)?a.filter(x=>typeof x==="string"):[]}catch(e){return[]}}
+function addPartners(list){const me=typeof meName==="function"?meName():null;let a=readPartners();
+  for(const n of list){const t=String(n||"").trim();if(!t||t.includes("#")||(me&&pkey(t)===pkey(me)))continue;a=a.filter(x=>pkey(x)!==pkey(t));a.unshift(t)}
+  try{localStorage.setItem(PART_KEY,JSON.stringify(a.slice(0,30)))}catch(e){}}
+let MATES=[],matesKey="";
+function mateCandidates(){const me=typeof meName==="function"?meName():null;if(!me)return[];
+  const out=[],seen=new Set([pkey(me)]),push=n=>{const t=String(n||"").trim();if(!t||t.includes("#")||t.length>16)return;const k=pkey(t);if(seen.has(k))return;seen.add(k);out.push(t)};
+  readPartners().forEach(push);
+  for(const g of HIST||[]){const names=(g.ranking||[]).map(x=>String(x.n||""));if(names.some(x=>pkey(x)===pkey(me)))names.forEach(push)}
+  return out.slice(0,30);
+}
+async function loadMates(){
+  if(!DB)return;const c=mateCandidates(),key=c.join("|");
+  if(key===matesKey)return;matesKey=key;
+  if(!c.length){MATES=[];refreshMates();return}
+  try{const snap=await DB.collection("joueurs").where("pseudo","in",c).get();
+    if(key!==matesKey)return;
+    const ok=new Set(snap.docs.map(d=>String((d.data()||{}).pseudo||"")));
+    MATES=c.filter(n=>ok.has(n));refreshMates()}
+  catch(e){matesKey=""}
+}
+function matesHTML(){
+  const inT=new Set(S.players.map(pkey)),l=MATES.filter(n=>!inT.has(pkey(n))).slice(0,10);
+  if(!l.length||S.players.length>=12&&!S.players.some(n=>!String(n).trim()))return`<div id="mates" hidden></div>`;
+  return`<div id="mates" class="mates"><span class="mt">Déjà joué avec</span>${l.map(n=>`<button class="mate" data-mate="${esc(n)}">+ ${esc(n)}</button>`).join("")}</div>`;
+}
+function bindMates(){document.querySelectorAll("[data-mate]").forEach(b=>b.onclick=()=>{const n=b.dataset.mate;
+  if(S.players.some(x=>pkey(x)===pkey(n)))return;addAcct(n);
+  const e=S.players.findIndex(x=>!String(x).trim());if(e>=0)S.players[e]=n;else if(S.players.length<12)S.players.push(n);else return;
+  save();render()})}
+function refreshMates(){const el=document.getElementById("mates");if(!el||S.started||VIEW)return;el.outerHTML=matesHTML();bindMates()}
+
 function setupHTML(){
+  const kd=rowKinds();
   return `<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
-  <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
+  <div class="setup">${DB&&S.live?`<div class="joinbox"><div class="jt"><small>Code de la partie</small><b>${esc(S.live)}</b></div><button class="jqr" id="btnJoinQR">${QR_ICON}<span>Faire rejoindre</span></button></div>`:DB?`<button class="who1" id="btnJoinQR">${QR_ICON}Faire rejoindre des joueurs</button>`:""}
+  <h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre. Les noms tapés à la main jouent en invité (#guest).</p>
   ${(()=>{const me=typeof meName==="function"?meName():null;const meIn=me&&S.players.some(n=>pkey(n)===pkey(me));
-  return `<div id="plist" data-me="${esc(me||"")}">${S.players.map((n,i)=>{const mine=me&&pkey(n)===pkey(me);return `<div class="prow${mine?" me":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":""}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"${mine?" readonly":""}>${mine?`<span class="mechip">moi</span>`:""}${i===0&&ui.starter&&pkey(n)===pkey(ui.starter)?`<span class="startchip">commence</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
+  return `<div id="plist" data-me="${esc(me||"")}">${S.players.map((n,i)=>{const k=kd[i],mine=k==="me",acct=k==="acct",joined=!!joinOf(n),ro=mine||acct||joined,
+    st=i===0&&ui.starter&&pkey(n)===pkey(ui.starter),val=k==="guest"?baseN(n):n;
+    return `<div class="prow${mine?" me":acct?" ac":val?" g":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(val)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(val)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":acct?" (compte)":val?" (invité)":""}" placeholder="Joueur ${i+1}" maxlength="${k==="guest"?GUEST_MAX:30}" autocomplete="off" enterkeyhint="next"${ro?" readonly":""}>${st?`<span class="startchip">commence</span>`:mine?`<span class="mechip">moi</span>`:acct?`<span class="acchip">compte</span>`:val?`<span class="gchip">${GUEST}</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
   ${me&&!meIn?`<button class="add addme" id="addMe">+ M’ajouter (${esc(me)})</button>`:""}`})()}
+  ${matesHTML()}
   <button class="add" id="addP">Ajouter un joueur</button>
   <button class="who1" id="btnWho">${DIE_ICON}Qui commence ?</button>
   <button class="primary" id="go">Commencer la partie</button>
+  <button class="secondary" id="btnJoin">Rejoindre une partie</button>
   <button class="secondary" id="btnFollow">Suivre une partie</button></div>`;
 }
 function bindSetup(){
-  document.querySelectorAll("#plist input").forEach(inp=>inp.oninput=()=>{S.players[+inp.dataset.i]=inp.value;save()});
+  document.querySelectorAll("#plist input").forEach(inp=>inp.oninput=()=>{if(inp.readOnly)return;
+    const v=inp.value.replace(/#/g,"");if(v!==inp.value)inp.value=v;
+    const row=inp.closest(".prow");if(row)row.classList.toggle("g",!!v.trim());
+    S.players[+inp.dataset.i]=v;save()});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del,mine=typeof isMe==="function"&&isMe(S.players[i]);
     if(mine)S.meOff=true;
-    if(S.players.length>1)S.players.splice(i,1);else if(mine)S.players=[""];else return;
+    const jid=joinOf(S.players[i]);if(jid)S.joins[jid].off=true;
+    if(S.players.length>1)S.players.splice(i,1);else if(mine||jid)S.players=[""];else return;
     save();render()});
   const am=document.getElementById("addMe");if(am)am.onclick=()=>{S.meOff=false;ensureMe();render()};
-  bindDrag();
+  bindDrag();bindMates();loadMates();
   document.getElementById("btnFollow").onclick=openFollow;
+  document.getElementById("btnJoin").onclick=()=>openJoin();
+  const jq=document.getElementById("btnJoinQR");if(jq)jq.onclick=openInvite;
   if(typeof bindAcctBtn==="function")bindAcctBtn();
   document.getElementById("btnWho").onclick=openRoulette;
   document.getElementById("addP").onclick=()=>{if(S.players.length>=12)return;S.players.push("");save();render();const ins=document.querySelectorAll("#plist input");ins[ins.length-1].focus()};
   document.getElementById("go").onclick=()=>{
-    S.players=S.players.map(n=>String(n).trim().slice(0,30)).filter(Boolean).slice(0,12);
+    const kd=rowKinds();addPartners(S.players.filter((_,i)=>kd[i]==="acct"));
+    S.players=finalNames().filter(Boolean).slice(0,12);
     if(!S.players.length){S.players=[""];render();return}
     ui.starter=null;resetGame();S.started=true;save();render();
     if(window.gtag)gtag("event","partie_commencee",{joueurs:S.players.length});
@@ -916,7 +1003,7 @@ function openCell(p,k){
   const draw=()=>{
     const d=ui.sheet.dice, full=d.length===5, r=full?compute(k,d):null;
     openSheet(`
-      <h3 id="sheetTitle">${esc(S.players[p])} · ${LABEL[k]}</h3>
+      <h3 id="sheetTitle">${nm(S.players[p])} · ${LABEL[k]}</h3>
       <div class="sub">${cur!=null?`Actuellement ${cur} point${cur>1?"s":""}. `:""}Touche les faces pour entrer tes 5 dés.</div>
       ${diceHTML(d)}
       <div class="result">${r?`<span class="pts">${r.pts} pt${r.pts>1?"s":""}</span><span class="why">${r.why}</span>`:`<span class="why" style="text-align:left">${5-d.length} dé${5-d.length>1?"s":""} à entrer</span>`}</div>
@@ -983,8 +1070,8 @@ function openNew(){
 function openEnd(){
   const r=S.players.map((n,p)=>({n,t:totals(p).total})).sort((a,b)=>b.t-a.t);
   const st=histStats(S.gid),rec=houseRecord(S.gid);
-  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${esc(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final${st?` · record de la saison ${st.best.t}, moyenne ${fmtAvg(st.avg)}`:""}</div>
-    <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em><small class="quip">${endQuip(x.n,x.t,st,rec)}</small></li>`).join("")}</ol>
+  openSheet(`<h3 id="sheetTitle">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`${nm(r[0].n)} gagne avec ${r[0].t} points`}</h3><div class="sub">Classement final${st?` · record de la saison ${st.best.t}, moyenne ${fmtAvg(st.avg)}`:""}</div>
+    <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${nm(x.n)}</span><em>${x.t}</em><small class="quip">${endQuip(x.n,x.t,st,rec)}</small></li>`).join("")}</ol>
     <p class="hint" id="syncSt">${esc(syncMsg())}</p>
     <button class="primary" id="again">Rejouer avec les mêmes joueurs</button>
     <button class="secondary" id="look">Voir la feuille</button>`,
@@ -1014,7 +1101,7 @@ function openRoulette(){
   const n=names.length,two=n>6;
   const o=overlay(`<div class="conf" aria-hidden="true" id="rlConf"></div><button class="snd" id="rlSnd" aria-label="${soundOn()?"Couper le son":"Activer le son"}">${soundOn()?SND_ON:SND_OFF}</button>
     <div class="in"><p class="kick">Tirage au sort</p><h1 style="font-size:44px;margin:8px 0 24px">Qui commence ?</h1>
-    <div class="rwl${two?" two":""}">${names.map((x,i)=>`<div class="rw" data-i="${i}">${esc(x)}</div>`).join("")}</div>
+    <div class="rwl${two?" two":""}">${names.map((x,i)=>`<div class="rw" data-i="${i}">${nm(x)}</div>`).join("")}</div>
     <div class="rres" id="rlRes" aria-live="polite"></div><div class="grow"></div>
     <div id="rlBtns" class="rbtns" hidden><button class="go" id="rlGo">C’est parti</button><button class="again" id="rlAgain">Relancer la roulette</button></div></div>`);
   const cells=[...o.querySelectorAll(".rw")];let timers=[],idx=0,winner=-1;
@@ -1030,7 +1117,7 @@ function openRoulette(){
     timers.push(setTimeout(()=>{
       winner=w;cells.forEach((c,k)=>{c.classList.remove("on");c.classList.toggle("win",k===w);c.classList.toggle("dim",k!==w)});
       const order=names.slice(w).concat(names.slice(0,w));
-      o.querySelector("#rlRes").innerHTML=`<b>${esc(names[w])} commence !</b><small>Ordre : ${order.map(esc).join(" → ")}</small>`;
+      o.querySelector("#rlRes").innerHTML=`<b>${nm(names[w])} commence !</b><small>Ordre : ${order.map(nm).join(" → ")}</small>`;
       o.querySelector("#rlConf").innerHTML=Array.from({length:30},(_,i)=>`<span class="cf" style="left:${(i*37)%100}%;background:${CONF_COLORS[i%6]};animation-delay:${((i*7)%10)/10}s;animation-duration:${(2.2+((i*13)%12)/10).toFixed(1)}s"></span>`).join("");
       o.querySelector("#rlBtns").hidden=false;fanfare();
       try{navigator.vibrate&&navigator.vibrate([60,40,120])}catch(e){}
@@ -1098,7 +1185,7 @@ function leaderKey(){const r=seasonRank(HIST);return r[0]?pkey(r[0].n):null}
 function seasonBarHTML(){
   const s=SEASON,th=s.th,l=leftParts(s),lead=seasonRank(HIST)[0];
   if(l.d===0)return`<button class="sbar last" id="seasonBar" data-season><span class="dot" aria-hidden="true"></span><span class="nm"><b>Dernier jour !</b> <small>${lead?`· à battre : ${lead.t}`:`· ${esc(th.n)}`}</small></span><span class="j" aria-label="Fin dans ${l.h} heures ${l.m} minutes">${p2(l.h)}:${p2(l.m)}</span></button>`;
-  return`<button class="sbar" id="seasonBar" data-season><span class="mk">${markHTML(th,"#E9B949",34,12)}</span><span class="nm"><b>${esc(th.n)}</b> <small>${lead?`· ${esc(lead.n)} ${lead.t}`:"· à toi d’ouvrir le bal"}</small></span><span class="j" aria-label="Fin dans ${l.d} jour${l.d>1?"s":""}">J-${l.d}</span></button>`;
+  return`<button class="sbar" id="seasonBar" data-season><span class="mk">${markHTML(th,"#E9B949",34,12)}</span><span class="nm"><b>${esc(th.n)}</b> <small>${lead?`· ${nm(lead.n)} ${lead.t}`:"· à toi d’ouvrir le bal"}</small></span><span class="j" aria-label="Fin dans ${l.d} jour${l.d>1?"s":""}">J-${l.d}</span></button>`;
 }
 function refreshBar(){const b=document.getElementById("seasonBar");if(b)b.outerHTML=seasonBarHTML()}
 /* nouvelles données de saison : bandeau et moustache du leader à jour */
@@ -1159,7 +1246,7 @@ function showIntro(){return new Promise(done=>{
 const CONF_COLORS=["#E9B949","#FFFFFF","#C2362F","#8EA8FF","#E9B949","#7ED1A6"];
 function showPodium(s,r){return new Promise(done=>{
   const th=s.th,top=r.slice(0,3),ch=top[0];
-  const col=(x,pl)=>x?`<div class="col c${pl}"><div class="nmx s-n${pl}">${pl===1?`<span class="s-sm">${markHTML(th,"#E9B949",60,20,"Champion de la saison")}</span>`:""}<div class="who">${esc(x.n)}</div><div class="pts">${x.t}</div></div><div class="step st${pl} s-b${pl}">${pl}</div></div>`:`<div class="col"></div>`;
+  const col=(x,pl)=>x?`<div class="col c${pl}"><div class="nmx s-n${pl}">${pl===1?`<span class="s-sm">${markHTML(th,"#E9B949",60,20,"Champion de la saison")}</span>`:""}<div class="who">${nm(x.n)}</div><div class="pts">${x.t}</div></div><div class="step st${pl} s-b${pl}">${pl}</div></div>`:`<div class="col"></div>`;
   const conf=Array.from({length:36},(_,i)=>`<span class="cf" style="left:${(i*37)%100}%;background:${CONF_COLORS[i%6]};animation-delay:${(2.3+((i*7)%20)/10).toFixed(1)}s;animation-duration:${(2.6+((i*13)%15)/10).toFixed(1)}s"></span>`).join("");
   const o=overlay(`<div class="conf" aria-hidden="true">${conf}</div><div class="in">
     <p class="kick s-t0">Fin de la saison ${esc(th.n)}</p>
@@ -1296,13 +1383,13 @@ function histHTML(){
   const yams=HIST.reduce((a,g)=>a+(g.sheet?g.sheet.filter(x=>x.v[yi]>0).length:0),0);
   return`${head}${sub(HIST.length)}
   <div class="hsec">Classement · meilleur score de chacun</div>
-  <ol class="rank srank">${(ui.rankAll?r:r.slice(0,3)).map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
+  <ol class="rank srank">${(ui.rankAll?r:r.slice(0,3)).map((x,i)=>`<li><b>${i+1}</b><span>${nm(x.n)}${i===0?`<span class="lmk">${markHTML(th,"currentColor",28,10,"Leader de la saison")}</span>`:""}<small>Meilleur score le ${esc(fmtDayShort(x.date))}</small></span><em>${x.t}</em></li>`).join("")}</ol>
   ${r.length>3?`<button class="replay" id="rankAll" style="margin:-6px auto 10px">${ui.rankAll?"Réduire le classement":`Voir tout le classement (${r.length} joueurs)`}</button>`:""}
   <div class="tiles"><div><b>${HIST.length}</b><small>Partie${HIST.length>1?"s":""} jouée${HIST.length>1?"s":""}</small></div><div><b>${st?fmtAvg(st.avg):"–"}</b><small>Moyenne</small></div><div><b>${yams}</b><small>Yams réussi${yams>1?"s":""}</small></div></div>
-  ${rec?`<div class="allrec"><div><span class="tag">Toutes saisons</span><span class="lb">Record absolu${rec.n?` · <strong>${esc(rec.n)}</strong>`:""}</span></div><b>${rec.t}</b></div>`:""}
+  ${rec?`<div class="allrec"><div><span class="tag">Toutes saisons</span><span class="lb">Record absolu${rec.n?` · <strong>${nm(rec.n)}</strong>`:""}</span></div><b>${rec.t}</b></div>`:""}
   <div class="hsec">Parties de la saison</div>
-  <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${esc(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
-    <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${esc(x.n)} ${x.t}`:`<strong>${esc(x.n)} ${x.t}</strong>`).join(" · ")}</div>
+  <ul class="hist">${HIST.map(g=>`<li><div class="hd"><b>🏆 ${nm(g.winner)} · ${g.top}</b><small>${esc(fmtDate(g.date))}</small></div>
+    <div class="rk">${(g.ranking||[]).map((x,i)=>i?`${nm(x.n)} ${x.t}`:`<strong>${nm(x.n)} ${x.t}</strong>`).join(" · ")}</div>
     ${g.sheet?`<button class="see" data-see="${esc(g.id)}">Voir la feuille →</button>`:""}</li>`).join("")}</ul>
   ${HIST.some(g=>!g.sheet)?`<p class="hint">La feuille détaillée n'existe pas pour les plus anciennes parties.</p>`:""}
   ${replay}`;
@@ -1334,8 +1421,8 @@ function openPastSheet(g){
   const best=Math.max(...tot.map(t=>t.total));
   const cells=i=>P.map(x=>`<td class="cell ${x.v[i]===0?"zero":""}">${x.v[i]}</td>`).join("");
   openSheet(`<div class="hv">${CLOSE}<button class="back" id="hvBack">← Saison</button>
-    <h3 id="sheetTitle">🏆 ${esc(g.winner)} · ${g.top}</h3><div class="sub">${esc(fmtDate(g.date))}</div>
-    ${boardHTML(P.map((x,p)=>`<th scope="col" class="${tot[p].total===best?"lead":""}">${esc(x.n)}</th>`).join(""),UPPER.map((_,i)=>cells(i)),LOWER.map((_,i)=>cells(i+6)),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>–</td>`,"Prime")}</div>`,
+    <h3 id="sheetTitle">🏆 ${nm(g.winner)} · ${g.top}</h3><div class="sub">${esc(fmtDate(g.date))}</div>
+    ${boardHTML(P.map((x,p)=>`<th scope="col" class="${tot[p].total===best?"lead":""}">${nm(x.n)}</th>`).join(""),UPPER.map((_,i)=>cells(i)),LOWER.map((_,i)=>cells(i+6)),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>–</td>`,"Prime")}</div>`,
   sh=>{sh.querySelector("#hvBack").onclick=openHist;sh.scrollTop=0});
   ui.sheet="histview";
 }
@@ -1353,6 +1440,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(VIEW){watchLive();watchHist();watchRecord();return} // spectateurs : partie en direct + saison en cours
   if(!DB){refreshHist();return}
   if(S.live)pushLive(true);
+  watchJoins();
+  if(!S.started)render(); // affiche le code de la partie (créé dans ensureLiveCode)
   watchHist(); // saison en cours, chargée dès le départ (bandeau, leader, scores de fin de partie)
   watchRecord();
   prevPromise=loadPrev();
@@ -1373,7 +1462,8 @@ async function shareLink(url){
 }
 function liveData(){
   const scores={};if(S.started)S.players.forEach((_,p)=>{const r=S.scores[p];if(r)scores[p]={...r}});
-  return{players:S.players.slice(0,12).map(n=>String(n).slice(0,30)),scores,settings:{...S.settings},started:!!S.started,
+  const pl=S.started?S.players.slice(0,12).map(n=>String(n).slice(0,30)):finalNames().filter(Boolean).slice(0,12);
+  return{players:pl.length?pl:[""],scores,settings:{...S.settings},started:!!S.started,
     last:S.started&&S.last?{p:S.last.p,k:S.last.k,v:S.last.v}:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
 }
 function sendLive(){
@@ -1405,23 +1495,132 @@ const QR_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 function openInvite(){
   if(!DB){toast("Le direct a besoin de la base Firebase.");return}
   const fresh=!S.live;
-  if(fresh){S.live=newCode();S.invited=true;persist();render();if(window.gtag)gtag("event","direct_ouvert")}
+  if(fresh){S.live=newCode();S.joins={};S.liveOff=false;S.invited=true;persist();render();watchJoins();if(window.gtag)gtag("event","direct_ouvert")}
   pushLive(true);
-  const url=liveURL();
-  openSheet(`${CLOSE}<h3 id="sheetTitle">Suivre la partie</h3><div class="sub">Les autres scannent ce QR code avec l'appareil photo pour voir le tableau et les scores en direct.</div>
+  const url=liveURL(),setup=!S.started;
+  openSheet(`${CLOSE}<h3 id="sheetTitle">${setup?"Faire rejoindre":"Suivre la partie"}</h3><div class="sub">${setup?"Les autres joueurs scannent ce QR code avec l'appareil photo, ou touchent « Rejoindre une partie » dans l'appli et entrent le code. Ils s'ajoutent tout seuls à la liste.":"Les autres scannent ce QR code avec l'appareil photo pour voir le tableau et les scores en direct."}</div>
     <div class="qr">${qrSVG(url)}</div>
     <div class="code" aria-label="Code de la partie">${S.live}</div>
-    <p class="hint" style="margin:0 0 14px">ou « Suivre une partie » dans l'appli (scan ou code)</p>
+    <p class="hint" style="margin:0 0 14px">${setup?"La partie se suit aussi en direct avec ce code.":"ou « Suivre une partie » dans l'appli (scan ou code)"}</p>
     <p class="hint" id="liveSt" style="margin:0 0 14px">${esc(liveMsg())}</p>
     <button class="primary" id="share">Envoyer le lien</button>
-    <button class="secondary danger" id="stopLive">Arrêter le direct</button>`,
+    <button class="secondary danger" id="stopLive">${setup?"Fermer la partie aux autres":"Arrêter le direct"}</button>`,
   sh=>{
     sh.querySelector("#share").onclick=()=>shareLink(url);
     sh.querySelector("#stopLive").onclick=()=>{
-      const code=S.live;S.live=null;clearTimeout(liveT);persist();closeSheet();render();
+      const code=S.live;S.live=null;S.joins={};S.liveOff=true;clearTimeout(liveT);persist();watchJoins();closeSheet();render();
       if(DB&&code)DB.collection("direct").doc(code).delete().catch(()=>{});
-      toast("Direct arrêté");
+      toast(setup?"Plus personne ne peut rejoindre":"Direct arrêté");
     };
+  });
+}
+/* en préparation de partie : un code est créé d'office pour que les autres puissent rejoindre */
+function ensureLiveCode(){if(VIEW||!DB||S.started||S.live||S.liveOff)return;S.live=newCode();S.joins={};persist();pushLive(true);watchJoins()}
+/* joueurs qui rejoignent : direct/{code}/joueurs/{id} (id = uid du compte, ou identifiant d'invité « g… ») */
+let joinSub=null,joinCode=null;
+function watchJoins(){
+  if(VIEW||!DB)return;
+  if(joinSub&&joinCode===S.live)return;
+  if(joinSub){joinSub();joinSub=null}
+  joinCode=S.live||null;if(!joinCode)return;
+  joinSub=DB.collection("direct").doc(joinCode).collection("joueurs").onSnapshot(snap=>onJoins(snap.docs),()=>{joinSub=null;joinCode=null});
+}
+function onJoins(docs){
+  if(!S.joins||typeof S.joins!=="object")S.joins={};
+  let changed=false;const msgs=[];
+  for(const d of docs){const x=d.data()||{},acct=x.compte===true;
+    const n=acct?String(x.pseudo||"").trim().slice(0,16):guestN(x.pseudo);
+    if(!n||(acct&&n.includes("#")))continue;
+    const j=S.joins[d.id];
+    if(!j){
+      if(S.started)continue; // on ne rejoint qu'avant le début de la partie
+      S.joins[d.id]={n,acct};if(acct)addAcct(n);changed=true;
+      if(S.players.some(p=>String(p).trim()===n))continue; // déjà à la table (ajouté depuis « Déjà joué avec »)
+      const e=S.players.findIndex(p=>!String(p).trim());
+      if(e>=0)S.players[e]=n;else if(S.players.length<12)S.players.push(n);
+      else{S.joins[d.id].off=true;msgs.push(`Table pleine : ${n} n'a pas pu rejoindre`);continue}
+      msgs.push(`${n} a rejoint la partie`);
+    }else if(!j.off&&j.n!==n){
+      // invité qui se connecte ou crée son compte : son nom devient son pseudo, ses scores restent à leur place
+      const i=S.players.findIndex(p=>p===j.n);if(acct)addAcct(n);
+      if(i>=0){S.players[i]=n;msgs.push(`${j.n} joue maintenant sous le nom ${n}`)}
+      j.n=n;j.acct=acct;changed=true;
+    }
+  }
+  if(changed){save();pushLive(true);render()}
+  if(msgs.length)toast(msgs.join(" · "));
+}
+/* ---------- rejoindre une partie (téléphone d'un autre joueur) ---------- */
+const JOIN_KEY="yams-rejoint",GID_KEY="yams-gid";
+function myGid(){try{let g=localStorage.getItem(GID_KEY);
+  if(!/^g[a-z0-9]{16}$/.test(g||"")){const A="abcdefghijklmnopqrstuvwxyz0123456789",r=new Uint32Array(16);crypto.getRandomValues(r);g="g"+Array.from(r,x=>A[x%36]).join("");localStorage.setItem(GID_KEY,g)}
+  return g}catch(e){return null}}
+function readJoin(){try{const j=JSON.parse(localStorage.getItem(JOIN_KEY)||"null");if(j&&typeof j.code==="string"&&typeof j.jid==="string"&&Date.now()-(+j.at||0)<24*3600e3)return j}catch(e){}return null}
+function getJoin(code){const j=readJoin();return j&&j.code===code?j:null}
+function setJoin(j){try{localStorage.setItem(JOIN_KEY,JSON.stringify(j))}catch(e){}}
+const GNAME_KEY="yams-nom-invite";
+function guestPrefill(){let n="";try{n=localStorage.getItem(GNAME_KEY)||""}catch(e){}if(!n&&!VIEW&&typeof lastLocalName==="function")n=lastLocalName();return baseN(n).slice(0,GUEST_MAX)}
+function joinRef(code,id){return DB.collection("direct").doc(code).collection("joueurs").doc(id)}
+const jerr=(m,code)=>Object.assign(new Error(m),{jcode:code||"x"});
+async function joinGame(code,guestName){
+  if(!DB)throw jerr("La base Firebase n'est pas configurée.");
+  let snap;try{snap=await DB.collection("direct").doc(code).get({source:"server"})}catch(e){throw jerr(isDenied(e)?"Accès refusé par la base Firebase.":"Pas de connexion. Vérifie le réseau.")}
+  if(!snap.exists)throw jerr("Partie introuvable. Vérifie le code.");
+  const d=snap.data()||{};
+  if(d.started)throw jerr("La partie a déjà commencé : tu peux seulement la suivre.","started");
+  const pl=(Array.isArray(d.players)?d.players:[]).map(x=>String(x||"").trim()).filter(Boolean);
+  const me=typeof meName==="function"?meName():null,TS=firebase.firestore.FieldValue.serverTimestamp();
+  const name=me||guestN(guestName);
+  if(!name)throw jerr("Entre ton prénom ou un surnom.","name");
+  if(!pl.includes(name)&&pl.length>=12)throw jerr("La table est pleine (12 joueurs).");
+  const jid=me?Acc.user.uid:myGid();if(!jid)throw jerr("Ton téléphone bloque l'enregistrement local : impossible de rejoindre.");
+  try{await joinRef(code,jid).set(me?{pseudo:me,compte:true,uid:jid,at:TS}:{pseudo:name,compte:false,at:TS})}
+  catch(e){throw jerr(isDenied(e)?"La base a refusé : la partie a peut-être commencé.":"Pas de connexion. Vérifie le réseau.")}
+  setJoin({code,jid,n:name,acct:!!me,at:Date.now()});
+  if(!me)try{localStorage.setItem(GNAME_KEY,baseN(name))}catch(e){}
+  if(window.gtag)gtag("event","partie_rejointe",{compte:me?"oui":"non"});
+  return name;
+}
+/* invité qui se connecte (ou crée son compte) après avoir rejoint : son nom devient son pseudo, même en cours de partie */
+let upBusy=false;
+async function upgradeJoin(){
+  if(!DB||upBusy)return;const me=typeof meName==="function"?meName():null;if(!me)return;
+  const j=readJoin();if(!j||j.acct)return;
+  upBusy=true;
+  try{await joinRef(j.code,j.jid).set({pseudo:me,compte:true,uid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
+    j.n=me;j.acct=true;setJoin(j);toast(`Tu joues maintenant sous ton pseudo : ${me}`);if(VIEW)render()}
+  catch(e){}finally{upBusy=false}
+}
+function openJoin(code){
+  const me=typeof meName==="function"?meName():null;
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Rejoindre ${code?"la partie "+esc(code):"une partie"}</h3><div class="sub">${code?"":"Scanne le QR code ou entre le code affiché sur le téléphone de celui qui tient la feuille. "}${me?`Tu seras ajouté sous ton pseudo <b>${esc(me)}</b>.`:"Sans compte, tu joues en invité (#guest). Connecte-toi et ton nom devient ton pseudo, même en cours de partie."}</div>
+    <div class="follow">${code?"":`<div class="scan" id="scan" hidden><video id="scanVid" playsinline muted autoplay></video></div>
+    <button class="ghost" id="fscan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/></svg>Scanner le QR code</button>
+    <input id="fcode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" aria-label="Code de la partie" placeholder="K7P2Q">`}
+    ${me?"":`<input id="jname" class="jname" maxlength="${GUEST_MAX}" autocomplete="nickname" autocapitalize="words" spellcheck="false" enterkeyhint="go" aria-label="Ton nom" placeholder="Ton prénom ou surnom" value="${esc(guestPrefill())}">`}</div>
+    <p class="accerr" role="alert" hidden></p>
+    <button class="primary" id="jgo">Rejoindre</button>
+    ${me?"":`<button class="secondary" id="jlog">Me connecter d'abord</button>`}
+    <button class="secondary" id="jfollow" hidden>Suivre la partie</button>`,
+  sh=>{
+    const ci=sh.querySelector("#fcode"),ni=sh.querySelector("#jname"),bt=sh.querySelector("#jgo"),fo=sh.querySelector("#jfollow");
+    if(ni)ni.oninput=()=>{const v=ni.value.replace(/#/g,"");if(v!==ni.value)ni.value=v};
+    const val=()=>code||(ci?ci.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,""):"");
+    const go=async()=>{const c=val();setErr(sh,"");fo.hidden=true;
+      if(c.length<4){if(ci)ci.focus();return}
+      busy(bt,true,"Un instant…");
+      try{const n=await joinGame(c,ni&&ni.value);
+        if(VIEW===c){busy(bt,false);closeSheet();render();toast(`Tu es dans la partie : ${n}`)}
+        else{stopScan();location.href=location.pathname+"?partie="+c}}
+      catch(e){busy(bt,false);setErr(sh,e.message||"Petit souci. Réessaie.");
+        if(e.jcode==="name"&&ni)ni.focus();
+        if(e.jcode==="started"&&VIEW!==c){fo.hidden=false;fo.onclick=()=>{stopScan();location.href=location.pathname+"?partie="+c}}}};
+    bt.onclick=go;
+    if(ci)ci.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();ni?ni.focus():go()}};
+    if(ni)ni.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go()}};
+    const lg=sh.querySelector("#jlog");if(lg)lg.onclick=()=>{if(typeof accTap==="function")accTap()};
+    const bs=sh.querySelector("#fscan");
+    if(bs)bs.onclick=()=>{if(scanStream){stopScan();return}startScan(sh,c=>{stopScan();ci.value=c;ni?ni.focus():go()})};
   });
 }
 function openFollow(){
@@ -1507,37 +1706,44 @@ function watchLive(){
   setInterval(resync,10000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)resync()});
 }
+let viewMates=false;
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
   const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn invite" id="btnInstallView" aria-label="Installer">${DL_ICON}<span class="lbl">Installer</span></button>`}${VS==="ok"?`<button class="iconbtn sq" id="btnShareView" aria-label="Partager" title="Partager">${SHARE_ICON}</button>`:""}<button class="iconbtn sq" id="btnQuit" aria-label="Quitter" title="Quitter">${QUIT_ICON}</button></header>`;
-  const box=(t,m)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p></div>`;
+  const box=(t,m,x)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p>${x||""}</div>`;
+  const jn=getJoin(VIEW),logged=typeof meName==="function"&&!!meName();
+  const loginBtn=jn&&!jn.acct&&!logged?`<button class="secondary" id="vLogin">Me connecter pour jouer avec mon pseudo</button>`:"";
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
       denied:"Accès refusé par la base Firebase.",error:"Impossible de se connecter pour le moment. Vérifie ta connexion."}[VS]
-      ||`La partie n'a pas encore commencé.${S.players.filter(Boolean).length?" Joueurs : "+S.players.filter(Boolean).map(esc).join(", ")+".":""}`;
-    app.innerHTML=box(`Partie ${esc(VIEW)}`,m);
+      ||`La partie n'a pas encore commencé.${S.players.filter(Boolean).length?" Joueurs : "+S.players.filter(Boolean).map(nm).join(", ")+".":""}`;
+    const x=VS==="ok"&&!S.started?(jn?`<div class="joined">✓ Tu es dans la partie sous le nom <b>${nm(jn.n)}</b>. Elle commence dès que celui qui tient la feuille la lance.</div>${loginBtn}`:`<button class="primary" id="vJoin">Rejoindre la partie</button>`):"";
+    app.innerHTML=box(`Partie ${esc(VIEW)}`,m,x);
   }else{
     const tot=S.players.map((_,p)=>totals(p)),best=Math.max(...tot.map(t=>t.total)),anyScore=tot.some(t=>t.total>0);
     const over=finished(),cur=over?null:curPlayer();
     const lk=leaderKey();
-    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${esc(n)}</th>`).join("");
+    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${nm(n)}</th>`).join("");
     const row=k=>S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
       return`<td class="cell ${v===0?"zero":""}" data-p="${p}" data-k="${k}">${v==null?"":v}</td>`}).join("");
     const L=S.last;
     let bar;
     if(over){
       const r=S.players.map((n,p)=>({n,t:tot[p].total})).sort((a,b)=>b.t-a.t);
-      bar=`<div class="on">Partie terminée · ${esc(VIEW)}</div><div class="who">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`🏆 ${esc(r[0].n)} gagne avec ${r[0].t}`}</div>
-        <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${esc(x.n)}</span><em>${x.t}</em></li>`).join("")}</ol>`;
+      bar=`<div class="on">Partie terminée · ${esc(VIEW)}</div><div class="who">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`🏆 ${nm(r[0].n)} gagne avec ${r[0].t}`}</div>
+        <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${nm(x.n)}</span><em>${x.t}</em></li>`).join("")}</ol>`;
     }else{
       bar=`<div class="on"><i aria-hidden="true"></i>En direct · partie ${esc(VIEW)}</div>
-        <div class="who">Au tour de ${esc(S.players[cur.p])} <small style="font-size:16px;color:var(--muted);font-weight:500">· tour ${cur.round}/${ALL.length}</small></div>
-        ${L?`<div class="lst">Dernier coup : ${esc(S.players[L.p])}, ${L.v?`${L.v} en ${LABEL[L.k]}`:`${LABEL[L.k]} barré`}</div>`:""}`;
+        <div class="who">Au tour de ${nm(S.players[cur.p])} <small style="font-size:16px;color:var(--muted);font-weight:500">· tour ${cur.round}/${ALL.length}</small></div>
+        ${L?`<div class="lst">Dernier coup : ${nm(S.players[L.p])}, ${L.v?`${L.v} en ${LABEL[L.k]}`:`${LABEL[L.k]} barré`}</div>`:""}`;
     }
-    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div><div class="live">
+    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div>${jn&&!jn.acct&&!logged?`<div class="joined vg">Tu joues en invité : <b>${nm(jn.n)}</b>. Connecte-toi et ton nom devient ton pseudo.${loginBtn}</div>`:""}<div class="live">
       ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}</div>
       <p class="hint">Tu regardes la partie : seul celui qui tient la feuille peut inscrire les scores.</p>`;
+    if(!viewMates){viewMates=true;addPartners(S.players.filter(n=>!isGuestN(n)))}
   }
+  const vj=document.getElementById("vJoin");if(vj)vj.onclick=()=>openJoin(VIEW);
+  const vl=document.getElementById("vLogin");if(vl)vl.onclick=()=>{if(typeof accTap==="function")accTap()};
   document.getElementById("btnQuit").onclick=()=>{location.href=location.pathname};
   const bs=document.getElementById("btnShareView");if(bs)bs.onclick=openShareView;
   const bi=document.getElementById("btnInstallView");if(bi)bi.onclick=installFromView;
@@ -1724,6 +1930,8 @@ function acctUI(){
   const on=!!(Acc.user&&Acc.pseudo);
   const sp=document.getElementById("acctChip");
   if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Invité";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
+  upgradeJoin();
+  if(VIEW){if(Acc.ready)render();return}
   const inSetup=!VIEW&&!S.started&&document.querySelector("#app header");
   const added=ensureMe();
   const pl=document.getElementById("plist");

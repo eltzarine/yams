@@ -43,6 +43,40 @@ service cloud.firestore {
       allow create, update: if code.matches('^[A-Z0-9]{4,8}$')
         && directValide(request.resource.data);
       allow delete: if true;
+
+      // Joueurs qui rejoignent la partie depuis leur téléphone (lus par l'appli de l'hôte).
+      // id = uid du compte, ou identifiant d'invité « g… » gardé sur le téléphone.
+      match /joueurs/{jid} {
+        function joueurValide(d) {
+          return d.keys().hasOnly(['pseudo', 'compte', 'uid', 'at'])
+            && d.pseudo is string && d.pseudo.size() >= 1 && d.pseudo.size() <= 30
+            && d.compte is bool
+            && d.at == request.time;
+        }
+        // compte : uniquement le sien, avec le pseudo validé par le mini-serveur
+        function commeCompte(d) {
+          return d.compte == true && request.auth != null
+            && d.uid == request.auth.uid
+            && d.pseudo == request.auth.token.pseudo;
+        }
+        // invité : nom sans « # » suivi de « #guest »
+        function commeInvite(d) {
+          return d.compte == false && !('uid' in d)
+            && d.pseudo.matches('^[^#]{1,22}#guest$');
+        }
+        allow read: if true;
+        allow create: if code.matches('^[A-Z0-9]{4,8}$')
+          && joueurValide(request.resource.data)
+          && ((commeCompte(request.resource.data) && jid == request.auth.uid)
+              || (commeInvite(request.resource.data) && jid.matches('^g[a-z0-9]{16}$')));
+        // un invité peut changer de nom, ou devenir son compte quand il se connecte
+        allow update: if joueurValide(request.resource.data)
+          && ((resource.data.compte == false && jid.matches('^g[a-z0-9]{16}$')
+                && (commeInvite(request.resource.data) || commeCompte(request.resource.data)))
+              || (resource.data.compte == true && commeCompte(request.resource.data)
+                && resource.data.uid == request.auth.uid));
+        allow delete: if false;
+      }
     }
     // Profil public d'un joueur (pseudo seulement) : chacun ne modifie que le sien,
     // et le pseudo doit être celui validé par le mini-serveur (unicité)
