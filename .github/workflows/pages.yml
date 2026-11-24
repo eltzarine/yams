@@ -37,6 +37,17 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         if: steps.source.outputs.build_type == 'workflow'
         with: { path: _site }
+      # GitHub met parfois quelques secondes à voir l'archive envoyée : petite pause, puis un second essai si besoin
+      - name: Pause
+        if: steps.source.outputs.build_type == 'workflow'
+        run: sleep 15
       - id: deploy
         if: steps.source.outputs.build_type == 'workflow'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Pause avant nouvel essai
+        if: steps.source.outputs.build_type == 'workflow' && steps.deploy.outcome == 'failure'
+        run: sleep 45
+      - id: deploy2
+        if: steps.source.outputs.build_type == 'workflow' && steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
