@@ -1,0 +1,4 @@
+node_modules/
+*.log
+# copie de ../auth/firestore.rules faite avant les tests
+firestore.rules

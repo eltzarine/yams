@@ -1,0 +1,42 @@
+name: Site (tests puis mise en ligne)
+
+# Publie le site seulement si les tests passent.
+# Nécessite Settings > Pages > Source : « GitHub Actions ». Tant que la source reste la branche,
+# ce workflow lance les tests puis laisse GitHub publier comme avant (aucune erreur).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: { group: pages, cancel-in-progress: false }
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions: { contents: read, pages: write, id-token: write }
+    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
+    steps:
+      - name: Source de publication
+        id: source
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          t=$(gh api "repos/${{ github.repository }}/pages" -q .build_type 2>/dev/null || echo inconnu)
+          echo "build_type=$t" >> "$GITHUB_OUTPUT"
+          [ "$t" = workflow ] || echo "::notice::Source Pages = « $t » : GitHub publie depuis la branche. Passe-la sur « GitHub Actions » pour que le site ne parte qu'après les tests."
+      - uses: actions/checkout@v4
+        if: steps.source.outputs.build_type == 'workflow'
+      - name: Fichiers du site
+        if: steps.source.outputs.build_type == 'workflow'
+        run: |
+          mkdir _site
+          cp -r index.html manifest.json sw.js qrcode.js jsqr.js webauthn.js icons _site/
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.source.outputs.build_type == 'workflow'
+        with: { path: _site }
+      - id: deploy
+        if: steps.source.outputs.build_type == 'workflow'
+        uses: actions/deploy-pages@v4

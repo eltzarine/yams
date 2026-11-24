@@ -1,0 +1,37 @@
+name: Tests
+
+# Règles Firestore (47 cas), parcours complet de l'appli avec le vrai SDK Firebase sur émulateurs, ménage.
+# Lancés à chaque push et pull request, et avant chaque mise en ligne (appelés par pages.yml et deploy-auth.yml).
+on:
+  push:
+    branches-ignore: [main] # sur main, les workflows de mise en ligne les lancent déjà
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            auth/package-lock.json
+            tests/package-lock.json
+      - uses: actions/setup-java@v4 # émulateurs Firebase
+        with: { distribution: temurin, java-version: 21 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Dépendances
+        run: |
+          npm ci --omit=dev --prefix auth
+          npm ci --prefix tests
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium
+      - name: Tests
+        working-directory: tests
+        run: npm test

@@ -9,7 +9,11 @@ on:
 concurrency: deploy-auth
 
 jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   worker:
+    needs: tests
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: auth } }
     env:
@@ -43,6 +47,7 @@ jobs:
         run: curl -fsS https://yams-auth.cesar-poirrier.workers.dev/
 
   firestore-rules:
+    needs: tests
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: auth } }
     steps:
