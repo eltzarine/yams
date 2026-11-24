@@ -59,6 +59,8 @@ with sync_playwright() as p:
         pg.goto(APP);pg.evaluate(SEEN+";"+extra);pg.reload();pg.wait_for_timeout(1500)
         if uid:pg.evaluate(f"__login('{uid}','{ps}')");pg.wait_for_timeout(1200)
         pg.click("#btnPlay");pg.wait_for_timeout(1800)
+        if not uid:  # sans compte : « Jouer » propose le code e-mail ou l'invité
+            ok(pg.locator("#pcGuest").count()==1,"Jouer sans compte : choix e-mail / invité");pg.click("#pcGuest");pg.wait_for_timeout(1200)
     A=mk("Hôte");boot(A,"uA","César","localStorage.setItem('yams-partenaires',JSON.stringify(['Jojo']))")
     ok("César" in A.inner_text("#btnAcct"),"hôte connecté (vrai Firebase Auth)")
     A.click("#cCreate");A.wait_for_selector(".joinbox",timeout=8000);code=A.inner_text(".joinbox b")
