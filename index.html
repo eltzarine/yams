@@ -343,7 +343,8 @@ html:has(#splash:not(.hide)),html:has(#splash:not(.hide)) body{overflow:hidden;o
 .splash .piste{position:absolute;left:8px;right:8px;top:var(--pt);bottom:var(--pb);z-index:0;pointer-events:none;
   border-style:solid;border-width:calc(130px * var(--s));border-image:url(piste.webp) 130 / calc(130px * var(--s)) round;
   filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
-.splash .dice3d{left:calc(8px + 82px * var(--s));right:calc(8px + 82px * var(--s));top:calc(var(--pt) + 82px * var(--s));bottom:calc(var(--pb) + 82px * var(--s))}
+/* zone 3D = piste + 20 px autour : les dés arrivent par-dessus le rebord ; les murs (bas) sont posés sur le bord intérieur du cuir (insetPx) */
+.splash .dice3d{left:-12px;right:-12px;top:calc(var(--pt) - 20px);bottom:calc(var(--pb) - 20px)}
 
 /* stats de l'historique */
 .stats{background:var(--bg);border-radius:14px;padding:4px 12px;margin:0 0 14px}
@@ -2026,7 +2027,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   import("./dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
     if(!sp.isConnected)return;
     box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",
-      theme:"yams",themeColor:"#FBF8F1",scale:5.5,gravity:1.2,shadowTransparency:.65,lightIntensity:1.05});
+      theme:"yams",themeColor:"#FBF8F1",scale:5,gravity:1.2,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05});
     await box.init();if(!sp.isConnected)return;
     sp.classList.add("d3");roll();
     zone.addEventListener("click",roll);

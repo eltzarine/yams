@@ -10,3 +10,5 @@ Moteur et modèles repris et adaptés pour le Yam's Club.
 
 Pour retravailler les dés : les fichiers Blender sources sont dans le dépôt `3d-dice/dice-themes` (`3d_files/default`).
 Le thème du Yam's Club se règle dans `assets/themes/yams/theme.config.json` (texture des points `pips-red.png`, relief `pips-normal.png`).
+
+Modification Yam's Club (nov. 2026) : le worker physique intégré (base64) accepte insetPx et wallH pour ajouter des murs bas sur le bord intérieur de la piste — les dés partent du rebord et passent par-dessus.
