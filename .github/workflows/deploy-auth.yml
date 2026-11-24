@@ -1,0 +1,58 @@
+name: Comptes (mini-serveur + règles Firestore)
+
+on:
+  push:
+    branches: [main]
+    paths: ["auth/**", ".github/workflows/deploy-auth.yml"]
+  workflow_dispatch:
+
+concurrency: deploy-auth
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: auth } }
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: auth/package-lock.json }
+      - run: npm ci
+      - name: Base D1 (création au premier passage)
+        run: |
+          find_id() { npx wrangler d1 list --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s||"[]");const d=l.find(x=>x.name==="yams-auth");process.stdout.write(d?d.uuid:"")})'; }
+          ID=$(find_id)
+          if [ -z "$ID" ]; then npx wrangler d1 create yams-auth; ID=$(find_id); fi
+          [ -n "$ID" ] || { echo "::error::Base D1 introuvable"; exit 1; }
+          sed -i "s/__D1_ID__/$ID/" wrangler.toml
+      - run: npx wrangler d1 migrations apply yams-auth --remote
+      - run: npx wrangler deploy
+      - name: Secrets du mini-serveur
+        env:
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+        run: |
+          [ -n "$MAIL_FROM" ] || { echo "::error::Ajoute le secret GitHub MAIL_FROM (adresse d'expéditeur vérifiée dans Brevo)"; exit 1; }
+          node -e 'require("fs").writeFileSync("/tmp/secrets.json",JSON.stringify({BREVO_API_KEY:process.env.BREVO_API_KEY,FIREBASE_SERVICE_ACCOUNT:process.env.FIREBASE_SERVICE_ACCOUNT,MAIL_FROM:process.env.MAIL_FROM}))'
+          npx wrangler secret bulk /tmp/secrets.json
+          rm -f /tmp/secrets.json
+      - name: Vérification
+        run: curl -fsS https://yams-auth.cesar-poirrier.workers.dev/
+
+  firestore-rules:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: auth } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Publier les règles Firestore
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 deploy --only firestore:rules --project yams-gaillon --non-interactive
+          rm -f /tmp/sa.json

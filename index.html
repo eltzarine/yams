@@ -33,7 +33,7 @@
   ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
 })();
 </script>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1F4D3A">
@@ -63,6 +63,7 @@ gtag('config','G-WQ8CDEPL7G');
 <!-- Firebase (historique partagé) -->
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="qrcode.js"></script>
 <script>
 /* ⬇️ Colle ici la config de TON projet Firebase (Console Firebase > Paramètres du projet > Tes applis > Web) */
@@ -461,6 +462,46 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .s-sm{display:inline-flex;animation:s-stache .7s 2.3s cubic-bezier(.2,.8,.3,1) both}
 .s-t0{animation:s-up .5s .05s both}.s-t1{animation:s-up .5s 2.4s both}.s-t2{animation:s-up .5s 2.8s both}
 @media (prefers-reduced-motion:reduce){.sov *{animation:none!important}.sov .conf{display:none}.sov{transition:none}}
+
+/* comptes joueurs */
+.splash .acctchip{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;display:inline-flex;align-items:center;gap:7px;height:38px;max-width:60vw;padding:0 14px 0 6px;border:1.5px solid rgba(255,255,255,.4);border-radius:999px;background:rgba(0,0,0,.15);color:var(--felt-ink);font-weight:600;font-size:15px;animation:fadeup .6s 1.1s both;z-index:2}
+.splash .acctchip[hidden]{display:none}
+.splash .acctchip .av{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;flex:none}
+.splash .acctchip .av svg{width:18px;height:18px;filter:none}
+.splash .acctchip .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.splash .acctchip.on{border-color:var(--gold)}
+.splash .acctchip.on .av{background:var(--gold);color:#1B2620}
+.acctbtn .ini{width:30px;height:30px;border-radius:50%;background:var(--felt);color:var(--felt-ink);display:grid;place-items:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:18px}
+.acctbtn svg{width:22px;height:22px}
+.acc{display:flex;flex-direction:column;gap:0}
+.acc .secondary{margin-top:10px}
+.acc .secondary.withic,.acc .secondary .ic{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.acc .ic{width:22px;height:22px;flex:none}
+.acc .ghost.wide svg{width:20px;height:20px;flex:none}
+.accin{width:100%;height:54px;border:1px solid var(--line-strong);border-radius:12px;padding:0 14px;font-size:18px;background:var(--bg);color:var(--ink);margin:0 0 12px;box-sizing:border-box}
+.accin:focus{outline:2px solid var(--felt);outline-offset:1px}
+.accin.code{text-align:center;font-family:"Barlow Condensed",sans-serif;font-size:36px;font-weight:700;letter-spacing:.4em;padding-left:.4em}
+.acc .chk{display:flex;align-items:flex-start;gap:10px;font-size:15px;margin:0 0 14px;line-height:1.35}
+.acc .chk input{width:22px;height:22px;flex:none;margin:0;accent-color:var(--felt)}
+.acc .chk a{color:var(--pen);font-weight:600}
+.accerr{color:var(--pip);font-weight:600;font-size:15px;margin:-4px 0 12px}
+.accerr[hidden]{display:none}
+.psinfo{font-size:14px;color:var(--muted);margin:-6px 2px 12px;min-height:18px}
+.psinfo.ok{color:#2E8B57;font-weight:600}.psinfo.ko{color:var(--pip);font-weight:600}
+.bioart{display:grid;place-items:center;margin:4px 0 18px;color:var(--felt)}
+.bioart .ic{width:72px;height:72px;stroke-width:1.6}
+.acc.welcome{text-align:center;align-items:stretch;padding-top:8px}
+.acc.welcome .wdice{font-size:56px;line-height:1;margin:0 0 6px}
+.accrow{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-height:52px;margin:0 0 4px}
+.accrow span{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.accrow small{color:var(--muted);font-size:14px}.accrow small.on{color:#2E8B57;font-weight:700}
+.accrow .ghost{height:38px;border:1px solid var(--line-strong);border-radius:10px;background:transparent;font-weight:600;padding:0 14px}
+.replay.danger{color:var(--pip)}
+.primary.dangerbg{background:var(--pip);color:#FFFFFF}
+.primary:disabled,.secondary:disabled{opacity:.6}
+.priv p{margin:0 0 12px;font-size:15px;line-height:1.45}
+/* volet ouvert depuis l’écran d’accueil : au-dessus de l’accueil */
+body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .sheet{z-index:61}body:has(#splash:not(.hide)) .toast{z-index:62}
 </style>
 </head>
 <body>
@@ -472,6 +513,7 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
   </div>
 </div>
 <div class="splash" id="splash">
+  <button class="acctchip" id="acctChip" hidden aria-label="Créer un compte ou se connecter"><span class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span class="nm">Invité</span></button>
   <svg viewBox="0 0 300 100" aria-hidden="true">
     <g class="dd" style="--i:0;--dx:-72px;--rot:0deg;transform-origin:30px 62px"><g transform="rotate(-16 30 62)"><rect x="6" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="19" cy="51" r="4.3"/><circle cx="41" cy="51" r="4.3"/><circle cx="30" cy="62" r="4.3"/><circle cx="19" cy="73" r="4.3"/><circle cx="41" cy="73" r="4.3"/></g></g></g>
     <g class="dd" style="--i:1;--dx:-40px;--rot:90deg;transform-origin:84px 48px"><g transform="rotate(-6 84 48)"><rect x="60" y="24" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="73" cy="37" r="4.3"/><circle cx="84" cy="48" r="4.3"/><circle cx="95" cy="59" r="4.3"/></g></g></g>
@@ -777,7 +819,7 @@ function endQuip(name,t,st,rec){
 }
 
 function setupHTML(){
-  return `<header><h1>Yam’s Gaillon</h1></header>
+  return `<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
   <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next">${i===0&&ui.starter&&pkey(n)===pkey(ui.starter)?`<span class="startchip">commence</span>`:""}<button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
@@ -791,6 +833,7 @@ function bindSetup(){
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(S.players.length>1){S.players.splice(+b.dataset.del,1);save();render()}});
   bindDrag();
   document.getElementById("btnFollow").onclick=openFollow;
+  if(typeof bindAcctBtn==="function")bindAcctBtn();
   document.getElementById("btnWho").onclick=openRoulette;
   document.getElementById("addP").onclick=()=>{if(S.players.length>=12)return;S.players.push("");save();render();const ins=document.querySelectorAll("#plist input");ins[ins.length-1].focus()};
   document.getElementById("go").onclick=()=>{
@@ -1592,6 +1635,275 @@ const Pwa={on:false,waiting:null,reg:null,clicked:false,reloading:false,lastChec
     this.lastCheck=Date.now();return this.reg.update().catch(()=>{})}
 };
 Pwa.init();
+</script>
+<script>
+/* ================= Comptes joueurs =================
+   Code à 6 chiffres par e-mail (valable 15 min) ou Face ID / empreinte (passkey).
+   Le mini-serveur (Cloudflare) garde e-mails, codes et clés ; Firestore ne reçoit que le pseudo public. */
+const AUTH_API="https://yams-auth.cesar-poirrier.workers.dev";
+const Acc={user:null,pseudo:null,email:null,passkeys:0,ready:false};
+/* phase de test : les comptes ne s’affichent que sur les téléphones activés (5 tapes rapides sur « by César ») */
+let ACC_ON=false;try{ACC_ON=localStorage.getItem("yams_comptes")==="1"}catch(e){}
+const IS_IOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const IS_ANDROID=/android/i.test(navigator.userAgent);
+const BIO=IS_IOS?"Face ID":IS_ANDROID?"ton empreinte":"ta clé d’accès";
+const BIO_T=IS_IOS?"Face ID":IS_ANDROID?"Empreinte":"Clé d’accès";
+const PK_OK=!!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.create);
+const ERR={email:"Cette adresse e-mail n’est pas valide.",attends:"Attends un peu avant de redemander un code.",trop:"Trop de demandes aujourd’hui. Réessaie demain.",
+  envoi:"L’e-mail n’a pas pu partir. Réessaie dans un instant.",expire:"Ce code a expiré. Demande-en un nouveau.",faux:"Code incorrect.",bloque:"Trop d’essais. Demande un nouveau code.",
+  code:"Entre les 6 chiffres du code.",pseudo_court:"2 caractères minimum.",pseudo_long:"16 caractères maximum.",pseudo_caracteres:"Lettres, chiffres, espaces, - _ . ’ seulement.",
+  pseudo_pris:"Ce pseudo est déjà pris.",passkey:`${BIO_T} n’a pas fonctionné. Réessaie ou utilise un code.`,passkey_inconnue:"Cette clé n’est plus valable. Connecte-toi avec un code.",
+  delai:"Trop long, recommence.",session:"Ta session a expiré. Reconnecte-toi.",compte:"Ce compte n’existe plus.",reseau:"Pas de connexion. Vérifie le réseau.",serveur:"Petit souci de notre côté. Réessaie."};
+const errMsg=e=>ERR[e&&e.code]||ERR.serveur;
+const FACE_ICON=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9v1M15 9v1M12 9v4h-1M9 15.5c1.8 1.4 4.2 1.4 6 0"/></svg>`;
+const KEY_ICON=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg>`;
+const BIO_ICON=IS_IOS?FACE_ICON:KEY_ICON;
+
+async function api(path,body,auth){
+  const h={"content-type":"application/json"};
+  if(auth){const u=fbAuth()&&fbAuth().currentUser;if(!u)throw Object.assign(new Error("session"),{code:"session"});h.authorization="Bearer "+await u.getIdToken()}
+  let r;try{r=await fetch(AUTH_API+path,{method:body===undefined?"GET":"POST",headers:h,body:body===undefined?undefined:JSON.stringify(body)})}
+  catch(e){throw Object.assign(new Error("reseau"),{code:"reseau"})}
+  const d=await r.json().catch(()=>({ok:false,error:"serveur"}));
+  if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||"serveur"),{code:d.error||"serveur",data:d});
+  return d;
+}
+function fbAuth(){try{return window.firebase&&firebase.apps.length&&firebase.auth?firebase.auth():null}catch(e){return null}}
+async function signInToken(token){const a=fbAuth();if(!a)throw Object.assign(new Error("serveur"),{code:"serveur"});await a.signInWithCustomToken(token);await a.currentUser.getIdToken(true)}
+function loadWebAuthn(){if(window.SimpleWebAuthnBrowser)return Promise.resolve();return new Promise((ok,ko)=>{const sc=document.createElement("script");sc.src="webauthn.js";sc.onload=ok;sc.onerror=()=>ko(Object.assign(new Error("reseau"),{code:"reseau"}));document.head.appendChild(sc)})}
+function ev(name,p){if(window.gtag)gtag("event",name,p||{})}
+
+/* profil public (pseudo) dans Firestore : joueurs/{uid} */
+function saveProfile(){if(!DB||!Acc.user||!Acc.pseudo)return;
+  DB.collection("joueurs").doc(Acc.user.uid).set({pseudo:Acc.pseudo,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{})}
+
+async function refreshMe(){
+  try{const d=await api("/me",undefined,true);Acc.pseudo=d.pseudo;Acc.email=d.email;Acc.passkeys=d.passkeys}
+  catch(e){if(e.code==="compte"){const a=fbAuth();if(a)await a.signOut().catch(()=>{})}}
+  acctUI();
+}
+function acctUI(){
+  const on=!!(Acc.user&&Acc.pseudo);
+  const sp=document.getElementById("acctChip");
+  if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Invité";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
+  const hb=document.getElementById("btnAcct");if(hb){hb.outerHTML=acctBtnHTML();bindAcctBtn()}
+  else if(Acc.ready&&!VIEW&&!S.started&&document.querySelector("#app header"))render();
+}
+function acctBtnHTML(){if(!Acc.ready||!ACC_ON)return"";const on=Acc.user&&Acc.pseudo;
+  return`<button class="iconbtn sq acctbtn ${on?"on":""}" id="btnAcct" aria-label="${on?"Mon compte : "+esc(Acc.pseudo):"Créer un compte ou se connecter"}">${on?`<span class="ini">${esc([...Acc.pseudo][0].toUpperCase())}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`}</button>`}
+function bindAcctBtn(){const b=document.getElementById("btnAcct");if(b)b.onclick=openAccount}
+
+/* ---------- volet Compte ---------- */
+function busy(btn,on,txt){if(!btn)return;if(on){btn.dataset.t=btn.innerHTML;btn.disabled=true;btn.setAttribute("aria-busy","true");btn.textContent=txt||"Un instant…"}else{btn.disabled=false;btn.removeAttribute("aria-busy");if(btn.dataset.t)btn.innerHTML=btn.dataset.t}}
+function setErr(sh,msg){const e=sh.querySelector(".accerr");if(e){e.textContent=msg||"";e.hidden=!msg}}
+
+function openAccount(){
+  if(Acc.user&&Acc.pseudo)return accSignedIn();
+  if(Acc.user&&!Acc.pseudo)return accPseudo();
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Ton compte</h3>
+    <div class="sub">Avec un compte, tes scores comptent pour ton palmarès et tu le retrouves sur tous tes téléphones. Pas de mot de passe.</div>
+    <div class="acc">
+      <button class="primary" id="accMail">Recevoir un code par e-mail</button>
+      ${PK_OK?`<button class="secondary withic" id="accBio">${BIO_ICON}Se connecter avec ${BIO}</button>`:""}
+      <p class="accerr" role="alert" hidden></p>
+      <p class="hint">Tu peux toujours jouer en invité, sans compte.</p>
+    </div>`,
+  sh=>{sh.querySelector("#accMail").onclick=()=>accEmail();const b=sh.querySelector("#accBio");if(b)b.onclick=()=>bioLogin(b,sh)});
+}
+
+function accEmail(prefill){
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Ton e-mail</h3>
+    <div class="sub">On t’envoie un code à 6 chiffres. Il sert à créer ton compte ou à te reconnecter.</div>
+    <form class="acc" id="accF" novalidate>
+      <input class="accin" id="accEm" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="toi@exemple.fr" aria-label="Adresse e-mail" value="${esc(prefill||"")}">
+      <label class="chk"><input type="checkbox" id="accOk"><span>J’ai lu la page <a href="#" id="accPriv">Données personnelles</a></span></label>
+      <p class="accerr" role="alert" hidden></p>
+      <button class="primary" id="accSend" type="submit">Recevoir mon code</button>
+      <button class="replay" type="button" id="accBack">Retour</button>
+    </form>`,
+  sh=>{const f=sh.querySelector("#accF"),em=sh.querySelector("#accEm"),ck=sh.querySelector("#accOk"),bt=sh.querySelector("#accSend");
+    sh.querySelector("#accPriv").onclick=e=>{e.preventDefault();openPrivacy(()=>accEmail(em.value))};
+    sh.querySelector("#accBack").onclick=openAccount;
+    try{if(localStorage.getItem("yams_privacy_ok")==="1")ck.checked=true}catch(e){}
+    setTimeout(()=>em.focus(),250);
+    f.onsubmit=async e=>{e.preventDefault();setErr(sh,"");
+      const v=em.value.trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){setErr(sh,ERR.email);em.focus();return}
+      if(!ck.checked){setErr(sh,"Coche la case pour continuer.");ck.focus();return}
+      try{localStorage.setItem("yams_privacy_ok","1")}catch(e){}
+      busy(bt,true,"Envoi…");
+      try{const d=await api("/code/request",{email:v});ev("code_demande");accCode(v,d)}
+      catch(err){busy(bt,false);if(err.code==="attends"){accCode(v,{resend:err.data&&err.data.retry||60,already:true});return}setErr(sh,errMsg(err))}
+    };
+  });
+}
+
+function accCode(email,d){
+  const until=Date.now()+(d&&d.resend||60)*1000;
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Ton code</h3>
+    <div class="sub">${d&&d.already?"Un code t’a déjà été envoyé à":"Code envoyé à"} <b>${esc(email)}</b>. Il est valable 15 minutes. Pense à regarder dans les spams.</div>
+    <form class="acc" id="accF" novalidate>
+      <input class="accin code" id="accCd" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" enterkeyhint="done" placeholder="••••••" aria-label="Code à 6 chiffres">
+      ${navigator.clipboard&&navigator.clipboard.readText?`<button class="ghost wide" type="button" id="accPaste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg>Coller le code</button>`:""}
+      ${d&&d.devCode?`<p class="hint">Code de test : <b id="devCode">${esc(d.devCode)}</b></p>`:""}
+      <p class="accerr" role="alert" hidden></p>
+      <button class="primary" id="accGo" type="submit">Valider</button>
+      <button class="replay" type="button" id="accRe" disabled>Renvoyer le code</button>
+      <button class="replay" type="button" id="accOther">Changer d’adresse</button>
+    </form>`,
+  sh=>{const f=sh.querySelector("#accF"),cd=sh.querySelector("#accCd"),bt=sh.querySelector("#accGo"),re=sh.querySelector("#accRe");
+    setTimeout(()=>cd.focus(),250);
+    const tick=()=>{if(!re.isConnected)return;const s=Math.ceil((until-Date.now())/1000);if(s>0){re.disabled=true;re.textContent=`Renvoyer le code (${s} s)`;setTimeout(tick,1000)}else{re.disabled=false;re.textContent="Renvoyer le code"}};tick();
+    re.onclick=async()=>{busy(re,true,"Envoi…");try{const d2=await api("/code/request",{email});accCode(email,d2);toast("Nouveau code envoyé")}catch(err){busy(re,false);setErr(sh,errMsg(err))}};
+    sh.querySelector("#accOther").onclick=()=>accEmail(email);
+    const p=sh.querySelector("#accPaste");
+    if(p)p.onclick=async()=>{try{const t=(await navigator.clipboard.readText()||"").replace(/\D/g,"").slice(0,6);if(t.length===6){cd.value=t;f.requestSubmit()}else setErr(sh,"Aucun code à 6 chiffres dans le presse-papiers.")}catch(e){setErr(sh,"Le collage a été refusé. Appuie longuement dans la case pour coller.")}};
+    cd.oninput=()=>{cd.value=cd.value.replace(/\D/g,"").slice(0,6);setErr(sh,"");if(cd.value.length===6)f.requestSubmit()};
+    let sending=false;
+    f.onsubmit=async e=>{e.preventDefault();if(sending)return;const v=cd.value.replace(/\D/g,"");
+      if(v.length!==6){setErr(sh,ERR.code);cd.focus();return}
+      sending=true;busy(bt,true,"Vérification…");
+      try{const r=await api("/code/verify",{email,code:v});await signInToken(r.token);
+        Acc.email=email;Acc.pseudo=r.pseudo;Acc.user=fbAuth().currentUser;
+        ev(r.isNew?"compte_code_valide":"connexion",{methode:"code"});
+        if(!r.pseudo)accPseudo();else{saveProfile();acctUI();refreshMe();afterLogin()}}
+      catch(err){sending=false;busy(bt,false);cd.value="";cd.focus();
+        setErr(sh,err.code==="faux"&&err.data&&err.data.left?`${ERR.faux} Encore ${err.data.left} essai${err.data.left>1?"s":""}.`:errMsg(err))}
+    };
+  });
+}
+
+function lastLocalName(){try{const n=(S.players||[]).map(x=>String(x||"").trim()).find(Boolean);return n?n.slice(0,16):""}catch(e){return""}}
+function accPseudo(){
+  openSheet(`<h3 id="sheetTitle">Ton pseudo</h3>
+    <div class="sub">C’est le nom que tes potes verront sur la feuille, dans le direct et au classement.</div>
+    <form class="acc" id="accF" novalidate>
+      <input class="accin" id="accPs" type="text" maxlength="16" autocomplete="nickname" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Ton pseudo" aria-label="Pseudo" aria-describedby="accPsInfo" value="${esc(lastLocalName())}">
+      <p class="psinfo" id="accPsInfo" aria-live="polite">2 à 16 caractères</p>
+      <p class="accerr" role="alert" hidden></p>
+      <button class="primary" id="accGo" type="submit">Valider</button>
+    </form>`,
+  sh=>{const f=sh.querySelector("#accF"),ps=sh.querySelector("#accPs"),info=sh.querySelector("#accPsInfo"),bt=sh.querySelector("#accGo");
+    setTimeout(()=>{ps.focus();ps.select()},250);
+    let t=0,seq=0;
+    const check=()=>{clearTimeout(t);const v=ps.value.trim();info.className="psinfo";
+      if(v.length<2){info.textContent="2 à 16 caractères";return}
+      info.textContent="Vérification…";
+      t=setTimeout(async()=>{const my=++seq;try{const r=await api("/pseudo/check?p="+encodeURIComponent(v));if(my!==seq)return;
+        if(r.available){info.textContent="✓ Disponible";info.className="psinfo ok"}else{info.textContent=r.reason==="pris"?"Déjà pris, essaie une variante":ERR["pseudo_"+r.reason]||"Pseudo invalide";info.className="psinfo ko"}}
+        catch(e){if(my===seq){info.textContent="";info.className="psinfo"}}},350)};
+    ps.oninput=()=>{setErr(sh,"");check()};check();
+    f.onsubmit=async e=>{e.preventDefault();setErr(sh,"");busy(bt,true,"Enregistrement…");
+      try{const r=await api("/pseudo",{pseudo:ps.value},true);await signInToken(r.token);Acc.user=fbAuth().currentUser;Acc.pseudo=r.pseudo;saveProfile();acctUI();ev("compte_cree");
+        if(PK_OK&&!Acc.passkeys)accBioOffer();else accWelcome()}
+      catch(err){busy(bt,false);setErr(sh,errMsg(err));ps.focus()}
+    };
+  });
+}
+
+function accBioOffer(fromSettings){
+  openSheet(`${fromSettings?CLOSE:""}<h3 id="sheetTitle">${BIO_T}</h3>
+    <div class="sub">La prochaine fois, connecte-toi ${IS_IOS?"d’un regard":IS_ANDROID?"d’un doigt":"en un geste"}, sans attendre de code.</div>
+    <div class="acc"><div class="bioart" aria-hidden="true">${BIO_ICON}</div>
+      <p class="accerr" role="alert" hidden></p>
+      <button class="primary" id="accOn">Activer ${BIO_T}</button>
+      <button class="secondary" id="accLater">${fromSettings?"Annuler":"Plus tard"}</button></div>`,
+  sh=>{sh.querySelector("#accLater").onclick=fromSettings?accSignedIn:accWelcome;
+    const b=sh.querySelector("#accOn");
+    b.onclick=async()=>{setErr(sh,"");busy(b,true,"Un instant…");
+      try{await loadWebAuthn();const o=await api("/passkey/register/options",{},true);
+        const resp=await SimpleWebAuthnBrowser.startRegistration({optionsJSON:o.options});
+        await api("/passkey/register/verify",{response:resp},true);Acc.passkeys++;ev("faceid_active");toast(`${BIO_T} activé`);
+        fromSettings?accSignedIn():accWelcome()}
+      catch(err){busy(b,false);if(err&&(err.name==="NotAllowedError"||err.name==="AbortError"))return;
+        setErr(sh,err&&err.name==="InvalidStateError"?`${BIO_T} est déjà activé sur cet appareil.`:errMsg(err&&err.code?err:{code:"passkey"}))}
+    };
+  });
+}
+
+async function bioLogin(btn,sh){
+  busy(btn,true,"Un instant…");setErr(sh,"");
+  try{await loadWebAuthn();const o=await api("/passkey/login/options",{});
+    const resp=await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:o.options});
+    const r=await api("/passkey/login/verify",{cid:o.cid,response:resp});await signInToken(r.token);
+    Acc.user=fbAuth().currentUser;Acc.pseudo=r.pseudo;ev("connexion",{methode:"passkey"});acctUI();refreshMe();
+    if(!r.pseudo)accPseudo();else afterLogin()}
+  catch(err){busy(btn,false);if(err&&(err.name==="NotAllowedError"||err.name==="AbortError"))return;
+    setErr(sh,errMsg(err&&err.code?err:{code:"passkey"}))}
+}
+function afterLogin(){closeSheet();toast(`Content de te revoir, ${Acc.pseudo} 🎲`)}
+
+function accWelcome(){
+  openSheet(`<div class="acc welcome"><div class="wdice" aria-hidden="true">🎲</div>
+    <h3 id="sheetTitle">Bienvenue, ${esc(Acc.pseudo)}</h3>
+    <div class="sub">Ton compte est prêt. Tes prochaines parties compteront pour ton palmarès.</div>
+    <button class="primary" id="accPlay">Jouer</button></div>`,
+  sh=>{sh.querySelector("#accPlay").onclick=()=>{closeSheet();const b=document.getElementById("btnPlay");if(b&&b.isConnected)b.click()}});
+}
+
+function accSignedIn(){
+  openSheet(`${CLOSE}<h3 id="sheetTitle">${esc(Acc.pseudo)}</h3>
+    <div class="sub">${Acc.email?esc(Acc.email):"Connecté"}</div>
+    <div class="acc">
+      <div class="accrow"><span>${BIO_ICON}${BIO_T}</span>${!PK_OK?`<small>non disponible ici</small>`:Acc.passkeys?`<small class="on">✓ activé</small>`:`<button class="ghost" id="accBioOn">Activer</button>`}</div>
+      <button class="secondary" id="accPriv">Données personnelles</button>
+      <button class="secondary" id="accOut">Se déconnecter</button>
+      <button class="replay danger" id="accDel">Supprimer mon compte</button>
+    </div>`,
+  sh=>{const b=sh.querySelector("#accBioOn");if(b)b.onclick=()=>accBioOffer(true);
+    sh.querySelector("#accPriv").onclick=()=>openPrivacy(accSignedIn);
+    sh.querySelector("#accOut").onclick=async()=>{const a=fbAuth();if(a)await a.signOut().catch(()=>{});closeSheet();toast("Déconnecté. Tu joues en invité.")};
+    sh.querySelector("#accDel").onclick=accDelete;
+  });
+}
+
+function accDelete(){
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Supprimer ton compte ?</h3>
+    <div class="sub">Ton e-mail, ton pseudo et ${BIO_T} sont effacés définitivement. Les parties déjà jouées restent dans l’historique, sous le nom écrit sur la feuille.</div>
+    <div class="acc"><p class="accerr" role="alert" hidden></p>
+      <button class="primary dangerbg" id="accYes">Supprimer définitivement</button>
+      <button class="secondary" id="accNo">Annuler</button></div>`,
+  sh=>{sh.querySelector("#accNo").onclick=accSignedIn;const b=sh.querySelector("#accYes");
+    b.onclick=async()=>{busy(b,true,"Suppression…");setErr(sh,"");
+      try{const uid=Acc.user.uid;
+        if(DB)await DB.collection("joueurs").doc(uid).delete().catch(()=>{});
+        const r=await api("/account/delete",{},true);
+        try{await fbAuth().signInWithCustomToken(r.token);await fbAuth().currentUser.delete()}catch(e){await fbAuth().signOut().catch(()=>{})}
+        ev("compte_supprime");closeSheet();toast("Compte supprimé.")}
+      catch(err){busy(b,false);setErr(sh,errMsg(err))}
+    };
+  });
+}
+
+function openPrivacy(back){
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Données personnelles</h3>
+    <div class="priv">
+      <p><b>Ce qu’on garde.</b> Ton adresse e-mail (pour t’envoyer les codes), ton pseudo et, si tu l’actives, la clé publique de ${BIO_T}. Ton visage et ton empreinte ne quittent jamais ton téléphone.</p>
+      <p><b>Qui les voit.</b> Ton pseudo est visible des autres joueurs. Ton e-mail reste privé : il n’est ni affiché, ni partagé, ni revendu.</p>
+      <p><b>Où.</b> Les e-mails et clés sont stockés chez Cloudflare, les e-mails partent par Brevo, le pseudo et les parties sont chez Google Firebase. Des statistiques de visite anonymes passent par Google Analytics.</p>
+      <p><b>Combien de temps.</b> Tant que ton compte existe. Les codes sont effacés au bout de 15 minutes.</p>
+      <p><b>Tes droits.</b> Tu peux supprimer ton compte à tout moment depuis « Mon compte ».${window.YAMS_CONTACT?` Pour toute question : ${esc(window.YAMS_CONTACT)}.`:""}</p>
+    </div>
+    <button class="primary" id="privOk">Compris</button>`,
+  sh=>{sh.querySelector("#privOk").onclick=()=>back?back():closeSheet()});
+}
+
+/* ---------- démarrage ---------- */
+function initAccounts(){
+  const a=fbAuth();
+  if(!a){Acc.ready=false;acctUI();return}
+  a.onAuthStateChanged(async u=>{Acc.user=u;
+    if(!u){Acc.pseudo=null;Acc.email=null;Acc.passkeys=0;Acc.ready=true;acctUI();return}
+    try{const t=await u.getIdTokenResult();Acc.pseudo=t.claims.pseudo||Acc.pseudo||null}catch(e){}
+    Acc.ready=true;acctUI();refreshMe();
+  });
+}
+(()=>{const c=document.getElementById("acctChip");if(c)c.onclick=openAccount;
+  const cr=document.querySelector(".splash .credit");let taps=[];
+  if(cr)cr.addEventListener("click",()=>{const t=Date.now();taps=taps.filter(x=>t-x<2000);taps.push(t);if(taps.length<5)return;taps=[];
+    ACC_ON=!ACC_ON;try{ACC_ON?localStorage.setItem("yams_comptes","1"):localStorage.removeItem("yams_comptes")}catch(e){}
+    toast(ACC_ON?"Comptes activés sur ce téléphone (test)":"Comptes désactivés sur ce téléphone");acctUI()});
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(initAccounts,0));else setTimeout(initAccounts,0);})();
 </script>
 <script>
 /* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le titre « Yam’s Gaillon » */

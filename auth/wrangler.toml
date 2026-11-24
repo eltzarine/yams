@@ -1,0 +1,20 @@
+name = "yams-auth"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[vars]
+ORIGINS = "https://eltzarine.github.io"
+RP_ID = "eltzarine.github.io"
+FIREBASE_PROJECT = "yams-gaillon"
+MAIL_FROM_NAME = "Yams Club"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "yams-auth"
+database_id = "__D1_ID__"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true

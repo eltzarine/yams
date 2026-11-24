@@ -1,0 +1,101 @@
+import re, json, time, sys
+from playwright.sync_api import sync_playwright
+B="http://localhost:8765/"; W="https://yams-auth.cesar-poirrier.workers.dev"
+fake=open(__file__.rsplit("/",1)[0]+"/fakefb.js").read()
+fails=[]
+def ok(c,m):
+    print(("✓ " if c else "✗ ")+m)
+    if not c: fails.append(m)
+UA="Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1"
+with sync_playwright() as p:
+    b=p.chromium.launch(executable_path="/usr/bin/google-chrome",args=["--no-sandbox"])
+    ctx=b.new_context(viewport={"width":390,"height":844},device_scale_factor=2,is_mobile=True,has_touch=True,user_agent=UA,service_workers="block")
+    def route(r):
+        u=r.request.url
+        if "firebase-app-compat" in u: return r.fulfill(body=fake,content_type="application/javascript")
+        if "firebasejs" in u: return r.fulfill(body="",content_type="application/javascript")
+        if "googletagmanager" in u or "fonts.g" in u or "google-analytics" in u: return r.abort()
+        if u.startswith("https://mint.test/"):
+            return r.fulfill(response=r.fetch(url="http://127.0.0.1:8798/"))
+        if u.startswith(W):
+            resp=r.fetch(url=u.replace(W,"http://127.0.0.1:8787"))
+            return r.fulfill(response=resp)
+        if u in (B,B+"index.html") or u.startswith(B+"?"):
+            resp=r.fetch(); html=resp.text()
+            html=re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>','',html)
+            return r.fulfill(response=resp,body=html)
+        return r.continue_()
+    ctx.route("**/*",route)
+    pg=ctx.new_page(); errs=[]
+    pg.on("pageerror",lambda e:errs.append(str(e))); logs=[]; pg.on("console",lambda m:logs.append(m.text))
+    cdp=ctx.new_cdp_session(pg); cdp.send("WebAuthn.enable")
+    auth=cdp.send("WebAuthn.addVirtualAuthenticator",{"options":{"protocol":"ctap2","transport":"internal","hasResidentKey":True,"hasUserVerification":True,"isUserVerified":True,"automaticPresenceSimulation":True}})
+    pg.goto(B); pg.wait_for_timeout(2500)
+    ok(pg.is_hidden("#acctChip"),"comptes masqués par défaut (phase de test)")
+    for _ in range(5): pg.click(".splash .credit",force=True)
+    pg.wait_for_selector("#acctChip:not([hidden])",timeout=8000); pg.wait_for_timeout(1500)
+    ok(pg.inner_text("#acctChip .nm")=="Invité","accueil : pastille « Invité »")
+    pg.screenshot(path="/tmp/yams-e2e-01-accueil.png")
+    pg.click("#acctChip"); pg.wait_for_selector("#accMail"); pg.wait_for_timeout(400)
+    ok("Se connecter avec Face ID" in pg.inner_text("#sheet"),"volet compte : bouton Face ID (iPhone)")
+    pg.screenshot(path="/tmp/yams-e2e-02-compte.png")
+    pg.click("#accMail"); pg.wait_for_selector("#accEm")
+    email=f"zoe{int(time.time())}@exemple.fr"
+    pg.fill("#accEm",email); pg.click("#accSend")
+    ok("Coche la case" in pg.inner_text(".accerr"),"case Données personnelles obligatoire")
+    pg.click("#accPriv"); pg.wait_for_selector("#privOk"); pg.wait_for_timeout(300); pg.screenshot(path="/tmp/yams-e2e-03-donnees.png")
+    pg.click("#privOk"); pg.wait_for_selector("#accEm")
+    ok(pg.input_value("#accEm")==email,"retour des Données personnelles : e-mail conservé")
+    pg.check("#accOk"); pg.wait_for_timeout(300); pg.screenshot(path="/tmp/yams-e2e-04-email.png")
+    pg.click("#accSend"); pg.wait_for_selector("#accCd"); pg.wait_for_timeout(400)
+    code=pg.inner_text("#devCode"); ok(re.fullmatch(r"\d{6}",code) is not None,"écran du code (code reçu)")
+    ok("Renvoyer le code (" in pg.inner_text("#accRe") and pg.is_disabled("#accRe"),"« Renvoyer le code » bloqué 60 s")
+    pg.screenshot(path="/tmp/yams-e2e-05-code.png")
+    wrong="000000" if code!="000000" else "111111"
+    pg.fill("#accCd",wrong); pg.wait_for_selector(".accerr:not([hidden])")
+    ok("Encore 4 essais" in pg.inner_text(".accerr"),"mauvais code : « Encore 4 essais »")
+    pg.fill("#accCd",code)
+    try: pg.wait_for_selector("#accPs",timeout=8000)
+    except Exception as e: print("ERR UI:",pg.inner_text("#sheet")[:400],errs,logs[-5:]); raise
+    pg.fill("#accPs","Zoé"+str(int(time.time())%10000)); pg.wait_for_selector(".psinfo.ok",timeout=5000)
+    ok("Disponible" in pg.inner_text("#accPsInfo"),"pseudo : vérification « Disponible »")
+    pg.screenshot(path="/tmp/yams-e2e-06-pseudo.png")
+    nick=pg.input_value("#accPs")
+    pg.click("#accGo"); pg.wait_for_selector("#accOn",timeout=8000); pg.wait_for_timeout(300)
+    ok("Activer Face ID" in pg.inner_text("#accOn"),"proposition Face ID")
+    pg.screenshot(path="/tmp/yams-e2e-07-faceid.png")
+    pg.click("#accOn"); pg.wait_for_selector("#accPlay",timeout=8000); pg.wait_for_timeout(400)
+    ok(nick in pg.inner_text("#sheet"),"écran Bienvenue avec le pseudo")
+    pg.screenshot(path="/tmp/yams-e2e-08-bienvenue.png")
+    creds=cdp.send("WebAuthn.getCredentials",{"authenticatorId":auth["authenticatorId"]})["credentials"]
+    ok(len(creds)==1 and creds[0]["rpId"]=="localhost","clé Face ID créée (1 clé)")
+    w=pg.evaluate("window.__fsWrites.filter(x=>x.path.startsWith('joueurs/'))")
+    ok(any(x["op"]=="set" and x["d"]["pseudo"]==nick for x in w),"profil public joueurs/{uid} écrit avec le pseudo")
+    pg.click("#accPlay")
+    try: pg.wait_for_selector(".sov .go",timeout=5000); pg.wait_for_timeout(2500); pg.click(".sov .go"); pg.wait_for_timeout(800)
+    except Exception: pass
+    pg.wait_for_selector("#btnAcct .ini",timeout=5000); pg.wait_for_timeout(600)
+    ok(pg.inner_text("#btnAcct .ini")==nick[0].upper(),"écran « Qui joue ? » : bouton compte avec l’initiale")
+    pg.screenshot(path="/tmp/yams-e2e-09-quijoue.png")
+    pg.click("#btnAcct"); pg.wait_for_selector("#accOut"); pg.wait_for_timeout(300)
+    ok("✓ activé" in pg.inner_text("#sheet") and email in pg.inner_text("#sheet"),"volet connecté : e-mail + Face ID activé")
+    pg.screenshot(path="/tmp/yams-e2e-10-moncompte.png")
+    pg.click("#accOut"); pg.wait_for_timeout(600)
+    ok(pg.query_selector("#btnAcct .ini") is None,"déconnexion : retour en invité")
+    # reconnexion par Face ID
+    pg.click("#btnAcct"); pg.wait_for_selector("#accBio"); pg.click("#accBio")
+    pg.wait_for_selector("#btnAcct .ini",timeout=8000); pg.wait_for_timeout(500)
+    ok("Content de te revoir" in pg.inner_text("#toast"),"connexion Face ID : « Content de te revoir »")
+    # suppression
+    pg.click("#btnAcct"); pg.wait_for_selector("#accDel"); pg.click("#accDel"); pg.wait_for_selector("#accYes"); pg.wait_for_timeout(300)
+    pg.screenshot(path="/tmp/yams-e2e-11-suppression.png")
+    pg.click("#accYes"); pg.wait_for_timeout(1500)
+    ok("Compte supprimé" in pg.inner_text("#toast"),"suppression du compte")
+    ok(pg.evaluate("!!window.__authDeleted"),"compte Firebase supprimé")
+    ok(any(x["op"]=="delete" for x in pg.evaluate("window.__fsWrites.filter(x=>x.path.startsWith('joueurs/'))")),"profil public supprimé")
+    pg.click("#btnAcct"); pg.wait_for_selector("#accBio"); pg.click("#accBio"); pg.wait_for_selector(".accerr:not([hidden])",timeout=8000)
+    ok("plus valable" in pg.inner_text(".accerr"),"ancienne clé Face ID refusée après suppression")
+    ok(not errs,"aucune erreur JavaScript "+str(errs[:3]))
+    b.close()
+print("\n"+("Tout est bon" if not fails else f"{len(fails)} ÉCHEC(S)"))
+sys.exit(1 if fails else 0)

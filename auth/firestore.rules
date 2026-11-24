@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /parties/{id} {
+      // Une partie valide : uniquement ces champs, avec des tailles raisonnables
+      // (« sheet » = la feuille de scores complète, facultative)
+      function valide(d) {
+        return d.keys().hasOnly(['date', 'winner', 'top', 'ranking', 'sheet', 'createdAt'])
+          && d.date is string && d.date.size() <= 40
+          && d.winner is string && d.winner.size() <= 40
+          && d.top is int && d.top >= 0 && d.top <= 2000
+          && d.ranking is list && d.ranking.size() >= 1 && d.ranking.size() <= 12
+          && (!('sheet' in d) || (d.sheet is list && d.sheet.size() <= 12));
+      }
+
+      // Tout le monde peut voir l'historique
+      allow read: if true;
+
+      // Ajout : identifiant au bon format + date de création posée par le serveur
+      allow create: if id.matches('^g[a-z0-9]{6,24}$')
+        && valide(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+
+      // Correction et suppression : seulement pendant 2 jours après la partie
+      allow update: if valide(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.time < resource.data.createdAt + duration.value(2, 'd');
+      allow delete: if request.time < resource.data.createdAt + duration.value(2, 'd');
+    }
+     // Partie en direct : lisible par tous, écrite par l'appli de l'hôte
+    match /direct/{code} {
+      function directValide(d) {
+        return d.keys().hasOnly(['players', 'scores', 'settings', 'started', 'last', 'updatedAt'])
+          && d.players is list && d.players.size() >= 1 && d.players.size() <= 12
+          && d.scores is map && d.scores.size() <= 12
+          && d.settings is map
+          && d.started is bool
+          && (d.last == null || d.last is map)
+          && d.updatedAt == request.time;
+      }
+      allow read: if true;
+      allow create, update: if code.matches('^[A-Z0-9]{4,8}$')
+        && directValide(request.resource.data);
+      allow delete: if true;
+    }
+    // Profil public d'un joueur (pseudo seulement) : chacun ne modifie que le sien,
+    // et le pseudo doit être celui validé par le mini-serveur (unicité)
+    match /joueurs/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['pseudo', 'updatedAt'])
+        && request.resource.data.pseudo is string
+        && request.resource.data.pseudo == request.auth.token.pseudo
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // Tout le reste de la base est fermé
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
