@@ -1,0 +1,30 @@
+name: Ménage Firestore (chaque nuit)
+
+# Remplace les règles TTL de Firestore (payantes) : efface les directs inactifs depuis 24 h,
+# les joueurs qui les ont rejoints et les invitations expirées. Ne touche pas à l'historique.
+on:
+  schedule:
+    - cron: "17 3 * * *" # 4 h 17 à Paris en hiver (5 h 17 en été)
+  workflow_dispatch:
+    inputs:
+      essai:
+        description: "Essai : compter sans rien effacer"
+        type: boolean
+        default: false
+
+concurrency: menage
+
+jobs:
+  menage:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: auth } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: auth/package-lock.json }
+      - run: npm ci --omit=dev
+      - name: Ménage
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          MENAGE_ESSAI: ${{ inputs.essai && '1' || '0' }}
+        run: node scripts/menage.mjs
