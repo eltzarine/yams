@@ -33,7 +33,7 @@
   ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
 })();
 </script>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1F4D3A">
@@ -293,6 +293,17 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 /* écran d'accueil */
 .splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--felt);color:var(--felt-ink);text-align:center;padding:24px;transition:opacity .45s ease,visibility .45s}
 .splash.hide{opacity:0;visibility:hidden}
+/* tapis de yam's : vert feutrine, grain, lumière au centre, bords assombris */
+.splash{--tapis:#0E5A36;background:
+  radial-gradient(ellipse 75% 55% at 50% 38%,rgba(255,255,240,.10),transparent 70%),
+  radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55) 100%),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+  var(--tapis)}
+.splash .dice3d{position:absolute;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 60px);height:calc(50% - 60px);z-index:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.splash .dice3d canvas{width:100%;height:100%;display:block}
+.splash.d3 > svg{visibility:hidden}
+.splash > :not(.dice3d){position:relative;z-index:1}
+.splash .foot,.splash .acctchip,.splash .ihelp{position:absolute}
 .splash svg{width:min(86vw,340px);height:auto;filter:drop-shadow(0 10px 18px rgba(0,0,0,.35));overflow:visible}
 .splash .dd{animation:roll .85s calc(var(--i)*.09s) cubic-bezier(.2,.8,.3,1) both}
 @keyframes roll{from{transform:translate(var(--dx),-90px) rotate(var(--rot));opacity:0}to{transform:none;opacity:1}}
@@ -573,7 +584,8 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
     <g class="dd" style="--i:3;--dx:40px;--rot:270deg;transform-origin:216px 48px"><g transform="rotate(7 216 48)"><rect x="192" y="24" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="205" cy="37" r="4.3"/><circle cx="227" cy="59" r="4.3"/></g></g></g>
     <g class="dd" style="--i:4;--dx:72px;--rot:360deg;transform-origin:270px 62px"><g transform="rotate(15 270 62)"><rect x="246" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="259" cy="51" r="4.3"/><circle cx="281" cy="51" r="4.3"/><circle cx="259" cy="73" r="4.3"/><circle cx="281" cy="73" r="4.3"/></g></g></g>
   </svg>
-  <p class="title">Yam’s Gaillon</p>
+  <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
+  <p class="title">Yam’s Club</p>
   <button class="play" id="btnPlay">Jouer</button>
   <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
   <div class="foot">
@@ -1988,6 +2000,23 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   document.getElementById("btnPlay").onclick=async e=>{if(going)return;going=true;
     if(typeof bioBeforePlay==="function")await bioBeforePlay(e.currentTarget);
     hide();seasonFlow()};})();
+/* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice) — les dés dessinés restent si la 3D ne charge pas */
+(()=>{const sp=document.getElementById("splash"),zone=document.getElementById("dice3d");if(!sp||!zone||!sp.isConnected)return;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return}catch(e){return}
+  const base=new URL(".",location.href);let box=null,busy=false;
+  const roll=()=>{if(!box||busy||!sp.isConnected)return;busy=true;
+    box.roll("5dpip").catch(()=>{}).finally(()=>{busy=false})};
+  import("./dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
+    if(!sp.isConnected)return;
+    box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",
+      theme:"yams",themeColor:"#FBF8F1",scale:8,gravity:1.2,shadowTransparency:.65,lightIntensity:1.05});
+    await box.init();if(!sp.isConnected)return;
+    sp.classList.add("d3");roll();
+    zone.addEventListener("click",roll);
+    new MutationObserver(()=>{if(sp.classList.contains("hide")){try{box.clear()}catch(e){}}}).observe(sp,{attributes:true,attributeFilter:["class"]});
+  }).catch(e=>{console.warn("dés 3D indisponibles",e);sp.classList.remove("d3")});
+})();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
 (()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;
   if(hasApp())return; // déjà installée (ou « J’ai déjà l’appli » sur ce navigateur)
