@@ -299,7 +299,13 @@ body.locked{position:fixed;left:0;right:0;height:auto}
   radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55) 100%),
   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
   var(--tapis)}
-.splash .dice3d{position:absolute;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 60px);height:calc(50% - 60px);z-index:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* mise en page : enseigne en haut, dés au milieu, bouton Jouer en bas */
+.splash{justify-content:space-between;padding-top:calc(env(safe-area-inset-top,0px) + 66px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 92px)}
+.splash .logo{margin:0;width:min(90vw,440px);line-height:0;animation:neon 1.4s .2s both}
+.splash .logo img{width:100%;height:auto;filter:drop-shadow(0 0 6px rgba(255,46,170,.75)) drop-shadow(0 0 18px rgba(255,46,170,.45))}
+@keyframes neon{0%{opacity:0}12%{opacity:.85}16%{opacity:.15}24%{opacity:1}30%{opacity:.4}38%,100%{opacity:1}}
+.splash .play{margin-top:0}
+.splash .dice3d{position:absolute;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 66px + min(90vw,440px)/3 + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 92px + 58px + 10px);z-index:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .splash .dice3d canvas{width:100%;height:100%;display:block}
 .splash.d3 > svg{visibility:hidden}
 .splash > :not(.dice3d){position:relative;z-index:1}
@@ -577,6 +583,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
 </div>
 <div class="splash" id="splash">
   <button class="acctchip" id="acctChip" hidden aria-label="Créer un compte ou se connecter"><span class="av" aria-hidden="true">👤</span><span class="nm">Me connecter</span></button>
+  <h1 class="logo"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
   <svg viewBox="0 0 300 100" aria-hidden="true">
     <g class="dd" style="--i:0;--dx:-72px;--rot:0deg;transform-origin:30px 62px"><g transform="rotate(-16 30 62)"><rect x="6" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="19" cy="51" r="4.3"/><circle cx="41" cy="51" r="4.3"/><circle cx="30" cy="62" r="4.3"/><circle cx="19" cy="73" r="4.3"/><circle cx="41" cy="73" r="4.3"/></g></g></g>
     <g class="dd" style="--i:1;--dx:-40px;--rot:90deg;transform-origin:84px 48px"><g transform="rotate(-6 84 48)"><rect x="60" y="24" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="73" cy="37" r="4.3"/><circle cx="84" cy="48" r="4.3"/><circle cx="95" cy="59" r="4.3"/></g></g></g>
@@ -585,7 +592,6 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
     <g class="dd" style="--i:4;--dx:72px;--rot:360deg;transform-origin:270px 62px"><g transform="rotate(15 270 62)"><rect x="246" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="259" cy="51" r="4.3"/><circle cx="281" cy="51" r="4.3"/><circle cx="259" cy="73" r="4.3"/><circle cx="281" cy="73" r="4.3"/></g></g></g>
   </svg>
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
-  <p class="title">Yam’s Club</p>
   <button class="play" id="btnPlay">Jouer</button>
   <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
   <div class="foot">
