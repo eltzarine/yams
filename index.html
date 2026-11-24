@@ -307,6 +307,10 @@ body.locked{position:fixed;left:0;right:0;height:auto}
 .splash .play{margin-top:0}
 .splash .dice3d{position:absolute;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 66px + min(90vw,440px)/3 + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 92px + 58px + 10px);z-index:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .splash .dice3d canvas{width:100%;height:100%;display:block}
+/* écran d'accueil figé : rien ne défile ni ne rebondit derrière (bug de scroll iOS) */
+html:has(#splash:not(.hide)),html:has(#splash:not(.hide)) body{overflow:hidden;overscroll-behavior:none;height:100%}
+.splash{touch-action:none;overscroll-behavior:none}
+.splash .dice3d,.splash .dice3d canvas{touch-action:none}
 .splash.d3 > svg{visibility:hidden}
 .splash > :not(.dice3d){position:relative;z-index:1}
 .splash .foot,.splash .acctchip,.splash .ihelp{position:absolute}
@@ -2006,6 +2010,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   document.getElementById("btnPlay").onclick=async e=>{if(going)return;going=true;
     if(typeof bioBeforePlay==="function")await bioBeforePlay(e.currentTarget);
     hide();seasonFlow()};})();
+/* iOS ignore parfois overflow:hidden : on bloque le glisser sur l'accueil (sauf dans l'aide d'installation) */
+(()=>{const sp=document.getElementById("splash");if(!sp)return;
+  sp.addEventListener("touchmove",e=>{if(!sp.classList.contains("hide")&&!e.target.closest(".ihelp"))e.preventDefault()},{passive:false})})();
 /* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice) — les dés dessinés restent si la 3D ne charge pas */
 (()=>{const sp=document.getElementById("splash"),zone=document.getElementById("dice3d");if(!sp||!zone||!sp.isConnected)return;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
