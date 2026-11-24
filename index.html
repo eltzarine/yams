@@ -470,6 +470,24 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .sheet .sfoot .secondary{margin-top:8px}
 /* comptes joueurs */
 .prow.me input{border-color:var(--felt);font-weight:700;padding-right:58px}
+/* Direct ON / OFF, bouton compte, accueil Créer / Rejoindre, invitations */
+.iconbtn.liveoff{display:inline-flex;align-items:center;gap:7px;color:var(--muted)}
+.iconbtn.liveoff i{width:9px;height:9px;border-radius:50%;background:var(--muted);opacity:.6}
+@media (max-width:374px){.iconbtn.liveoff .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.iconbtn.liveoff{width:44px;padding:0;justify-content:center}}
+.iconbtn.acctbtn{display:inline-flex;align-items:center;gap:6px;max-width:46vw;margin-left:auto}
+.iconbtn.acctbtn .an{overflow:hidden;text-overflow:ellipsis}
+.iconbtn.acctbtn.on{border-color:var(--felt);color:var(--felt)}
+.splash .acctchip .av{font-size:16px}
+.backlink{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:15px;padding:0;margin:0 0 12px;height:32px}
+.choice .big{height:64px;font-size:20px;display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 0 0}
+.choice .big svg{width:22px;height:22px}
+.choice .hint{margin-top:16px}
+.prow.pd input{padding-right:132px;color:var(--muted);font-style:italic}
+.pdchip{position:absolute;right:62px;top:50%;transform:translateY(-50%);border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;pointer-events:none;background:color-mix(in srgb,var(--gold) 30%,transparent);color:var(--ink);font-variant-numeric:tabular-nums}
+.primary:disabled{cursor:not-allowed}
+.invbox{border:2px solid var(--gold);border-radius:14px;padding:12px 14px;margin:0 0 14px;background:color-mix(in srgb,var(--gold) 10%,transparent)}
+.invbox p{margin:0 0 10px;font-size:17px}
+.invbox .secondary{margin-top:8px;height:42px}
 /* invités (#guest), comptes, code pour rejoindre, « Déjà joué avec » */
 .gtag{font-size:.7em;font-weight:500;opacity:.6;margin-left:1px;letter-spacing:0}
 thead th .gtag{display:block;font-size:11px;line-height:1.1;margin:1px 0 0}
@@ -542,7 +560,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   </div>
 </div>
 <div class="splash" id="splash">
-  <button class="acctchip" id="acctChip" hidden aria-label="Créer un compte ou se connecter"><span class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span class="nm">Invité</span></button>
+  <button class="acctchip" id="acctChip" hidden aria-label="Créer un compte ou se connecter"><span class="av" aria-hidden="true">👤</span><span class="nm">Me connecter</span></button>
   <svg viewBox="0 0 300 100" aria-hidden="true">
     <g class="dd" style="--i:0;--dx:-72px;--rot:0deg;transform-origin:30px 62px"><g transform="rotate(-16 30 62)"><rect x="6" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="19" cy="51" r="4.3"/><circle cx="41" cy="51" r="4.3"/><circle cx="30" cy="62" r="4.3"/><circle cx="19" cy="73" r="4.3"/><circle cx="41" cy="73" r="4.3"/></g></g></g>
     <g class="dd" style="--i:1;--dx:-40px;--rot:90deg;transform-origin:84px 48px"><g transform="rotate(-6 84 48)"><rect x="60" y="24" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="73" cy="37" r="4.3"/><circle cx="84" cy="48" r="4.3"/><circle cx="95" cy="59" r="4.3"/></g></g></g>
@@ -650,6 +668,7 @@ function render(){try{return renderMain()}finally{syncWake()}}
 function renderMain(){
   if(VIEW)return renderView();
   const app=document.getElementById("app");
+  if(!S.started&&!ui.created){document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=choiceHTML();bindChoice();return}
   if(!S.started){if(typeof ensureMe==="function")ensureMe();ensureLiveCode();document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();window.scrollTo(0,0);return}
   const tot=S.players.map((_,p)=>totals(p));
   const best=Math.max(...tot.map(t=>t.total));
@@ -663,8 +682,8 @@ function renderMain(){
   app.innerHTML=`
   <header><h1>Yam’s Gaillon</h1>
     <button class="iconbtn sq" id="btnSettings" aria-label="Règles" title="Règles">${GEAR_ICON}</button>
-    <button class="iconbtn sq" id="btnNew" aria-label="Nouvelle partie" title="Nouvelle partie">${NEW_ICON}</button>
-    <button class="iconbtn ${S.live?"liveon":"invite"+(S.invited?"":" fresh")}" id="btnLive" ${S.live?`aria-label="Direct"`:`aria-label="Inviter"`}>${S.live?`<i aria-hidden="true"></i><span class="lbl">Direct</span>`:`${QR_ICON}<span class="lbl">Inviter</span>`}</button></header>
+    <button class="iconbtn ${S.live?"liveon":"liveoff"}" id="btnLive" aria-label="${S.live?"Direct activé : voir le code pour les spectateurs":"Direct coupé : l'activer"}"><i aria-hidden="true"></i><span class="lbl">Direct ${S.live?"ON":"OFF"}</span></button>
+    <button class="iconbtn sq" id="btnQuitGame" aria-label="Quitter la partie" title="Quitter la partie">${QUIT_ICON}</button></header>
   ${seasonBarHTML()}
   ${cp>=0?`<div class="tabs" role="group" aria-label="Affichage">
     <button id="tabBoard" aria-pressed="${!ui.turnOpen}">Tableau</button>
@@ -672,7 +691,7 @@ function renderMain(){
   ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}
   <p class="hint">Touche une case du tableau pour corriger un score.</p>`;
   document.getElementById("btnSettings").onclick=openSettings;
-  document.getElementById("btnNew").onclick=openNew;
+  document.getElementById("btnQuitGame").onclick=openNew;
   document.getElementById("btnLive").onclick=openInvite;
   app.classList.toggle("mode-turn",cp>=0&&ui.turnOpen);
   const tb=document.getElementById("tabBoard"),tt=document.getElementById("tabTurn");
@@ -860,6 +879,7 @@ function endQuip(name,t,st,rec){
 function rowKinds(){
   const acc=new Set((S.accts||[]).map(pkey)),used=new Set();
   return S.players.map(n=>{const k=pkey(n);if(!String(n??"").trim())return"guest";
+    if(S.pending&&S.pending[k])return"pend";
     if(typeof isMe==="function"&&isMe(n)&&!used.has(k)){used.add(k);return"me"}
     if(!isGuestN(n)&&acc.has(k)&&!used.has(k)){used.add(k);return"acct"}
     return"guest"});
@@ -873,7 +893,7 @@ function readPartners(){try{const a=JSON.parse(localStorage.getItem(PART_KEY)||"
 function addPartners(list){const me=typeof meName==="function"?meName():null;let a=readPartners();
   for(const n of list){const t=String(n||"").trim();if(!t||t.includes("#")||(me&&pkey(t)===pkey(me)))continue;a=a.filter(x=>pkey(x)!==pkey(t));a.unshift(t)}
   try{localStorage.setItem(PART_KEY,JSON.stringify(a.slice(0,30)))}catch(e){}}
-let MATES=[],matesKey="";
+let MATES=[],matesKey="";const MATE_UID={};
 function mateCandidates(){const me=typeof meName==="function"?meName():null;if(!me)return[];
   const out=[],seen=new Set([pkey(me)]),push=n=>{const t=String(n||"").trim();if(!t||t.includes("#")||t.length>16)return;const k=pkey(t);if(seen.has(k))return;seen.add(k);out.push(t)};
   readPartners().forEach(push);
@@ -886,7 +906,7 @@ async function loadMates(){
   if(!c.length){MATES=[];refreshMates();return}
   try{const snap=await DB.collection("joueurs").where("pseudo","in",c).get();
     if(key!==matesKey)return;
-    const ok=new Set(snap.docs.map(d=>String((d.data()||{}).pseudo||"")));
+    const ok=new Set(snap.docs.map(d=>{const ps=String((d.data()||{}).pseudo||"");MATE_UID[ps]=d.id;return ps}));
     MATES=c.filter(n=>ok.has(n));refreshMates()}
   catch(e){matesKey=""}
 }
@@ -895,29 +915,25 @@ function matesHTML(){
   if(!l.length||S.players.length>=12&&!S.players.some(n=>!String(n).trim()))return`<div id="mates" hidden></div>`;
   return`<div id="mates" class="mates"><span class="mt">Déjà joué avec</span>${l.map(n=>`<button class="mate" data-mate="${esc(n)}">+ ${esc(n)}</button>`).join("")}</div>`;
 }
-function bindMates(){document.querySelectorAll("[data-mate]").forEach(b=>b.onclick=()=>{const n=b.dataset.mate;
-  if(S.players.some(x=>pkey(x)===pkey(n)))return;addAcct(n);
-  const e=S.players.findIndex(x=>!String(x).trim());if(e>=0)S.players[e]=n;else if(S.players.length<12)S.players.push(n);else return;
-  save();render()})}
+function bindMates(){document.querySelectorAll("[data-mate]").forEach(b=>b.onclick=()=>sendInvite(b.dataset.mate,b))}
 function refreshMates(){const el=document.getElementById("mates");if(!el||S.started||VIEW)return;el.outerHTML=matesHTML();bindMates()}
 
 function setupHTML(){
   const kd=rowKinds();
   return `<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
-  <div class="setup">${DB&&S.live?`<div class="joinbox"><div class="jt"><small>Code de la partie</small><b>${esc(S.live)}</b></div><button class="jqr" id="btnJoinQR">${QR_ICON}<span>Faire rejoindre</span></button></div>`:DB?`<button class="who1" id="btnJoinQR">${QR_ICON}Faire rejoindre des joueurs</button>`:""}
+  ${inviteHTML()}
+  <div class="setup"><button class="backlink" id="btnBack">← Retour</button>${DB&&S.live?`<div class="joinbox"><div class="jt"><small>Code de la partie</small><b>${esc(S.live)}</b></div><button class="jqr" id="btnJoinQR">${QR_ICON}<span>Faire rejoindre</span></button></div>`:DB?`<button class="who1" id="btnJoinQR">${QR_ICON}Faire rejoindre des joueurs</button>`:""}
   <h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre. Les noms tapés à la main jouent en invité (#guest).</p>
   ${(()=>{const me=typeof meName==="function"?meName():null;const meIn=me&&S.players.some(n=>pkey(n)===pkey(me));
-  return `<div id="plist" data-me="${esc(me||"")}">${S.players.map((n,i)=>{const k=kd[i],mine=k==="me",acct=k==="acct",joined=!!joinOf(n),ro=mine||acct||joined,
+  return `<div id="plist" data-me="${esc(me||"")}">${S.players.map((n,i)=>{const k=kd[i],mine=k==="me",acct=k==="acct",pend=k==="pend",joined=!!joinOf(n),ro=mine||acct||pend||joined,
     st=i===0&&ui.starter&&pkey(n)===pkey(ui.starter),val=k==="guest"?baseN(n):n;
-    return `<div class="prow${mine?" me":acct?" ac":val?" g":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(val)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(val)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":acct?" (compte)":val?" (invité)":""}" placeholder="Joueur ${i+1}" maxlength="${k==="guest"?GUEST_MAX:30}" autocomplete="off" enterkeyhint="next"${ro?" readonly":""}>${st?`<span class="startchip">commence</span>`:mine?`<span class="mechip">moi</span>`:acct?`<span class="acchip">compte</span>`:val?`<span class="gchip">${GUEST}</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
+    return `<div class="prow${mine?" me":acct?" ac":pend?" pd":val?" g":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(val)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(val)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":acct?" (compte)":val?" (invité)":""}" placeholder="Joueur ${i+1}" maxlength="${k==="guest"?GUEST_MAX:30}" autocomplete="off" enterkeyhint="next"${ro?" readonly":""}>${st?`<span class="startchip">commence</span>`:mine?`<span class="mechip">moi</span>`:acct?`<span class="acchip">compte</span>`:pend?`<span class="pdchip" data-pend="${esc(pkey(n))}">${pendLabel(n)}</span>`:val?`<span class="gchip">${GUEST}</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
   ${me&&!meIn?`<button class="add addme" id="addMe">+ M’ajouter (${esc(me)})</button>`:""}`})()}
   ${matesHTML()}
   <button class="add" id="addP">Ajouter un joueur</button>
   <button class="who1" id="btnWho">${DIE_ICON}Qui commence ?</button>
-  <button class="primary" id="go">Commencer la partie</button>
-  <button class="secondary" id="btnJoin">Rejoindre une partie</button>
-  <button class="secondary" id="btnFollow">Suivre une partie</button></div>`;
+  <button class="primary" id="go"${pendCount()?" disabled":""}>${pendCount()?"En attente des invités…":"Commencer la partie"}</button></div>`;
 }
 function bindSetup(){
   document.querySelectorAll("#plist input").forEach(inp=>inp.oninput=()=>{if(inp.readOnly)return;
@@ -927,17 +943,19 @@ function bindSetup(){
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del,mine=typeof isMe==="function"&&isMe(S.players[i]);
     if(mine)S.meOff=true;
     const jid=joinOf(S.players[i]);if(jid)S.joins[jid].off=true;
+    const pk=pkey(S.players[i]);if(S.pending&&S.pending[pk]){cancelInvite(pk);}
     if(S.players.length>1)S.players.splice(i,1);else if(mine||jid)S.players=[""];else return;
     save();render()});
   const am=document.getElementById("addMe");if(am)am.onclick=()=>{S.meOff=false;ensureMe();render()};
   bindDrag();bindMates();loadMates();
-  document.getElementById("btnFollow").onclick=openFollow;
-  document.getElementById("btnJoin").onclick=()=>openJoin();
+  document.getElementById("btnBack").onclick=()=>{ui.created=false;render();window.scrollTo(0,0)};
+  bindInvite();
   const jq=document.getElementById("btnJoinQR");if(jq)jq.onclick=openInvite;
   if(typeof bindAcctBtn==="function")bindAcctBtn();
   document.getElementById("btnWho").onclick=openRoulette;
   document.getElementById("addP").onclick=()=>{if(S.players.length>=12)return;S.players.push("");save();render();const ins=document.querySelectorAll("#plist input");ins[ins.length-1].focus()};
   document.getElementById("go").onclick=()=>{
+    if(pendCount())return;
     const kd=rowKinds();addPartners(S.players.filter((_,i)=>kd[i]==="acct"));
     S.players=finalNames().filter(Boolean).slice(0,12);
     if(!S.players.length){S.players=[""];render();return}
@@ -1058,11 +1076,11 @@ function trackAbandon(){
   gtag("event","partie_abandonnee",{joueurs:S.players.length,remplissage:Math.round(100*n/tot),duree_min:S.t0?Math.round((Date.now()-S.t0)/60000):undefined});
 }
 function openNew(){
-  openSheet(`<h3 id="sheetTitle">Nouvelle partie</h3><div class="sub">Les scores actuels seront effacés.</div>
-    <button class="primary" id="change">Créer la nouvelle partie</button>
-    <button class="secondary" id="keep">Continuer cette partie</button>`,
+  openSheet(`<h3 id="sheetTitle">Êtes-vous sûr de vouloir quitter la partie ?</h3><div class="sub">Les scores de cette partie seront effacés.</div>
+    <button class="primary dangerbg" id="change">Oui</button>
+    <button class="secondary" id="keep">Non</button>`,
   sh=>{
-    sh.querySelector("#change").onclick=()=>{trackAbandon();resetGame();S.started=false;save();closeSheet();render()};
+    sh.querySelector("#change").onclick=()=>{trackAbandon();resetGame();S.started=false;ui.created=true;save();closeSheet();render()};
     sh.querySelector("#keep").onclick=closeSheet;
   });
 }
@@ -1441,6 +1459,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(!DB){refreshHist();return}
   if(S.live)pushLive(true);
   watchJoins();
+  Object.keys(S.pending||{}).forEach(watchInvSent);
   if(!S.started)render(); // affiche le code de la partie (créé dans ensureLiveCode)
   watchHist(); // saison en cours, chargée dès le départ (bandeau, leader, scores de fin de partie)
   watchRecord();
@@ -1535,6 +1554,7 @@ function onJoins(docs){
     if(!j){
       if(S.started)continue; // on ne rejoint qu'avant le début de la partie
       S.joins[d.id]={n,acct};if(acct)addAcct(n);changed=true;
+      if(acct&&S.pending&&S.pending[pkey(n)]){stopInvWatch(pkey(n));delete S.pending[pkey(n)];msgs.push(`${n} a accepté l'invitation`)}
       if(S.players.some(p=>String(p).trim()===n))continue; // déjà à la table (ajouté depuis « Déjà joué avec »)
       const e=S.players.findIndex(p=>!String(p).trim());
       if(e>=0)S.players[e]=n;else if(S.players.length<12)S.players.push(n);
@@ -1567,7 +1587,7 @@ async function joinGame(code,guestName){
   let snap;try{snap=await DB.collection("direct").doc(code).get({source:"server"})}catch(e){throw jerr(isDenied(e)?"Accès refusé par la base Firebase.":"Pas de connexion. Vérifie le réseau.")}
   if(!snap.exists)throw jerr("Partie introuvable. Vérifie le code.");
   const d=snap.data()||{};
-  if(d.started)throw jerr("La partie a déjà commencé : tu peux seulement la suivre.","started");
+  if(d.started)return{spect:true}; // déjà commencée : on la suit en spectateur
   const pl=(Array.isArray(d.players)?d.players:[]).map(x=>String(x||"").trim()).filter(Boolean);
   const me=typeof meName==="function"?meName():null,TS=firebase.firestore.FieldValue.serverTimestamp();
   const name=me||guestN(guestName);
@@ -1579,7 +1599,7 @@ async function joinGame(code,guestName){
   setJoin({code,jid,n:name,acct:!!me,at:Date.now()});
   if(!me)try{localStorage.setItem(GNAME_KEY,baseN(name))}catch(e){}
   if(window.gtag)gtag("event","partie_rejointe",{compte:me?"oui":"non"});
-  return name;
+  return{name};
 }
 /* invité qui se connecte (ou crée son compte) après avoir rejoint : son nom devient son pseudo, même en cours de partie */
 let upBusy=false;
@@ -1593,7 +1613,7 @@ async function upgradeJoin(){
 }
 function openJoin(code){
   const me=typeof meName==="function"?meName():null;
-  openSheet(`${CLOSE}<h3 id="sheetTitle">Rejoindre ${code?"la partie "+esc(code):"une partie"}</h3><div class="sub">${code?"":"Scanne le QR code ou entre le code affiché sur le téléphone de celui qui tient la feuille. "}${me?`Tu seras ajouté sous ton pseudo <b>${esc(me)}</b>.`:"Sans compte, tu joues en invité (#guest). Connecte-toi et ton nom devient ton pseudo, même en cours de partie."}</div>
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Rejoindre ${code?"la partie "+esc(code):"une partie"}</h3><div class="sub">${code?"":"Scanne le QR code ou entre le code affiché sur le téléphone de celui qui tient la feuille. Partie pas encore commencée : tu joues. Déjà commencée : tu la regardes. "}${me?`Tu seras ajouté sous ton pseudo <b>${esc(me)}</b>.`:"Sans compte, tu joues en invité (#guest). Connecte-toi et ton nom devient ton pseudo, même en cours de partie."}</div>
     <div class="follow">${code?"":`<div class="scan" id="scan" hidden><video id="scanVid" playsinline muted autoplay></video></div>
     <button class="ghost" id="fscan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/></svg>Scanner le QR code</button>
     <input id="fcode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" aria-label="Code de la partie" placeholder="K7P2Q">`}
@@ -1609,8 +1629,8 @@ function openJoin(code){
     const go=async()=>{const c=val();setErr(sh,"");fo.hidden=true;
       if(c.length<4){if(ci)ci.focus();return}
       busy(bt,true,"Un instant…");
-      try{const n=await joinGame(c,ni&&ni.value);
-        if(VIEW===c){busy(bt,false);closeSheet();render();toast(`Tu es dans la partie : ${n}`)}
+      try{const r=await joinGame(c,ni&&ni.value);
+        if(VIEW===c){busy(bt,false);closeSheet();render();toast(r.spect?"La partie a commencé : tu la suis en spectateur":`Tu es dans la partie : ${r.name}`)}
         else{stopScan();location.href=location.pathname+"?partie="+c}}
       catch(e){busy(bt,false);setErr(sh,e.message||"Petit souci. Réessaie.");
         if(e.jcode==="name"&&ni)ni.focus();
@@ -1638,6 +1658,106 @@ function openFollow(){
     bs.onclick=()=>{if(scanStream){stopScan();return}startScan(sh,follow)};
   });
 }
+/* ---------- écran d'accueil : créer ou rejoindre ---------- */
+function choiceHTML(){
+  return`<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
+  ${seasonBarHTML()}
+  ${inviteHTML()}
+  <div class="setup choice"><h2>On joue ?</h2>
+  <button class="primary big" id="cCreate">🎲 Créer une partie</button>
+  <button class="secondary big" id="cJoin">${QR_ICON}Rejoindre une partie</button>
+  <p class="hint">Rejoindre : scanne le QR code ou entre le code. Si la partie n'a pas commencé, tu joues ; sinon, tu la regardes en direct.</p></div>`;
+}
+function bindChoice(){
+  document.getElementById("cCreate").onclick=()=>{ui.created=true;render()};
+  document.getElementById("cJoin").onclick=()=>openJoin();
+  if(typeof bindAcctBtn==="function")bindAcctBtn();
+  bindInvite();
+}
+/* ---------- invitations (« Déjà joué avec ») ----------
+   invitations/{uid de l'invité} = {code, hote, hoteUid, at}. L'invité a 2 minutes pour accepter (ou refuser). */
+const INV_MS=120000;
+function pendCount(){const P=S.pending||{};return Object.keys(P).length}
+function pendLeft(k){const p=(S.pending||{})[k];return p?Math.max(0,Math.ceil((p.until-Date.now())/1000)):0}
+function pendLabel(n){const t=pendLeft(pkey(n));return`en attente ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
+function ensureCodeOn(){if(S.live)return;S.live=newCode();S.joins={};S.liveOff=false;persist();pushLive(true);watchJoins()}
+async function sendInvite(n,btn){
+  const me=typeof meName==="function"?meName():null;
+  if(!DB||!me){toast("Connecte-toi pour inviter un joueur.");return}
+  if(S.players.some(x=>pkey(x)===pkey(n)))return;
+  if(S.players.filter(x=>String(x).trim()).length>=12){toast("La table est pleine (12 joueurs).");return}
+  if(btn){btn.disabled=true}
+  try{
+    let uid=MATE_UID[n];
+    if(!uid){const q=await DB.collection("joueurs").where("pseudo","==",n).get();uid=q.docs[0]&&q.docs[0].id}
+    if(!uid)throw 0;
+    ensureCodeOn();
+    await DB.collection("invitations").doc(uid).set({code:S.live,hote:me,hoteUid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
+    S.pending=S.pending||{};S.pending[pkey(n)]={uid,n,until:Date.now()+INV_MS,code:S.live};
+    const e=S.players.findIndex(x=>!String(x).trim());if(e>=0)S.players[e]=n;else S.players.push(n);
+    watchInvSent(pkey(n));save();render();toast(`Invitation envoyée à ${n}`);
+    if(window.gtag)gtag("event","invitation_envoyee");
+  }catch(e){if(btn)btn.disabled=false;toast(`Impossible d'inviter ${n} pour le moment.`)}
+}
+const invWatch={};
+function stopInvWatch(k){if(invWatch[k]){invWatch[k]();delete invWatch[k]}}
+function watchInvSent(k){
+  const p=(S.pending||{})[k];if(!p||!DB||invWatch[k])return;
+  invWatch[k]=DB.collection("invitations").doc(p.uid).onSnapshot(d=>{const x=d.exists?d.data():null;if(x&&x.refus)endInvite(k,"a refusé l'invitation")},()=>{});
+}
+/* fin d'une invitation sans réponse positive : la ligne disparaît */
+function endInvite(k,why){
+  const p=(S.pending||{})[k];if(!p)return;
+  stopInvWatch(k);delete S.pending[k];
+  const i=S.players.findIndex(x=>pkey(x)===k);
+  if(i>=0){if(S.players.length>1)S.players.splice(i,1);else S.players=[""]}
+  if(DB)DB.collection("invitations").doc(p.uid).get().then(d=>{const x=d.exists?d.data():null;if(x&&x.hoteUid===(Acc.user&&Acc.user.uid))d.ref.delete().catch(()=>{})}).catch(()=>{});
+  save();if(!S.started&&!VIEW)render();if(why)toast(`${p.n} ${why}`);
+}
+function cancelInvite(k){endInvite(k,"")}
+function pendTick(){
+  if(VIEW||!pendCount())return;
+  let ended=false;
+  for(const k of Object.keys(S.pending)){if(Date.now()>=S.pending[k].until){endInvite(k,"n'a pas répondu");ended=true}}
+  if(ended)return;
+  document.querySelectorAll("[data-pend]").forEach(el=>{const p=S.pending[el.dataset.pend];if(p)el.textContent=pendLabel(p.n)});
+}
+setInterval(pendTick,1000);
+/* côté invité : invitation reçue */
+let INV=null,invUnsub=null,invUid=null,invT=0;
+function invFresh(){return INV&&INV.code&&Date.now()-INV.ms<INV_MS}
+function watchMyInvite(){
+  const uid=Acc.user&&Acc.pseudo?Acc.user.uid:null;
+  if(uid===invUid)return;
+  if(invUnsub){invUnsub();invUnsub=null}
+  invUid=uid;INV=null;
+  if(!uid||!DB||VIEW)return;
+  invUnsub=DB.collection("invitations").doc(uid).onSnapshot(d=>{
+    const x=d.exists?d.data():null;
+    const ms=x&&x.at&&typeof x.at.toMillis==="function"?x.at.toMillis():Date.now();
+    INV=x&&!x.refus&&typeof x.code==="string"?{code:x.code,hote:String(x.hote||"").slice(0,16),ms:Math.min(ms,Date.now())}:null;
+    clearTimeout(invT);if(invFresh())invT=setTimeout(refreshInvite,INV_MS-(Date.now()-INV.ms)+200);
+    refreshInvite();
+  },()=>{invUnsub=null;invUid=null});
+}
+function inviteHTML(){
+  if(!invFresh())return`<div id="invbox" hidden></div>`;
+  return`<div id="invbox" class="invbox"><p>🎲 <b>${esc(INV.hote)}</b> t'invite à sa partie</p>
+    <button class="primary" id="invOk">Accepter l'invitation de ${esc(INV.hote)}</button>
+    <button class="secondary" id="invNo">Refuser</button></div>`;
+}
+function bindInvite(){
+  const ok=document.getElementById("invOk"),no=document.getElementById("invNo");
+  if(ok)ok.onclick=async()=>{const v=INV;if(!v)return;busy(ok,true,"Un instant…");
+    try{const r=await joinGame(v.code);
+      if(DB&&Acc.user)await DB.collection("invitations").doc(Acc.user.uid).delete().catch(()=>{});
+      if(window.gtag)gtag("event","invitation_acceptee");
+      location.href=location.pathname+"?partie="+v.code}
+    catch(e){busy(ok,false);toast(e.message||"Impossible de rejoindre la partie.")}};
+  if(no)no.onclick=async()=>{const uid=Acc.user&&Acc.user.uid;INV=null;refreshInvite();
+    if(DB&&uid)await DB.collection("invitations").doc(uid).update({refus:true}).catch(()=>{})};
+}
+function refreshInvite(){const el=document.getElementById("invbox");if(!el||VIEW||S.started)return;el.outerHTML=inviteHTML();bindInvite()}
 /* scanner de QR code dans l'appli (caméra arrière) : BarcodeDetector si dispo, sinon jsQR chargé à la demande */
 let scanStream=null,scanRAF=0;
 function codeFromQR(t){t=String(t||"").trim();
@@ -1929,9 +2049,10 @@ function ensureMe(){const m=meName();if(!m||VIEW||S.started||S.meOff)return fals
 function acctUI(){
   const on=!!(Acc.user&&Acc.pseudo);
   const sp=document.getElementById("acctChip");
-  if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Invité";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
+  if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Me connecter";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
   upgradeJoin();
   if(VIEW){if(Acc.ready)render();return}
+  watchMyInvite();
   const inSetup=!VIEW&&!S.started&&document.querySelector("#app header");
   const added=ensureMe();
   const pl=document.getElementById("plist");
@@ -1939,7 +2060,7 @@ function acctUI(){
   const hb=document.getElementById("btnAcct");if(hb){hb.outerHTML=acctBtnHTML();bindAcctBtn()}
 }
 function acctBtnHTML(){if(!Acc.ready||!ACC_ON)return"";const on=Acc.user&&Acc.pseudo;
-  return`<button class="iconbtn sq acctbtn ${on?"on":""}" id="btnAcct" aria-label="${on?"Mon compte : "+esc(Acc.pseudo):"Créer un compte ou se connecter"}">${on?`<span class="ini">${esc([...Acc.pseudo][0].toUpperCase())}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`}</button>`}
+  return`<button class="iconbtn acctbtn ${on?"on":""}" id="btnAcct" aria-label="${on?"Mon compte : "+esc(Acc.pseudo):"Me connecter ou créer un compte"}"><span aria-hidden="true">👤</span><span class="an">${on?esc(Acc.pseudo):"Me connecter"}</span></button>`}
 function bindAcctBtn(){const b=document.getElementById("btnAcct");if(b)b.onclick=accTap}
 
 /* ---------- volet Compte ---------- */
@@ -1953,11 +2074,10 @@ function openAccount(){
     <div class="sub">Avec un compte, tes scores comptent pour ton palmarès et tu le retrouves sur tous tes téléphones. Pas de mot de passe.</div>
     <div class="acc">
       <button class="primary" id="accMail">Recevoir un code par e-mail</button>
-      ${PK_OK?`<button class="secondary withic" id="accBio">${BIO_ICON}Se connecter avec ${BIO}</button>`:""}
       <p class="accerr" role="alert" hidden></p>
       <p class="hint">Tu peux toujours jouer en invité, sans compte.</p>
     </div>`,
-  sh=>{sh.querySelector("#accMail").onclick=()=>accEmail();const b=sh.querySelector("#accBio");if(b)b.onclick=()=>bioLogin(b,sh)});
+  sh=>{sh.querySelector("#accMail").onclick=()=>accEmail()});
 }
 
 function accEmail(prefill){

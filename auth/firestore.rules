@@ -78,6 +78,27 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+    // Invitation d'un joueur avec compte (« Déjà joué avec ») : document = uid de l'invité.
+    // L'hôte (connecté) l'écrit à son nom ; l'invité la lit, la refuse ou la supprime.
+    match /invitations/{uid} {
+      function invValide(d) {
+        return d.keys().hasOnly(['code', 'hote', 'hoteUid', 'at'])
+          && d.code is string && d.code.matches('^[A-Z0-9]{4,8}$')
+          && d.hoteUid == request.auth.uid
+          && d.hote == request.auth.token.pseudo
+          && d.at == request.time;
+      }
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || resource == null || resource.data.hoteUid == request.auth.uid);
+      allow create: if request.auth != null && request.auth.uid != uid && invValide(request.resource.data);
+      allow update: if request.auth != null && (
+        (request.auth.uid != uid && invValide(request.resource.data))
+        || (request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refus'])
+            && request.resource.data.refus == true));
+      allow delete: if request.auth != null
+        && (request.auth.uid == uid || resource.data.hoteUid == request.auth.uid);
+    }
     // Profil public d'un joueur (pseudo seulement) : chacun ne modifie que le sien,
     // et le pseudo doit être celui validé par le mini-serveur (unicité)
     match /joueurs/{uid} {
