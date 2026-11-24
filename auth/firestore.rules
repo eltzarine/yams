@@ -31,7 +31,8 @@ service cloud.firestore {
      // Partie en direct : lisible par tous, écrite par l'appli de l'hôte
     match /direct/{code} {
       function directValide(d) {
-        return d.keys().hasOnly(['players', 'scores', 'settings', 'started', 'last', 'updatedAt'])
+        return d.keys().hasOnly(['players', 'hote', 'scores', 'settings', 'started', 'last', 'updatedAt'])
+          && (!('hote' in d) || d.hote == null || (d.hote is string && d.hote.size() <= 16))
           && d.players is list && d.players.size() >= 1 && d.players.size() <= 12
           && d.scores is map && d.scores.size() <= 12
           && d.settings is map

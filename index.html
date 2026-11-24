@@ -470,6 +470,11 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .sheet .sfoot .secondary{margin-top:8px}
 /* comptes joueurs */
 .prow.me input{border-color:var(--felt);font-weight:700;padding-right:58px}
+/* écran du direct : ma colonne, revenir à la partie */
+thead th.mine{box-shadow:inset 0 -4px 0 var(--gold)}
+td.cell.mine{background:color-mix(in srgb,var(--gold) 14%,transparent)}
+.iconbtn.sq.invite.ico{display:inline-grid;place-items:center;padding:0;width:44px}
+.retbox{margin:0 0 14px;text-align:center}.retbox .primary{margin:0}.retbox small{display:block;margin-top:6px;color:var(--muted);font-size:13px}
 /* Direct ON / OFF, bouton compte, accueil Créer / Rejoindre, invitations */
 .iconbtn.liveoff{display:inline-flex;align-items:center;gap:7px;color:var(--muted)}
 .iconbtn.liveoff i{width:9px;height:9px;border-radius:50%;background:var(--muted);opacity:.6}
@@ -1482,7 +1487,7 @@ async function shareLink(url){
 function liveData(){
   const scores={};if(S.started)S.players.forEach((_,p)=>{const r=S.scores[p];if(r)scores[p]={...r}});
   const pl=S.started?S.players.slice(0,12).map(n=>String(n).slice(0,30)):finalNames().filter(Boolean).slice(0,12);
-  return{players:pl.length?pl:[""],scores,settings:{...S.settings},started:!!S.started,
+  return{players:pl.length?pl:[""],hote:(typeof meName==="function"&&meName())||null,scores,settings:{...S.settings},started:!!S.started,
     last:S.started&&S.last?{p:S.last.p,k:S.last.k,v:S.last.v}:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
 }
 function sendLive(){
@@ -1630,7 +1635,7 @@ function openJoin(code){
       if(c.length<4){if(ci)ci.focus();return}
       busy(bt,true,"Un instant…");
       try{const r=await joinGame(c,ni&&ni.value);
-        if(VIEW===c){busy(bt,false);closeSheet();render();toast(r.spect?"La partie a commencé : tu la suis en spectateur":`Tu es dans la partie : ${r.name}`)}
+        if(VIEW===c){busy(bt,false);closeSheet();render();toast(r.spect?(viewMyIdx(getJoin(c))>=0?"Tu es déjà dans cette partie":"La partie a commencé : tu la suis en spectateur"):`Tu es dans la partie : ${r.name}`)}
         else{stopScan();location.href=location.pathname+"?partie="+c}}
       catch(e){busy(bt,false);setErr(sh,e.message||"Petit souci. Réessaie.");
         if(e.jcode==="name"&&ni)ni.focus();
@@ -1663,6 +1668,7 @@ function choiceHTML(){
   return`<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
   ${inviteHTML()}
+  ${returnHTML()}
   <div class="setup choice"><h2>On joue ?</h2>
   <button class="primary big" id="cCreate">🎲 Créer une partie</button>
   <button class="secondary big" id="cJoin">${QR_ICON}Rejoindre une partie</button>
@@ -1671,9 +1677,32 @@ function choiceHTML(){
 function bindChoice(){
   document.getElementById("cCreate").onclick=()=>{ui.created=true;render()};
   document.getElementById("cJoin").onclick=()=>openJoin();
+  loadReturn();
   if(typeof bindAcctBtn==="function")bindAcctBtn();
   bindInvite();
 }
+/* partie rejointe toujours en cours : bouton « Revenir à la partie de … » */
+let RET=null,retKey="";
+function returnHTML(){
+  if(!RET)return`<div id="retbox" hidden></div>`;
+  return`<div id="retbox" class="retbox"><button class="primary" id="retGo">↩ Revenir à la partie${RET.hote?" de "+esc(RET.hote):""}</button><small>Partie ${esc(RET.code)} · ${RET.started?"en cours":"pas encore commencée"}</small></div>`;
+}
+async function loadReturn(){
+  const j=readJoin();const me=typeof meName==="function"?meName():null;
+  const key=j?j.code+"|"+j.n+"|"+(me||""):"";
+  if(!j||!DB){RET=null;refreshReturn();return}
+  if(key===retKey){refreshReturn();return}retKey=key;
+  try{const d=await DB.collection("direct").doc(j.code).get();const x=d.exists?d.data():null;
+    const pl=x&&Array.isArray(x.players)?x.players.map(n=>String(n||"")):[];
+    const i=pl.indexOf(j.n)>=0?pl.indexOf(j.n):me?pl.findIndex(n=>!isGuestN(n)&&pkey(n)===pkey(me)):-1;
+    const sc=x&&x.scores&&typeof x.scores==="object"?x.scores:{};
+    const over=pl.length&&pl.every((_,p)=>Object.keys(sc[p]||{}).length>=ALL.length);
+    RET=x&&i>=0&&!over?{code:j.code,hote:typeof x.hote==="string"?x.hote.slice(0,16):"",started:!!x.started}:null;
+  }catch(e){RET=null;retKey=""}
+  refreshReturn();
+}
+function refreshReturn(){const el=document.getElementById("retbox");if(!el||VIEW||S.started||ui.created)return;el.outerHTML=returnHTML();
+  const b=document.getElementById("retGo");if(b)b.onclick=()=>{location.href=location.pathname+"?partie="+RET.code}}
 /* ---------- invitations (« Déjà joué avec ») ----------
    invitations/{uid de l'invité} = {code, hote, hoteUid, at}. L'invité a 2 minutes pour accepter (ou refuser). */
 const INV_MS=120000;
@@ -1800,7 +1829,7 @@ function cleanLive(d){
   settings.fullMode=st.fullMode==="somme"?"somme":"fixe";
   const l=d.last;
   const last=l&&Number.isInteger(l.p)&&l.p>=0&&l.p<players.length&&ALL.includes(l.k)?{p:l.p,k:l.k,v:Math.max(0,num(l.v))}:null;
-  return{players,scores,settings,last,started:!!d.started};
+  return{players,scores,settings,last,started:!!d.started,hote:typeof d.hote==="string"?txt(d.hote).slice(0,16):null};
 }
 function watchLive(){
   if(!DB){VS="error";render();return}
@@ -1827,12 +1856,25 @@ function watchLive(){
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)resync()});
 }
 let viewMates=false;
+/* ma colonne dans la partie suivie : nom du « rejoindre » gardé sur ce téléphone, ou mon pseudo de compte */
+function viewMyIdx(jn){
+  if(jn){const i=S.players.indexOf(jn.n);if(i>=0)return i}
+  const me=typeof meName==="function"?meName():null;
+  return me?S.players.findIndex(n=>!isGuestN(n)&&pkey(n)===pkey(me)):-1;
+}
+function openQuitView(player){
+  openSheet(`<h3 id="sheetTitle">${player?"Quitter l'écran de la partie ?":"Arrêter de suivre la partie ?"}</h3><div class="sub">${player?"Tu restes dans la partie : tes scores continuent d'être inscrits, et tu pourras revenir depuis l'accueil ou avec le code.":"Tu pourras revenir avec le code."}</div>
+    <button class="primary dangerbg" id="qvYes">Oui</button>
+    <button class="secondary" id="qvNo">Non</button>`,
+  sh=>{sh.querySelector("#qvYes").onclick=()=>{location.href=location.pathname};sh.querySelector("#qvNo").onclick=closeSheet});
+}
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
-  const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn invite" id="btnInstallView" aria-label="Installer">${DL_ICON}<span class="lbl">Installer</span></button>`}${VS==="ok"?`<button class="iconbtn sq" id="btnShareView" aria-label="Partager" title="Partager">${SHARE_ICON}</button>`:""}<button class="iconbtn sq" id="btnQuit" aria-label="Quitter" title="Quitter">${QUIT_ICON}</button></header>`;
+  const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn sq invite ico" id="btnInstallView" aria-label="Installer l'appli" title="Installer l'appli">${DL_ICON}</button>`}${VS==="ok"?`<button class="iconbtn sq" id="btnShareView" aria-label="Partager" title="Partager">${SHARE_ICON}</button>`:""}${typeof acctBtnHTML==="function"?acctBtnHTML():""}<button class="iconbtn sq" id="btnQuit" aria-label="Quitter" title="Quitter">${QUIT_ICON}</button></header>`;
   const box=(t,m,x)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p>${x||""}</div>`;
   const jn=getJoin(VIEW),logged=typeof meName==="function"&&!!meName();
   const loginBtn=jn&&!jn.acct&&!logged?`<button class="secondary" id="vLogin">Me connecter pour jouer avec mon pseudo</button>`:"";
+  const myIdx=viewMyIdx(jn),host=S.hote?esc(S.hote):"celui qui tient la feuille";
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
       denied:"Accès refusé par la base Firebase.",error:"Impossible de se connecter pour le moment. Vérifie ta connexion."}[VS]
@@ -1843,9 +1885,9 @@ function renderView(){
     const tot=S.players.map((_,p)=>totals(p)),best=Math.max(...tot.map(t=>t.total)),anyScore=tot.some(t=>t.total>0);
     const over=finished(),cur=over?null:curPlayer();
     const lk=leaderKey();
-    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${nm(n)}</th>`).join("");
+    const head=S.players.map((n,p)=>`<th scope="col" class="${anyScore&&tot[p].total===best?"lead":""} ${cur&&p===cur.p?"now":""} ${p===myIdx?"mine":""}">${lk&&pkey(n)===lk?`<span class="lmk" title="Leader de la saison">${markHTML(SEASON.th,cur&&p===cur.p?"#1B2620":"#E9B949",26,9,"Leader de la saison")}</span>`:""}${cur&&p===cur.p?"▶ ":""}${nm(n)}</th>`).join("");
     const row=k=>S.players.map((_,p)=>{const v=(S.scores[p]||{})[k];
-      return`<td class="cell ${v===0?"zero":""}" data-p="${p}" data-k="${k}">${v==null?"":v}</td>`}).join("");
+      return`<td class="cell ${v===0?"zero":""} ${p===myIdx?"mine":""}" data-p="${p}" data-k="${k}">${v==null?"":v}</td>`}).join("");
     const L=S.last;
     let bar;
     if(over){
@@ -1857,14 +1899,15 @@ function renderView(){
         <div class="who">Au tour de ${nm(S.players[cur.p])} <small style="font-size:16px;color:var(--muted);font-weight:500">· tour ${cur.round}/${ALL.length}</small></div>
         ${L?`<div class="lst">Dernier coup : ${nm(S.players[L.p])}, ${L.v?`${L.v} en ${LABEL[L.k]}`:`${LABEL[L.k]} barré`}</div>`:""}`;
     }
-    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div>${jn&&!jn.acct&&!logged?`<div class="joined vg">Tu joues en invité : <b>${nm(jn.n)}</b>. Connecte-toi et ton nom devient ton pseudo.${loginBtn}</div>`:""}<div class="live">
+    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div>${myIdx>=0?`<div class="joined vg">🎲 <b>Tu joues dans cette partie</b> (colonne ${nm(S.players[myIdx])}). ${S.hote?`<b>${host}</b>`:"Celui qui tient la feuille"} inscrit les scores.${jn&&!jn.acct&&!logged?` Tu joues en invité : connecte-toi et ton nom devient ton pseudo.${loginBtn}`:""}</div>`:""}<div class="live">
       ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}</div>
-      <p class="hint">Tu regardes la partie : seul celui qui tient la feuille peut inscrire les scores.</p>`;
+      <p class="hint">${myIdx>=0?`Ta colonne est surlignée. Seul ${host} peut inscrire les scores.`:"Tu regardes la partie en spectateur : seul celui qui tient la feuille peut inscrire les scores."}</p>`;
     if(!viewMates){viewMates=true;addPartners(S.players.filter(n=>!isGuestN(n)))}
   }
   const vj=document.getElementById("vJoin");if(vj)vj.onclick=()=>openJoin(VIEW);
   const vl=document.getElementById("vLogin");if(vl)vl.onclick=()=>{if(typeof accTap==="function")accTap()};
-  document.getElementById("btnQuit").onclick=()=>{location.href=location.pathname};
+  document.getElementById("btnQuit").onclick=()=>openQuitView(myIdx>=0||(!!jn&&!S.started));
+  if(typeof bindAcctBtn==="function")bindAcctBtn();
   const bs=document.getElementById("btnShareView");if(bs)bs.onclick=openShareView;
   const bi=document.getElementById("btnInstallView");if(bi)bi.onclick=installFromView;
 }
