@@ -1298,8 +1298,11 @@ async function seasonFlow(){
 
 /* ---------- historique partagé ---------- */
 let DB=null,HIST=null,HERR=false;
+const MAX_TOTAL=1200; // 105 en haut + prime et cases du bas à leur valeur maximale réglable
+/* date d'effacement automatique (règle TTL de Firestore) */
+const expireIn=ms=>firebase.firestore.Timestamp.fromMillis(Date.now()+ms);
 function gameData(){
-  const r=S.players.slice(0,12).map((n,p)=>({n:String(n).slice(0,30),t:Math.max(0,Math.min(2000,totals(p).total|0))})).sort((a,b)=>b.t-a.t);
+  const r=S.players.slice(0,12).map((n,p)=>({n:String(n).slice(0,30),t:Math.max(0,Math.min(MAX_TOTAL,totals(p).total|0))})).sort((a,b)=>b.t-a.t);
   const sheet=S.players.slice(0,12).map((n,p)=>{const sc=S.scores[p]||{};
     return{n:String(n).slice(0,30),v:ALL.map(k=>Math.max(0,Math.min(500,sc[k]|0))),prime:Math.max(0,Math.min(500,totals(p).prime|0))}});
   return{date:new Date().toISOString(),winner:r[0].n,top:r[0].t,ranking:r,sheet};
@@ -1328,8 +1331,20 @@ function outboxPut(id,d){const o=readOutbox().filter(x=>x.id!==id);o.push({id,d,
 function outboxDone(id,d){writeOutbox(readOutbox().filter(x=>!(x.id===id&&(!d||JSON.stringify(x.d)===JSON.stringify(d)))))}
 const isDenied=e=>e&&(e.code==="permission-denied"||e.code==="permission_denied");
 // Écrit une partie : création complète si elle n'existe pas encore, mise à jour sinon
+/* Identité Firebase de ce téléphone : le compte s'il est connecté, sinon une identité anonyme invisible.
+   Elle prouve qui a créé une partie : seul ce téléphone peut ensuite la corriger ou la supprimer. */
+let authReady=null;
+function fbReady(){const a=fbAuth();if(!a)return Promise.resolve(null);
+  if(!authReady)authReady=new Promise(ok=>{const off=a.onAuthStateChanged(()=>{off();ok()})});return authReady}
+async function fbUid(){
+  const a=fbAuth();if(!a)return null;
+  await fbReady();if(a.currentUser)return a.currentUser.uid;
+  try{const r=await a.signInAnonymously();return r.user.uid}catch(e){return null}
+}
 async function pushGame(ref,d,exists){
-  const write=x=>exists?ref.set(x,{merge:true}):ref.set({...x,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  const uid=await fbUid();
+  if(!uid)throw Object.assign(new Error("auth"),{code:"unavailable"}); // pas d'identité : la partie reste dans la boîte d'envoi
+  const write=x=>exists?ref.set(x,{merge:true}):ref.set({...x,owner:uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   try{await write(d)}catch(e){if(isDenied(e)){const{sheet,...light}=d;await write(light)}else throw e}
 }
 let flushing=false;
@@ -1488,7 +1503,7 @@ function liveData(){
   const scores={};if(S.started)S.players.forEach((_,p)=>{const r=S.scores[p];if(r)scores[p]={...r}});
   const pl=S.started?S.players.slice(0,12).map(n=>String(n).slice(0,30)):finalNames().filter(Boolean).slice(0,12);
   return{players:pl.length?pl:[""],hote:(typeof meName==="function"&&meName())||null,scores,settings:{...S.settings},started:!!S.started,
-    last:S.started&&S.last?{p:S.last.p,k:S.last.k,v:S.last.v}:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    last:S.started&&S.last?{p:S.last.p,k:S.last.k,v:S.last.v}:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),expireAt:expireIn(864e5)};
 }
 function sendLive(){
   clearTimeout(liveT);liveT=0;const code=S.live;if(!code||VIEW||!DB)return;
@@ -1599,7 +1614,7 @@ async function joinGame(code,guestName){
   if(!name)throw jerr("Entre ton prénom ou un surnom.","name");
   if(!pl.includes(name)&&pl.length>=12)throw jerr("La table est pleine (12 joueurs).");
   const jid=me?Acc.user.uid:myGid();if(!jid)throw jerr("Ton téléphone bloque l'enregistrement local : impossible de rejoindre.");
-  try{await joinRef(code,jid).set(me?{pseudo:me,compte:true,uid:jid,at:TS}:{pseudo:name,compte:false,at:TS})}
+  try{await joinRef(code,jid).set(me?{pseudo:me,compte:true,uid:jid,at:TS,expireAt:expireIn(864e5)}:{pseudo:name,compte:false,at:TS,expireAt:expireIn(864e5)})}
   catch(e){throw jerr(isDenied(e)?"La base a refusé : la partie a peut-être commencé.":"Pas de connexion. Vérifie le réseau.")}
   setJoin({code,jid,n:name,acct:!!me,at:Date.now()});
   if(!me)try{localStorage.setItem(GNAME_KEY,baseN(name))}catch(e){}
@@ -1612,7 +1627,7 @@ async function upgradeJoin(){
   if(!DB||upBusy)return;const me=typeof meName==="function"?meName():null;if(!me)return;
   const j=readJoin();if(!j||j.acct)return;
   upBusy=true;
-  try{await joinRef(j.code,j.jid).set({pseudo:me,compte:true,uid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
+  try{await joinRef(j.code,j.jid).set({pseudo:me,compte:true,uid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp(),expireAt:expireIn(864e5)});
     j.n=me;j.acct=true;setJoin(j);toast(`Tu joues maintenant sous ton pseudo : ${me}`);if(VIEW)render()}
   catch(e){}finally{upBusy=false}
 }
@@ -1721,7 +1736,7 @@ async function sendInvite(n,btn){
     if(!uid){const q=await DB.collection("joueurs").where("pseudo","==",n).get();uid=q.docs[0]&&q.docs[0].id}
     if(!uid)throw 0;
     ensureCodeOn();
-    await DB.collection("invitations").doc(uid).set({code:S.live,hote:me,hoteUid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
+    await DB.collection("invitations").doc(uid).set({code:S.live,hote:me,hoteUid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp(),expireAt:expireIn(6e5)});
     S.pending=S.pending||{};S.pending[pkey(n)]={uid,n,until:Date.now()+INV_MS,code:S.live};
     const e=S.players.findIndex(x=>!String(x).trim());if(e>=0)S.players[e]=n;else S.players.push(n);
     watchInvSent(pkey(n));save();render();toast(`Invitation envoyée à ${n}`);
@@ -2336,7 +2351,8 @@ function openPrivacy(back){
 function initAccounts(){
   const a=fbAuth();
   if(!a){Acc.ready=false;acctUI();return}
-  a.onAuthStateChanged(async u=>{Acc.user=u;
+  a.onAuthStateChanged(async u=>{if(u&&u.isAnonymous)u=null; // identité anonyme (historique) : pas un compte
+    Acc.user=u;
     if(!u){Acc.pseudo=null;Acc.email=null;Acc.passkeys=0;Acc.ready=true;acctUI();prefetchBio();return}
     try{const t=await u.getIdTokenResult();Acc.pseudo=t.claims.pseudo||Acc.pseudo||null}catch(e){}
     Acc.ready=true;acctUI();refreshMe();

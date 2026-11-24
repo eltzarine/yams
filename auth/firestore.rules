@@ -6,10 +6,11 @@ service cloud.firestore {
       // Une partie valide : uniquement ces champs, avec des tailles raisonnables
       // (« sheet » = la feuille de scores complète, facultative)
       function valide(d) {
-        return d.keys().hasOnly(['date', 'winner', 'top', 'ranking', 'sheet', 'createdAt'])
+        return d.keys().hasOnly(['date', 'winner', 'top', 'ranking', 'sheet', 'createdAt', 'owner'])
           && d.date is string && d.date.size() <= 40
           && d.winner is string && d.winner.size() <= 40
-          && d.top is int && d.top >= 0 && d.top <= 2000
+          // 1200 = maximum possible avec les règles réglables les plus généreuses
+          && d.top is int && d.top >= 0 && d.top <= 1200
           && d.ranking is list && d.ranking.size() >= 1 && d.ranking.size() <= 12
           && (!('sheet' in d) || (d.sheet is list && d.sheet.size() <= 12));
       }
@@ -17,21 +18,29 @@ service cloud.firestore {
       // Tout le monde peut voir l'historique
       allow read: if true;
 
-      // Ajout : identifiant au bon format + date de création posée par le serveur
-      allow create: if id.matches('^g[a-z0-9]{6,24}$')
+      // Ajout : il faut une identité (compte ou anonyme), qui devient propriétaire de la partie
+      allow create: if request.auth != null
+        && id.matches('^g[a-z0-9]{6,24}$')
         && valide(request.resource.data)
+        && request.resource.data.owner == request.auth.uid
         && request.resource.data.createdAt == request.time;
 
-      // Correction et suppression : seulement pendant 2 jours après la partie
-      allow update: if valide(request.resource.data)
+      // Correction et suppression : seulement le téléphone qui l'a créée, pendant 2 jours
+      allow update: if request.auth != null
+        && resource.data.owner == request.auth.uid
+        && valide(request.resource.data)
+        && request.resource.data.owner == resource.data.owner
         && request.resource.data.createdAt == resource.data.createdAt
         && request.time < resource.data.createdAt + duration.value(2, 'd');
-      allow delete: if request.time < resource.data.createdAt + duration.value(2, 'd');
+      allow delete: if request.auth != null
+        && resource.data.owner == request.auth.uid
+        && request.time < resource.data.createdAt + duration.value(2, 'd');
     }
      // Partie en direct : lisible par tous, écrite par l'appli de l'hôte
     match /direct/{code} {
       function directValide(d) {
-        return d.keys().hasOnly(['players', 'hote', 'scores', 'settings', 'started', 'last', 'updatedAt'])
+        return d.keys().hasOnly(['players', 'hote', 'scores', 'settings', 'started', 'last', 'updatedAt', 'expireAt'])
+          && (!('expireAt' in d) || (d.expireAt is timestamp && d.expireAt <= request.time + duration.value(2, 'd')))
           && (!('hote' in d) || d.hote == null || (d.hote is string && d.hote.size() <= 16))
           && d.players is list && d.players.size() >= 1 && d.players.size() <= 12
           && d.scores is map && d.scores.size() <= 12
@@ -40,7 +49,9 @@ service cloud.firestore {
           && (d.last == null || d.last is map)
           && d.updatedAt == request.time;
       }
-      allow read: if true;
+      // Lecture d'une partie seulement avec son code : impossible de lister toutes les parties en cours
+      allow get: if true;
+      allow list: if false;
       allow create, update: if code.matches('^[A-Z0-9]{4,8}$')
         && directValide(request.resource.data);
       allow delete: if true;
@@ -49,7 +60,8 @@ service cloud.firestore {
       // id = uid du compte, ou identifiant d'invité « g… » gardé sur le téléphone.
       match /joueurs/{jid} {
         function joueurValide(d) {
-          return d.keys().hasOnly(['pseudo', 'compte', 'uid', 'at'])
+          return d.keys().hasOnly(['pseudo', 'compte', 'uid', 'at', 'expireAt'])
+            && (!('expireAt' in d) || (d.expireAt is timestamp && d.expireAt <= request.time + duration.value(2, 'd')))
             && d.pseudo is string && d.pseudo.size() >= 1 && d.pseudo.size() <= 30
             && d.compte is bool
             && d.at == request.time;
@@ -83,7 +95,8 @@ service cloud.firestore {
     // L'hôte (connecté) l'écrit à son nom ; l'invité la lit, la refuse ou la supprime.
     match /invitations/{uid} {
       function invValide(d) {
-        return d.keys().hasOnly(['code', 'hote', 'hoteUid', 'at'])
+        return d.keys().hasOnly(['code', 'hote', 'hoteUid', 'at', 'expireAt'])
+          && (!('expireAt' in d) || (d.expireAt is timestamp && d.expireAt <= request.time + duration.value(1, 'h')))
           && d.code is string && d.code.matches('^[A-Z0-9]{4,8}$')
           && d.hoteUid == request.auth.uid
           && d.hote == request.auth.token.pseudo
