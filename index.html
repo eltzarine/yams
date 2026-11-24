@@ -2027,7 +2027,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     await box.init();if(!sp.isConnected)return;
     sp.classList.add("d3");roll();
     zone.addEventListener("click",roll);
-    new MutationObserver(()=>{if(sp.classList.contains("hide")){try{box.clear()}catch(e){}}}).observe(sp,{attributes:true,attributeFilter:["class"]});
+    /* pas de box.clear() à la fermeture : vider pendant un lancer fait planter dice-box ; le rendu s'arrête seul quand les dés sont posés */
   }).catch(e=>{console.warn("dés 3D indisponibles",e);sp.classList.remove("d3")});
 })();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
