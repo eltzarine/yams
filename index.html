@@ -337,6 +337,15 @@ html:has(#splash:not(.hide)),html:has(#splash:not(.hide)) body{overflow:hidden;o
 .splash .install[hidden],.splash .ihelp[hidden]{display:none}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.splash *{animation:none!important}}
+/* accueil v2 : logo tout en haut, piste en cuir (rebord = murs des dés), « Jouer » et mention en bas */
+.splash{padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 50px);
+  --pt:calc(env(safe-area-inset-top,0px) + 14px + min(90vw,440px)/3 + 6px);--pb:calc(env(safe-area-inset-bottom,0px) + 50px + 58px + 14px);--s:.34}
+.splash .foot{bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+.splash .credit{font-size:12px;opacity:.6}
+.splash .piste{position:absolute;left:8px;right:8px;top:var(--pt);bottom:var(--pb);z-index:0;pointer-events:none;
+  border-style:solid;border-width:calc(130px * var(--s));border-image:url(piste.webp) 130 / calc(130px * var(--s)) round;
+  filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
+.splash .dice3d{left:calc(8px + 82px * var(--s));right:calc(8px + 82px * var(--s));top:calc(var(--pt) + 82px * var(--s));bottom:calc(var(--pb) + 82px * var(--s))}
 
 /* stats de l'historique */
 .stats{background:var(--bg);border-radius:14px;padding:4px 12px;margin:0 0 14px}
@@ -586,7 +595,6 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   </div>
 </div>
 <div class="splash" id="splash">
-  <button class="acctchip" id="acctChip" hidden aria-label="Créer un compte ou se connecter"><span class="av" aria-hidden="true">👤</span><span class="nm">Me connecter</span></button>
   <h1 class="logo"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
   <svg viewBox="0 0 300 100" aria-hidden="true">
     <g class="dd" style="--i:0;--dx:-72px;--rot:0deg;transform-origin:30px 62px"><g transform="rotate(-16 30 62)"><rect x="6" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="19" cy="51" r="4.3"/><circle cx="41" cy="51" r="4.3"/><circle cx="30" cy="62" r="4.3"/><circle cx="19" cy="73" r="4.3"/><circle cx="41" cy="73" r="4.3"/></g></g></g>
@@ -595,6 +603,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
     <g class="dd" style="--i:3;--dx:40px;--rot:270deg;transform-origin:216px 48px"><g transform="rotate(7 216 48)"><rect x="192" y="24" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="205" cy="37" r="4.3"/><circle cx="227" cy="59" r="4.3"/></g></g></g>
     <g class="dd" style="--i:4;--dx:72px;--rot:360deg;transform-origin:270px 62px"><g transform="rotate(15 270 62)"><rect x="246" y="38" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#1B2620" stroke-width="2.5"/><g fill="#C8352E"><circle cx="259" cy="51" r="4.3"/><circle cx="281" cy="51" r="4.3"/><circle cx="259" cy="73" r="4.3"/><circle cx="281" cy="73" r="4.3"/></g></g></g>
   </svg>
+  <div class="piste" aria-hidden="true"></div>
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <button class="play" id="btnPlay">Jouer</button>
   <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
@@ -2006,10 +2015,13 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   if(VIEW){sp.remove();return}
   const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
-  let going=false;
+  let going=false,gone=false;
+  const go=()=>{if(gone)return;gone=true;hide();seasonFlow()};
+  window.splashGo=()=>{if(sp.isConnected&&!sp.classList.contains("hide"))go()};
+  /* « Jouer » : connecté → on joue ; Face ID sur ce téléphone → reconnaissance ; sinon choix e-mail / invité */
   document.getElementById("btnPlay").onclick=async e=>{if(going)return;going=true;
-    if(typeof bioBeforePlay==="function")await bioBeforePlay(e.currentTarget);
-    hide();seasonFlow()};})();
+    try{if(typeof playGate==="function"&&!(await playGate(e.currentTarget)))return;go()}
+    finally{going=false}};})();
 /* iOS ignore parfois overflow:hidden : on bloque le glisser sur l'accueil (sauf dans l'aide d'installation) */
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   sp.addEventListener("touchmove",e=>{if(!sp.classList.contains("hide")&&!e.target.closest(".ihelp"))e.preventDefault()},{passive:false})})();
@@ -2023,7 +2035,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   import("./dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
     if(!sp.isConnected)return;
     box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",
-      theme:"yams",themeColor:"#FBF8F1",scale:8,gravity:1.2,shadowTransparency:.65,lightIntensity:1.05});
+      theme:"yams",themeColor:"#FBF8F1",scale:5.5,gravity:1.2,shadowTransparency:.65,lightIntensity:1.05});
     await box.init();if(!sp.isConnected)return;
     sp.classList.add("d3");roll();
     zone.addEventListener("click",roll);
@@ -2307,7 +2319,22 @@ async function bioAuth(){
   return r;
 }
 /* « Jouer » : si Face ID existe sur ce téléphone et qu'on n'est pas connecté, on reconnaît d'abord.
-   Annulé ou raté : on joue en invité, sans blocage. */
+   Annulé ou raté : on propose le code par e-mail ou le jeu en invité. Renvoie true si on peut jouer tout de suite. */
+async function playGate(btn){
+  if(!ACC_ON||!Acc.ready||Acc.user)return true;
+  if(PK_OK&&pkHere()&&!bioBusy){await bioBeforePlay(btn);if(Acc.user)return true}
+  openPlayChoice();return false;
+}
+function openPlayChoice(){
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Avant de jouer</h3>
+    <div class="sub">Avec un compte, tes scores comptent pour ton palmarès et la saison. Pas de mot de passe.</div>
+    <div class="acc">
+      <button class="primary" id="pcMail">Recevoir un code par e-mail</button>
+      <button class="replay" id="pcGuest">Jouer en invité</button>
+    </div>`,
+  sh=>{sh.querySelector("#pcMail").onclick=()=>accEmail();
+    sh.querySelector("#pcGuest").onclick=()=>{closeSheet();if(window.splashGo)splashGo()}});
+}
 async function bioBeforePlay(btn){
   if(!ACC_ON||!Acc.ready||!PK_OK||!pkHere()||Acc.user||bioBusy)return;
   bioBusy=true;if(btn){btn.disabled=true;btn.dataset.t=btn.innerHTML;btn.textContent=BIO_T+"…"}
@@ -2332,7 +2359,7 @@ async function accTap(){
     if(!bioCancel(err)){const sh=document.getElementById("sheet");setErr(sh,errMsg(err&&err.code?err:{code:"passkey"}))}}
   finally{bioBusy=false}
 }
-function afterLogin(){closeSheet();toast(`Content de te revoir, ${Acc.pseudo} 🎲`)}
+function afterLogin(){closeSheet();toast(`Content de te revoir, ${Acc.pseudo} 🎲`);if(window.splashGo)splashGo()}
 
 function accWelcome(){
   openSheet(`<div class="acc welcome"><div class="wdice" aria-hidden="true">🎲</div>
