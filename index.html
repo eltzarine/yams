@@ -463,7 +463,16 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .s-t0{animation:s-up .5s .05s both}.s-t1{animation:s-up .5s 2.4s both}.s-t2{animation:s-up .5s 2.8s both}
 @media (prefers-reduced-motion:reduce){.sov *{animation:none!important}.sov .conf{display:none}.sov{transition:none}}
 
+/* volets : défilement au doigt, boutons d’action collés en bas, clavier pris en compte */
+.sheet{touch-action:pan-y;bottom:var(--kb,0px)}
+@supports (height:1dvh){.sheet{max-height:min(92dvh,calc(var(--vvh,100dvh) - 12px))}}
+.sheet .sfoot{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom,0px));margin:14px -16px calc(-18px - env(safe-area-inset-bottom,0px));padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);z-index:2}
+.sheet .sfoot .secondary{margin-top:8px}
 /* comptes joueurs */
+.prow.me input{border-color:var(--felt);font-weight:700;padding-right:58px}
+.mechip{position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--felt);color:var(--felt-ink);border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;pointer-events:none}
+.prow.me .startchip{right:110px}
+.add.addme{border-color:var(--felt);color:var(--felt);font-weight:700}
 .splash .acctchip{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;display:inline-flex;align-items:center;gap:7px;height:38px;max-width:60vw;padding:0 14px 0 6px;border:1.5px solid rgba(255,255,255,.4);border-radius:999px;background:rgba(0,0,0,.15);color:var(--felt-ink);font-weight:600;font-size:15px;animation:fadeup .6s 1.1s both;z-index:2}
 .splash .acctchip[hidden]{display:none}
 .splash .acctchip .av{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;flex:none}
@@ -621,7 +630,7 @@ function render(){try{return renderMain()}finally{syncWake()}}
 function renderMain(){
   if(VIEW)return renderView();
   const app=document.getElementById("app");
-  if(!S.started){document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();window.scrollTo(0,0);return}
+  if(!S.started){if(typeof ensureMe==="function")ensureMe();document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");app.innerHTML=setupHTML();bindSetup();window.scrollTo(0,0);return}
   const tot=S.players.map((_,p)=>totals(p));
   const best=Math.max(...tot.map(t=>t.total));
   const anyScore=tot.some(t=>t.total>0);
@@ -822,7 +831,9 @@ function setupHTML(){
   return `<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
   <div class="setup"><h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre.</p>
-  <div id="plist">${S.players.map((n,i)=>`<div class="prow" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next">${i===0&&ui.starter&&pkey(n)===pkey(ui.starter)?`<span class="startchip">commence</span>`:""}<button data-del="${i}" aria-label="Retirer">×</button></div>`).join("")}</div>
+  ${(()=>{const me=typeof meName==="function"?meName():null;const meIn=me&&S.players.some(n=>pkey(n)===pkey(me));
+  return `<div id="plist" data-me="${esc(me||"")}">${S.players.map((n,i)=>{const mine=me&&pkey(n)===pkey(me);return `<div class="prow${mine?" me":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(n)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(n)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":""}" placeholder="Joueur ${i+1}" maxlength="30" autocomplete="off" enterkeyhint="next"${mine?" readonly":""}>${mine?`<span class="mechip">moi</span>`:""}${i===0&&ui.starter&&pkey(n)===pkey(ui.starter)?`<span class="startchip">commence</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
+  ${me&&!meIn?`<button class="add addme" id="addMe">+ M’ajouter (${esc(me)})</button>`:""}`})()}
   <button class="add" id="addP">Ajouter un joueur</button>
   <button class="who1" id="btnWho">${DIE_ICON}Qui commence ?</button>
   <button class="primary" id="go">Commencer la partie</button>
@@ -830,7 +841,11 @@ function setupHTML(){
 }
 function bindSetup(){
   document.querySelectorAll("#plist input").forEach(inp=>inp.oninput=()=>{S.players[+inp.dataset.i]=inp.value;save()});
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(S.players.length>1){S.players.splice(+b.dataset.del,1);save();render()}});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del,mine=typeof isMe==="function"&&isMe(S.players[i]);
+    if(mine)S.meOff=true;
+    if(S.players.length>1)S.players.splice(i,1);else if(mine)S.players=[""];else return;
+    save();render()});
+  const am=document.getElementById("addMe");if(am)am.onclick=()=>{S.meOff=false;ensureMe();render()};
   bindDrag();
   document.getElementById("btnFollow").onclick=openFollow;
   if(typeof bindAcctBtn==="function")bindAcctBtn();
@@ -928,7 +943,7 @@ function openCell(p,k){
 function openSettings(){
   const st=S.settings;
   const num=(id,label,hint)=>`<div class="set"><label for="s_${id}"><span>${label}</span>${hint?`<small>${hint}</small>`:""}</label><input type="number" inputmode="numeric" min="0" max="200" id="s_${id}" value="${st[id]}"></div>`;
-  openSheet(`<h3 id="sheetTitle">Règles de la partie</h3><div class="sub">Réglées sur ta feuille. Change-les si vous jouez autrement.</div>
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Règles de la partie</h3><div class="sub">Réglées sur ta feuille. Change-les si vous jouez autrement.</div>
     ${num("seuil","Prime à partir de","total des cases 1 à 6")}
     ${num("prime","Valeur de la prime")}
     <div class="set"><span>Full<small>${st.fullMode==="somme"?"somme des 5 dés":"valeur fixe"}</small></span>
@@ -937,8 +952,8 @@ function openSettings(){
     ${num("petite","Petite suite")}
     ${num("grande","Grande suite")}
     ${num("yams","Yams")}
-    <button class="primary" id="saveSet" style="margin-top:14px">Enregistrer</button>
-    <button class="secondary" id="resetSet">Revenir aux valeurs de la feuille</button>`,
+    <div class="sfoot"><button class="primary" id="saveSet">Enregistrer</button>
+    <button class="secondary" id="resetSet">Revenir aux valeurs de la feuille</button></div>`,
   sh=>{
     const grab=()=>["seuil","prime","petite","grande","yams","fullFixe"].forEach(k=>{const el=sh.querySelector("#s_"+k);if(el&&el.value!=="")st[k]=clamp(el.value,0,200)});
     sh.querySelectorAll("[data-fm]").forEach(b=>b.onclick=()=>{grab();st.fullMode=b.dataset.fm;save();openSettings()});
@@ -1575,6 +1590,13 @@ function openShareView(){
 }
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+/* clavier ouvert (iPhone surtout) : le volet remonte au-dessus du clavier et le champ actif reste visible */
+(()=>{const vv=window.visualViewport;if(!vv)return;const de=document.documentElement;
+  const upd=()=>{const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));de.style.setProperty("--kb",(kb>60?kb:0)+"px");de.style.setProperty("--vvh",Math.round(vv.height)+"px")};
+  vv.addEventListener("resize",upd);vv.addEventListener("scroll",upd);upd();
+  document.addEventListener("focusin",e=>{const sh=document.getElementById("sheet"),t=e.target;
+    if(sh&&sh.contains(t)&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))setTimeout(()=>{try{t.scrollIntoView({block:"center",behavior:"smooth"})}catch(x){}},320)});
+})();
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   if(VIEW){sp.remove();return}
   const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
@@ -1672,6 +1694,10 @@ function fbAuth(){try{return window.firebase&&firebase.apps.length&&firebase.aut
 async function signInToken(token){const a=fbAuth();if(!a)throw Object.assign(new Error("serveur"),{code:"serveur"});await a.signInWithCustomToken(token);await a.currentUser.getIdToken(true)}
 function loadWebAuthn(){if(window.SimpleWebAuthnBrowser)return Promise.resolve();return new Promise((ok,ko)=>{const sc=document.createElement("script");sc.src="webauthn.js";sc.onload=ok;sc.onerror=()=>ko(Object.assign(new Error("reseau"),{code:"reseau"}));document.head.appendChild(sc)})}
 function ev(name,p){if(window.gtag)gtag("event",name,p||{})}
+/* une clé Face ID / empreinte existe sur cet appareil (créée ou utilisée ici) */
+const PK_KEY="yams_pk";
+function pkHere(){try{return localStorage.getItem(PK_KEY)==="1"}catch(e){return false}}
+function setPkHere(on){try{on?localStorage.setItem(PK_KEY,"1"):localStorage.removeItem(PK_KEY)}catch(e){}}
 
 /* profil public (pseudo) dans Firestore : joueurs/{uid} */
 function saveProfile(){if(!DB||!Acc.user||!Acc.pseudo)return;
@@ -1682,16 +1708,28 @@ async function refreshMe(){
   catch(e){if(e.code==="compte"){const a=fbAuth();if(a)await a.signOut().catch(()=>{})}}
   acctUI();
 }
+/* pseudo du joueur connecté sur ce téléphone (null si invité ou comptes masqués) */
+function meName(){return ACC_ON&&Acc.ready&&Acc.user&&Acc.pseudo?Acc.pseudo:null}
+function isMe(n){const m=meName();return!!m&&pkey(n)===pkey(m)}
+/* je suis ajouté automatiquement à la table, sauf si je me suis retiré */
+function ensureMe(){const m=meName();if(!m||VIEW||S.started||S.meOff)return false;
+  if(S.players.some(n=>pkey(n)===pkey(m)))return false;
+  const e=S.players.findIndex(n=>!String(n).trim());
+  if(e>=0)S.players.splice(e,1);
+  S.players.unshift(m);S.players=S.players.slice(0,12);save();return true}
 function acctUI(){
   const on=!!(Acc.user&&Acc.pseudo);
   const sp=document.getElementById("acctChip");
   if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Invité";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
+  const inSetup=!VIEW&&!S.started&&document.querySelector("#app header");
+  const added=ensureMe();
+  const pl=document.getElementById("plist");
+  if(inSetup&&(added||!document.getElementById("btnAcct")||(pl&&pl.dataset.me!==String(meName()||""))))return render();
   const hb=document.getElementById("btnAcct");if(hb){hb.outerHTML=acctBtnHTML();bindAcctBtn()}
-  else if(Acc.ready&&!VIEW&&!S.started&&document.querySelector("#app header"))render();
 }
 function acctBtnHTML(){if(!Acc.ready||!ACC_ON)return"";const on=Acc.user&&Acc.pseudo;
   return`<button class="iconbtn sq acctbtn ${on?"on":""}" id="btnAcct" aria-label="${on?"Mon compte : "+esc(Acc.pseudo):"Créer un compte ou se connecter"}">${on?`<span class="ini">${esc([...Acc.pseudo][0].toUpperCase())}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`}</button>`}
-function bindAcctBtn(){const b=document.getElementById("btnAcct");if(b)b.onclick=openAccount}
+function bindAcctBtn(){const b=document.getElementById("btnAcct");if(b)b.onclick=accTap}
 
 /* ---------- volet Compte ---------- */
 function busy(btn,on,txt){if(!btn)return;if(on){btn.dataset.t=btn.innerHTML;btn.disabled=true;btn.setAttribute("aria-busy","true");btn.textContent=txt||"Un instant…"}else{btn.disabled=false;btn.removeAttribute("aria-busy");if(btn.dataset.t)btn.innerHTML=btn.dataset.t}}
@@ -1795,7 +1833,7 @@ function accPseudo(){
     ps.oninput=()=>{setErr(sh,"");check()};check();
     f.onsubmit=async e=>{e.preventDefault();setErr(sh,"");busy(bt,true,"Enregistrement…");
       try{const r=await api("/pseudo",{pseudo:ps.value},true);await signInToken(r.token);Acc.user=fbAuth().currentUser;Acc.pseudo=r.pseudo;saveProfile();acctUI();ev("compte_cree");
-        if(PK_OK&&!Acc.passkeys)accBioOffer();else accWelcome()}
+        accWelcome()}
       catch(err){busy(bt,false);setErr(sh,errMsg(err));ps.focus()}
     };
   });
@@ -1813,7 +1851,7 @@ function accBioOffer(fromSettings){
     b.onclick=async()=>{setErr(sh,"");busy(b,true,"Un instant…");
       try{await loadWebAuthn();const o=await api("/passkey/register/options",{},true);
         const resp=await SimpleWebAuthnBrowser.startRegistration({optionsJSON:o.options});
-        await api("/passkey/register/verify",{response:resp},true);Acc.passkeys++;ev("faceid_active");toast(`${BIO_T} activé`);
+        await api("/passkey/register/verify",{response:resp},true);Acc.passkeys++;setPkHere(true);ev("faceid_active");toast(`${BIO_T} activé`);
         fromSettings?accSignedIn():accWelcome()}
       catch(err){busy(b,false);if(err&&(err.name==="NotAllowedError"||err.name==="AbortError"))return;
         setErr(sh,err&&err.name==="InvalidStateError"?`${BIO_T} est déjà activé sur cet appareil.`:errMsg(err&&err.code?err:{code:"passkey"}))}
@@ -1821,22 +1859,36 @@ function accBioOffer(fromSettings){
   });
 }
 
+async function bioAuth(){
+  await loadWebAuthn();const o=await api("/passkey/login/options",{});
+  const resp=await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:o.options});
+  const r=await api("/passkey/login/verify",{cid:o.cid,response:resp});await signInToken(r.token);
+  setPkHere(true);Acc.user=fbAuth().currentUser;Acc.pseudo=r.pseudo;ev("connexion",{methode:"passkey"});acctUI();refreshMe();
+  return r;
+}
+const bioCancel=err=>err&&(err.name==="NotAllowedError"||err.name==="AbortError");
 async function bioLogin(btn,sh){
   busy(btn,true,"Un instant…");setErr(sh,"");
-  try{await loadWebAuthn();const o=await api("/passkey/login/options",{});
-    const resp=await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:o.options});
-    const r=await api("/passkey/login/verify",{cid:o.cid,response:resp});await signInToken(r.token);
-    Acc.user=fbAuth().currentUser;Acc.pseudo=r.pseudo;ev("connexion",{methode:"passkey"});acctUI();refreshMe();
-    if(!r.pseudo)accPseudo();else afterLogin()}
-  catch(err){busy(btn,false);if(err&&(err.name==="NotAllowedError"||err.name==="AbortError"))return;
+  try{const r=await bioAuth();if(!r.pseudo)accPseudo();else afterLogin()}
+  catch(err){busy(btn,false);if(bioCancel(err))return;if(err&&err.code==="passkey_inconnue")setPkHere(false);
     setErr(sh,errMsg(err&&err.code?err:{code:"passkey"}))}
+}
+/* bouton compte (pastille / initiale) : si Face ID existe sur cet appareil, on lance directement la reconnaissance */
+let bioBusy=false;
+async function accTap(){
+  if(Acc.user||!PK_OK||!pkHere())return openAccount();
+  if(bioBusy)return;bioBusy=true;
+  try{const r=await bioAuth();if(!r.pseudo)accPseudo();else afterLogin()}
+  catch(err){if(err&&err.code==="passkey_inconnue")setPkHere(false);openAccount();
+    if(!bioCancel(err)){const sh=document.getElementById("sheet");setErr(sh,errMsg(err&&err.code?err:{code:"passkey"}))}}
+  finally{bioBusy=false}
 }
 function afterLogin(){closeSheet();toast(`Content de te revoir, ${Acc.pseudo} 🎲`)}
 
 function accWelcome(){
   openSheet(`<div class="acc welcome"><div class="wdice" aria-hidden="true">🎲</div>
     <h3 id="sheetTitle">Bienvenue, ${esc(Acc.pseudo)}</h3>
-    <div class="sub">Ton compte est prêt. Tes prochaines parties compteront pour ton palmarès.</div>
+    <div class="sub">Ton compte est prêt. Tes prochaines parties compteront pour ton palmarès.${PK_OK?` Tu pourras activer ${BIO_T} dans « Mon compte ».`:""}</div>
     <button class="primary" id="accPlay">Jouer</button></div>`,
   sh=>{sh.querySelector("#accPlay").onclick=()=>{closeSheet();const b=document.getElementById("btnPlay");if(b&&b.isConnected)b.click()}});
 }
@@ -1869,7 +1921,7 @@ function accDelete(){
         if(DB)await DB.collection("joueurs").doc(uid).delete().catch(()=>{});
         const r=await api("/account/delete",{},true);
         try{await fbAuth().signInWithCustomToken(r.token);await fbAuth().currentUser.delete()}catch(e){await fbAuth().signOut().catch(()=>{})}
-        ev("compte_supprime");closeSheet();toast("Compte supprimé.")}
+        setPkHere(false);ev("compte_supprime");closeSheet();toast("Compte supprimé.")}
       catch(err){busy(b,false);setErr(sh,errMsg(err))}
     };
   });
@@ -1898,7 +1950,7 @@ function initAccounts(){
     Acc.ready=true;acctUI();refreshMe();
   });
 }
-(()=>{const c=document.getElementById("acctChip");if(c)c.onclick=openAccount;
+(()=>{const c=document.getElementById("acctChip");if(c)c.onclick=accTap;
   const cr=document.querySelector(".splash .credit");let taps=[];
   if(cr)cr.addEventListener("click",()=>{const t=Date.now();taps=taps.filter(x=>t-x<2000);taps.push(t);if(taps.length<5)return;taps=[];
     ACC_ON=!ACC_ON;try{ACC_ON?localStorage.setItem("yams_comptes","1"):localStorage.removeItem("yams_comptes")}catch(e){}
