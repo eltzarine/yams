@@ -36,14 +36,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1F4D3A">
+<meta name="theme-color" content="#0E5A36">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Yam’s">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<title>Yam’s Gaillon</title>
+<title>Yam’s Club</title>
 <meta name="description" content="Feuille de score du Yams avec calcul automatique des points et historique partagé des parties.">
 <meta name="color-scheme" content="light dark">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
@@ -79,9 +79,11 @@ window.FIREBASE_CONFIG = {
 <style>
 :root{
   --bg:#EEF2EF; --surface:#FFFFFF; --line:#C9D4CD; --line-strong:#8FA398;
-  --felt:#1F4D3A; --felt-ink:#FFFFFF; --ink:#1B2620; --muted:#5D6E64;
+  --felt:#0E5A36; --felt-ink:#FFFFFF; --ink:#1B2620; --muted:#5D6E64;
   --pen:#2848A8; --pip:#C2362F; --gold:#E9B949; --zero:#9AA8A0;
   --sheet:rgba(17,30,23,.45);
+  --felt-tex:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --felt-light:radial-gradient(ellipse 120% 140% at 50% 30%,rgba(255,255,240,.08),transparent 70%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -89,13 +91,13 @@ window.FIREBASE_CONFIG = {
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#101A15; --surface:#18251F; --line:#2B3B33; --line-strong:#4A6255;
-    --felt:#2E6B51; --ink:#E6EEE9; --muted:#93A69B; --pen:#8EA8FF; --pip:#E2574F; --zero:#5F7268;
+    --felt:#0E5A36; --ink:#E6EEE9; --muted:#93A69B; --pen:#8EA8FF; --pip:#E2574F; --zero:#5F7268;
     --sheet:rgba(0,0,0,.6);
   }
 }
 :root[data-theme="dark"]{
   --bg:#101A15; --surface:#18251F; --line:#2B3B33; --line-strong:#4A6255;
-  --felt:#2E6B51; --ink:#E6EEE9; --muted:#93A69B; --pen:#8EA8FF; --pip:#E2574F; --zero:#5F7268;
+  --felt:#0E5A36; --ink:#E6EEE9; --muted:#93A69B; --pen:#8EA8FF; --pip:#E2574F; --zero:#5F7268;
   --sheet:rgba(0,0,0,.6);
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -335,6 +337,12 @@ html:has(#splash:not(.hide)),html:has(#splash:not(.hide)) body{overflow:hidden;o
 .splash .install[hidden],.splash .ihelp[hidden]{display:none}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.splash *{animation:none!important}}
+/* tous les verts de l'appli = tapis de l'accueil (vert #0E5A36 + grain feutrine) */
+.primary,thead th,tr.grand th.cat,tr.grand td,.seg button.on,.thead,.tabs button[aria-pressed="true"],.splash .ihelp .ok,.updbar-btn,.sbar,.mechip,.acctbtn .ini{background-image:var(--felt-light),var(--felt-tex);background-size:100% 100%,160px 160px}
+thead th,tr.grand th.cat,tr.grand td{background-attachment:local}
+/* logo Yam's Club dans les en-têtes */
+header h1.brand{line-height:0;overflow:visible}
+header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;display:block;filter:drop-shadow(0 0 4px rgba(255,46,170,.55))}
 /* accueil v2 : logo tout en haut, piste en cuir (rebord = murs des dés), « Jouer » et mention en bas */
 .splash{padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 50px);
   --pt:calc(env(safe-area-inset-top,0px) + 14px + min(90vw,440px)/3 + 6px);--pb:calc(env(safe-area-inset-bottom,0px) + 50px + 58px + 14px);--s:.34}
@@ -438,7 +446,7 @@ thead th .lmk{display:flex;justify-content:center;margin:0 0 1px}
 .allrec b{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:700;color:var(--pen);line-height:1}
 .replay{display:block;margin:4px auto 0;border:0;background:transparent;color:var(--pen);font-weight:600;font-size:14px;min-height:40px}
 /* écrans de saison (lancement et podium) */
-.sov{position:fixed;inset:0;z-index:55;background:#1F4D3A;color:#FFFFFF;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transition:opacity .35s}
+.sov{position:fixed;inset:0;z-index:55;background:radial-gradient(ellipse 75% 55% at 50% 38%,rgba(255,255,240,.10),transparent 70%),radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55) 100%),var(--felt-tex),var(--felt);color:#FFFFFF;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transition:opacity .35s}
 .sov.hide{opacity:0}
 .sov .in{position:relative;min-height:100vh;min-height:100dvh;box-sizing:border-box;max-width:440px;margin:0 auto;padding:calc(52px + env(safe-area-inset-top,0px)) 26px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;text-align:center}
 .sov .kick{margin:0;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
@@ -708,7 +716,7 @@ function renderMain(){
     const cls=v==null?"empty":v===0?"zero":"";
     return `<td class="cell"><button class="${cls}" data-p="${p}" data-k="${k}" aria-label="${esc(S.players[p])}, ${LABEL[k]} : ${v==null?"vide":v}">${v==null?"·":v}</button></td>`}).join("")}`;
   app.innerHTML=`
-  <header><h1>Yam’s Gaillon</h1>
+  <header><h1 class="brand"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
     <button class="iconbtn sq" id="btnSettings" aria-label="Règles" title="Règles">${GEAR_ICON}</button>
     <button class="iconbtn ${S.live?"liveon":"liveoff"}" id="btnLive" aria-label="${S.live?"Direct activé : voir le code pour les spectateurs":"Direct coupé : l'activer"}"><i aria-hidden="true"></i><span class="lbl">Direct ${S.live?"ON":"OFF"}</span></button>
     <button class="iconbtn sq" id="btnQuitGame" aria-label="Quitter la partie" title="Quitter la partie">${QUIT_ICON}</button></header>
@@ -948,7 +956,7 @@ function refreshMates(){const el=document.getElementById("mates");if(!el||S.star
 
 function setupHTML(){
   const kd=rowKinds();
-  return `<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
+  return `<header><h1 class="brand"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
   ${inviteHTML()}
   <div class="setup"><button class="backlink" id="btnBack">← Retour</button>${DB&&S.live?`<div class="joinbox"><div class="jt"><small>Code de la partie</small><b>${esc(S.live)}</b></div><button class="jqr" id="btnJoinQR">${QR_ICON}<span>Faire rejoindre</span></button></div>`:DB?`<button class="who1" id="btnJoinQR">${QR_ICON}Faire rejoindre des joueurs</button>`:""}
@@ -1519,7 +1527,7 @@ let liveT=0,liveErr=null;
 function newCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ23456789",r=new Uint32Array(5);crypto.getRandomValues(r);return Array.from(r,x=>A[x%A.length]).join("")}
 function liveURL(c){return location.origin+location.pathname+"?partie="+(c||S.live)}
 async function shareLink(url){
-  if(navigator.share){try{await navigator.share({title:"Yam’s Gaillon",text:"Suis notre partie de Yam’s en direct",url})}catch(e){}return}
+  if(navigator.share){try{await navigator.share({title:"Yam’s Club",text:"Suis notre partie de Yam’s en direct",url})}catch(e){}return}
   try{await navigator.clipboard.writeText(url);toast("Lien copié")}catch(e){toast(url)}
 }
 function liveData(){
@@ -1703,7 +1711,7 @@ function openFollow(){
 }
 /* ---------- écran d'accueil : créer ou rejoindre ---------- */
 function choiceHTML(){
-  return`<header><h1>Yam’s Gaillon</h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
+  return`<header><h1 class="brand"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>${typeof acctBtnHTML==="function"?acctBtnHTML():""}</header>
   ${seasonBarHTML()}
   ${inviteHTML()}
   ${returnHTML()}
@@ -1908,7 +1916,7 @@ function openQuitView(player){
 }
 function renderView(){
   const app=document.getElementById("app");document.getElementById("turn").innerHTML="";app.classList.remove("mode-turn");
-  const top=`<header><h1>Yam’s Gaillon</h1>${hasApp()?"":`<button class="iconbtn sq invite ico" id="btnInstallView" aria-label="Installer l'appli" title="Installer l'appli">${DL_ICON}</button>`}${VS==="ok"?`<button class="iconbtn sq" id="btnShareView" aria-label="Partager" title="Partager">${SHARE_ICON}</button>`:""}${typeof acctBtnHTML==="function"?acctBtnHTML():""}<button class="iconbtn sq" id="btnQuit" aria-label="Quitter" title="Quitter">${QUIT_ICON}</button></header>`;
+  const top=`<header><h1 class="brand"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>${hasApp()?"":`<button class="iconbtn sq invite ico" id="btnInstallView" aria-label="Installer l'appli" title="Installer l'appli">${DL_ICON}</button>`}${VS==="ok"?`<button class="iconbtn sq" id="btnShareView" aria-label="Partager" title="Partager">${SHARE_ICON}</button>`:""}${typeof acctBtnHTML==="function"?acctBtnHTML():""}<button class="iconbtn sq" id="btnQuit" aria-label="Quitter" title="Quitter">${QUIT_ICON}</button></header>`;
   const box=(t,m,x)=>`${top}<div class="setup"><h2>${t}</h2><p>${m}</p>${x||""}</div>`;
   const jn=getJoin(VIEW),logged=typeof meName==="function"&&!!meName();
   const loginBtn=jn&&!jn.acct&&!logged?`<button class="secondary" id="vLogin">Me connecter pour jouer avec mon pseudo</button>`:"";
@@ -1975,14 +1983,14 @@ async function installFromView(){
   if(installEvt){const e=installEvt;installEvt=null;e.prompt();const r=await e.userChoice.catch(()=>null);
     if(r&&r.outcome==="accepted"){render();return}}
   const st=installSteps();
-  openSheet(`${CLOSE}<h3 id="sheetTitle">Installer l’appli</h3><div class="sub">Ajoute Yam’s Gaillon à ton écran d’accueil pour tenir la feuille à ta prochaine partie.</div>
+  openSheet(`${CLOSE}<h3 id="sheetTitle">Installer l’appli</h3><div class="sub">Ajoute Yam’s Club à ton écran d’accueil pour tenir la feuille à ta prochaine partie.</div>
     <ol class="steps">${st.steps}</ol>${st.hint?`<p class="hint" style="margin:0 0 14px">${st.hint}</p>`:""}
     <button class="primary" id="ihDone">Compris</button>
     <button class="ghost wide" id="ihHave" style="margin:10px 0 0">J’ai déjà l’appli</button>`,
   sh=>{sh.querySelector("#ihDone").onclick=closeSheet;
     sh.querySelector("#ihHave").onclick=()=>{setHasApp();if(window.gtag)gtag("event","deja_appli");render();
       openSheet(`${CLOSE}<h3 id="sheetTitle">Ouvre l’appli</h3><div class="sub">Pour suivre cette partie dans l’appli :</div>
-        <ol class="steps"><li>Ouvre <b>Yam’s Gaillon</b> depuis ton écran d’accueil</li><li>Touche <b>Suivre une partie</b></li><li>Scanne le QR code, ou entre ce code :</li></ol>
+        <ol class="steps"><li>Ouvre <b>Yam’s Club</b> depuis ton écran d’accueil</li><li>Touche <b>Suivre une partie</b></li><li>Scanne le QR code, ou entre ce code :</li></ol>
         <div class="code" aria-label="Code de la partie">${esc(VIEW)}</div>
         <button class="primary" id="ihOk">Compris</button>`,sh2=>{sh2.querySelector("#ihOk").onclick=closeSheet})}});
 }
@@ -2424,7 +2432,7 @@ function initAccounts(){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(initAccounts,0));else setTimeout(initAccounts,0);})();
 </script>
 <script>
-/* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le titre « Yam’s Gaillon » */
+/* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le logo « Yam’s Club » */
 (function(){
   function show(){
     var old=document.getElementById("diagbox");if(old){old.remove();return}
