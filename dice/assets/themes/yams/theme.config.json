@@ -1,0 +1,20 @@
+{
+  "name": "Yam's Club",
+  "systemName": "yams",
+  "extends": "smooth",
+  "author": "Yam's Club (d'après Smooth Pips de Frank Ali, licence MIT)",
+  "version": 1,
+  "meshFile": "smooth-pip.json",
+  "material": {
+    "type": "color",
+    "diffuseTexture": {
+      "light": "pips-red.png",
+      "dark": "pips-red.png"
+    },
+    "diffuseLevel": 1,
+    "bumpTexture": "pips-normal.png",
+    "bumpLevel": 0.75
+  },
+  "diceAvailable": ["pip"],
+  "themeColor": "#FBF8F1"
+}
