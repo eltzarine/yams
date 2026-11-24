@@ -48,11 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+        with: { node-version: 22, cache: npm, cache-dependency-path: auth/package-lock.json }
+      - run: npm ci
       - name: Publier les règles Firestore
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 deploy --only firestore:rules --project yams-gaillon --non-interactive
-          rm -f /tmp/sa.json
+        run: node scripts/deploy-rules.mjs
