@@ -33,7 +33,7 @@ jobs:
         if: steps.source.outputs.build_type == 'workflow'
         run: |
           mkdir _site
-          cp -r index.html manifest.json sw.js qrcode.js jsqr.js webauthn.js icons dice logo-yams-club.webp _site/
+          cp -r index.html manifest.json sw.js qrcode.js jsqr.js webauthn.js icons dice logo-yams-club.webp piste.webp _site/
       - uses: actions/upload-pages-artifact@v3
         if: steps.source.outputs.build_type == 'workflow'
         with: { path: _site }
