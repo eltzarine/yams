@@ -1667,8 +1667,8 @@ Pwa.init();
    Le mini-serveur (Cloudflare) garde e-mails, codes et clés ; Firestore ne reçoit que le pseudo public. */
 const AUTH_API="https://yams-auth.cesar-poirrier.workers.dev";
 const Acc={user:null,pseudo:null,email:null,passkeys:0,ready:false};
-/* phase de test : les comptes ne s’affichent que sur les téléphones activés (5 tapes rapides sur « by César ») */
-let ACC_ON=false;try{ACC_ON=localStorage.getItem("yams_comptes")==="1"}catch(e){}
+/* comptes ouverts à tout le monde */
+const ACC_ON=true;try{localStorage.removeItem("yams_comptes")}catch(e){}
 const IS_IOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 const IS_ANDROID=/android/i.test(navigator.userAgent);
 const BIO=IS_IOS?"Face ID":IS_ANDROID?"ton empreinte":"ta clé d’accès";
@@ -1973,10 +1973,6 @@ function initAccounts(){
 }
 (()=>{const c=document.getElementById("acctChip");if(c)c.onclick=accTap;
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)prefetchBio()});
-  const cr=document.querySelector(".splash .credit");let taps=[];
-  if(cr)cr.addEventListener("click",()=>{const t=Date.now();taps=taps.filter(x=>t-x<2000);taps.push(t);if(taps.length<5)return;taps=[];
-    ACC_ON=!ACC_ON;try{ACC_ON?localStorage.setItem("yams_comptes","1"):localStorage.removeItem("yams_comptes")}catch(e){}prefetchBio();
-    toast(ACC_ON?"Comptes activés sur ce téléphone (test)":"Comptes désactivés sur ce téléphone");acctUI()});
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(initAccounts,0));else setTimeout(initAccounts,0);})();
 </script>
 <script>

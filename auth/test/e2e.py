@@ -31,8 +31,6 @@ with sync_playwright() as p:
     cdp=ctx.new_cdp_session(pg); cdp.send("WebAuthn.enable")
     auth=cdp.send("WebAuthn.addVirtualAuthenticator",{"options":{"protocol":"ctap2","transport":"internal","hasResidentKey":True,"hasUserVerification":True,"isUserVerified":True,"automaticPresenceSimulation":True}})
     pg.goto(B); pg.wait_for_timeout(2500)
-    ok(pg.is_hidden("#acctChip"),"comptes masqués par défaut (phase de test)")
-    for _ in range(5): pg.click(".splash .credit",force=True)
     pg.wait_for_selector("#acctChip:not([hidden])",timeout=8000); pg.wait_for_timeout(1500)
     ok(pg.inner_text("#acctChip .nm")=="Invité","accueil : pastille « Invité »")
     pg.screenshot(path="/tmp/yams-e2e-01-accueil.png")
