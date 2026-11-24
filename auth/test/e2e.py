@@ -96,6 +96,34 @@ with sync_playwright() as p:
     pg.screenshot(path="/tmp/yams-e2e-10-moncompte.png")
     pg.click("#accOut"); pg.wait_for_timeout(600)
     ok(pg.query_selector("#btnAcct .ini") is None,"déconnexion : retour en invité")
+    # Jouer depuis l'accueil avec une clé Face ID sur l'appareil : reconnaissance automatique
+    pg.goto(B); pg.wait_for_selector("#acctChip:not([hidden])",timeout=8000); pg.wait_for_timeout(1500)
+    pg.click("#btnPlay")
+    try: pg.wait_for_selector(".sov .go",timeout=6000); pg.wait_for_timeout(2500); pg.click(".sov .go"); pg.wait_for_timeout(800)
+    except Exception: pass
+    pg.wait_for_selector("#btnAcct .ini",timeout=8000); pg.wait_for_timeout(400)
+    ok(pg.query_selector(".prow.me") is not None,"« Jouer » : Face ID automatique puis « moi » à la table")
+    pg.click("#btnAcct"); pg.wait_for_selector("#accOut"); pg.click("#accOut"); pg.wait_for_timeout(600)
+    # Face ID annulé au moment de « Jouer » : on joue en invité
+    cdp.send("WebAuthn.setUserVerified",{"authenticatorId":auth["authenticatorId"],"isUserVerified":False})
+    cdp.send("WebAuthn.setAutomaticPresenceSimulation",{"authenticatorId":auth["authenticatorId"],"enabled":False})
+    pg.goto(B); pg.wait_for_selector("#acctChip:not([hidden])",timeout=8000); pg.wait_for_timeout(1500)
+    pg.evaluate("()=>{navigator.credentials.get=()=>Promise.reject(Object.assign(new Error(\"annulé\"),{name:\"NotAllowedError\"}))}")
+    pg.click("#btnPlay")
+    try: pg.wait_for_selector(".sov .go",timeout=6000); pg.wait_for_timeout(2500); pg.click(".sov .go"); pg.wait_for_timeout(800)
+    except Exception: pass
+    pg.wait_for_selector("#plist",timeout=8000); pg.wait_for_timeout(400)
+    ok(pg.query_selector("#btnAcct .ini") is None,"Face ID annulé : on arrive quand même sur « Qui joue ? » en invité")
+    pg.goto(B); pg.wait_for_selector("#acctChip:not([hidden])",timeout=8000); pg.wait_for_timeout(1500)
+    cdp.send("WebAuthn.setUserVerified",{"authenticatorId":auth["authenticatorId"],"isUserVerified":True})
+    cdp.send("WebAuthn.setAutomaticPresenceSimulation",{"authenticatorId":auth["authenticatorId"],"enabled":True})
+    pg.click("#acctChip"); pg.wait_for_selector("#btnPlay"); pg.wait_for_timeout(1500)
+    ok("Content de te revoir" in pg.inner_text("#toast"),"pastille de l’accueil : Face ID direct")
+    pg.click("#btnPlay")
+    try: pg.wait_for_selector(".sov .go",timeout=6000); pg.wait_for_timeout(2500); pg.click(".sov .go"); pg.wait_for_timeout(800)
+    except Exception: pass
+    pg.wait_for_selector("#btnAcct .ini",timeout=8000)
+    pg.click("#btnAcct"); pg.wait_for_selector("#accOut"); pg.click("#accOut"); pg.wait_for_timeout(600)
     # reconnexion par Face ID
     pg.click("#btnAcct")
     pg.wait_for_selector("#btnAcct .ini",timeout=8000); pg.wait_for_timeout(500)

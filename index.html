@@ -1600,7 +1600,10 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   if(VIEW){sp.remove();return}
   const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
-  document.getElementById("btnPlay").onclick=()=>{hide();seasonFlow()};})();
+  let going=false;
+  document.getElementById("btnPlay").onclick=async e=>{if(going)return;going=true;
+    if(typeof bioBeforePlay==="function")await bioBeforePlay(e.currentTarget);
+    hide();seasonFlow()};})();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
 (()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;
   if(hasApp())return; // déjà installée (ou « J’ai déjà l’appli » sur ce navigateur)
@@ -1859,12 +1862,30 @@ function accBioOffer(fromSettings){
   });
 }
 
+/* options Face ID préparées à l'avance : au toucher, la reconnaissance part tout de suite
+   (iPhone exige que Face ID suive immédiatement le geste) */
+let bioPre=null;
+function prefetchBio(){if(!ACC_ON||!PK_OK||!pkHere()||(Acc.user&&Acc.ready))return;
+  if(bioPre&&Date.now()-bioPre.at<4*60e3)return;
+  const at=Date.now();bioPre={at,p:loadWebAuthn().then(()=>api("/passkey/login/options",{}))};bioPre.p.catch(()=>{if(bioPre&&bioPre.at===at)bioPre=null})}
 async function bioAuth(){
-  await loadWebAuthn();const o=await api("/passkey/login/options",{});
+  let o=null;
+  if(bioPre&&Date.now()-bioPre.at<4*60e3){try{o=await bioPre.p}catch(e){}}
+  bioPre=null;
+  if(!o){await loadWebAuthn();o=await api("/passkey/login/options",{})}
   const resp=await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:o.options});
   const r=await api("/passkey/login/verify",{cid:o.cid,response:resp});await signInToken(r.token);
   setPkHere(true);Acc.user=fbAuth().currentUser;Acc.pseudo=r.pseudo;ev("connexion",{methode:"passkey"});acctUI();refreshMe();
   return r;
+}
+/* « Jouer » : si Face ID existe sur ce téléphone et qu'on n'est pas connecté, on reconnaît d'abord.
+   Annulé ou raté : on joue en invité, sans blocage. */
+async function bioBeforePlay(btn){
+  if(!ACC_ON||!Acc.ready||!PK_OK||!pkHere()||Acc.user||bioBusy)return;
+  bioBusy=true;if(btn){btn.disabled=true;btn.dataset.t=btn.innerHTML;btn.textContent=BIO_T+"…"}
+  try{const r=await bioAuth();if(r.pseudo)toast(`Salut ${r.pseudo} 🎲`)}
+  catch(err){if(err&&err.code==="passkey_inconnue")setPkHere(false)}
+  finally{bioBusy=false;if(btn){btn.disabled=false;if(btn.dataset.t)btn.innerHTML=btn.dataset.t}}
 }
 const bioCancel=err=>err&&(err.name==="NotAllowedError"||err.name==="AbortError");
 async function bioLogin(btn,sh){
@@ -1945,15 +1966,16 @@ function initAccounts(){
   const a=fbAuth();
   if(!a){Acc.ready=false;acctUI();return}
   a.onAuthStateChanged(async u=>{Acc.user=u;
-    if(!u){Acc.pseudo=null;Acc.email=null;Acc.passkeys=0;Acc.ready=true;acctUI();return}
+    if(!u){Acc.pseudo=null;Acc.email=null;Acc.passkeys=0;Acc.ready=true;acctUI();prefetchBio();return}
     try{const t=await u.getIdTokenResult();Acc.pseudo=t.claims.pseudo||Acc.pseudo||null}catch(e){}
     Acc.ready=true;acctUI();refreshMe();
   });
 }
 (()=>{const c=document.getElementById("acctChip");if(c)c.onclick=accTap;
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)prefetchBio()});
   const cr=document.querySelector(".splash .credit");let taps=[];
   if(cr)cr.addEventListener("click",()=>{const t=Date.now();taps=taps.filter(x=>t-x<2000);taps.push(t);if(taps.length<5)return;taps=[];
-    ACC_ON=!ACC_ON;try{ACC_ON?localStorage.setItem("yams_comptes","1"):localStorage.removeItem("yams_comptes")}catch(e){}
+    ACC_ON=!ACC_ON;try{ACC_ON?localStorage.setItem("yams_comptes","1"):localStorage.removeItem("yams_comptes")}catch(e){}prefetchBio();
     toast(ACC_ON?"Comptes activés sur ce téléphone (test)":"Comptes désactivés sur ce téléphone");acctUI()});
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(initAccounts,0));else setTimeout(initAccounts,0);})();
 </script>
