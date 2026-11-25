@@ -2293,6 +2293,13 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const safety=setTimeout(()=>{if(!box)no3d()},12000); /* réseau lent : on ne bloque pas l'entrée */
   const base=new URL(".",location.href);let box=null,busy=false,throws=0,pending=null,done=false,hudT=0,lastTap=0,tapT=0;
   const locked=new Set(),broken=new Set(),win=new Set();
+  /* Analytics : compteur de lancers gardé sur ce téléphone (total depuis la 1re ouverture) + lancers de la visite */
+  const LKEY="yams_lancers_total";let visitThrows=0;
+  const bumpTotal=()=>{let t=0;try{t=(parseInt(localStorage.getItem(LKEY),10)||0)+1;localStorage.setItem(LKEY,String(t))}catch(_){}return t};
+  const ga=(name,p)=>{try{if(window.gtag)gtag("event",name,p)}catch(_){}};
+  const sendLeave=()=>{if(!visitThrows)return;ga("accueil_quitte",{lancers:visitThrows,entre:sp.classList.contains("hide")?"oui":"non",transport_type:"beacon"});visitThrows=0};
+  new MutationObserver(()=>{if(sp.classList.contains("hide"))sendLeave()}).observe(sp,{attributes:true,attributeFilter:["class"]});
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")sendLeave()});
   const hud=document.createElement("div");hud.className="dhud";hud.setAttribute("aria-live","polite");
   const peek=()=>globalThis.__yamsWorld&&globalThis.__yamsWorld.yamsPeek();
   const rolls=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls:[]};
@@ -2411,7 +2418,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     const rs=box.getRollResults()[0];
     const p=rs?box.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true}):box.roll("5dpip");
     p.then(()=>{live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))broken.add(d.config.rollId)});
-      if(broken.size){pending=ids;sfx.broken();if(navigator.vibrate)navigator.vibrate(60)}else{pending=null;throws++;if(throws>=3)return endTurn();showBest()}})
+      if(broken.size){pending=ids;sfx.broken();if(navigator.vibrate)navigator.vibrate(60);ga("lancer_casse",{lancer:throws+1,des:ids.length,casses:broken.size})}
+      else{pending=null;throws++;visitThrows++;ga("lancer_accueil",{lancer:throws,des:ids.length,total:bumpTotal(),defi:Math.min(20,prog.n+1)});if(throws>=3)return endTurn();showBest()}})
      .catch(()=>{}).finally(()=>{busy=false;draw()})};
   /* bouton haut-parleur : couper / remettre le son */
   const soundBtn=()=>{const b=document.getElementById("dSound");if(!b)return;

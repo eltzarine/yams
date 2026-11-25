@@ -1,5 +1,5 @@
 /* Yam's Club — service worker (installation + hors connexion) */
-const VERSION = "yams-v69";
+const VERSION = "yams-v70";
 const SHELL = [
   "./",
   "./index.html",
