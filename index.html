@@ -407,6 +407,11 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 /* défi réussi : le post-it passe au vert, le bouton d'entrée apparaît à sa droite */
 .splash .postit.ok{background:#CFE8B0;color:#1F3A10}
 .splash .postit.ok b{color:#2F6B12}
+.splash .postit b{display:block;font-size:17px;line-height:1.05;margin-bottom:1px}
+.splash .postit{font-size:14px}
+/* nouveau défi : le post-it arrive en glissant */
+.splash .postit.new{animation:postin .55s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes postin{0%{opacity:0;transform:translateX(-46px) rotate(-16deg)}100%{opacity:1;transform:rotate(-4deg)}}
 @media (max-width:374px){.splash .postit{width:112px;font-size:14px;left:10px}.splash .play.enter{right:10px;padding:0 12px;font-size:15px;letter-spacing:.08em}}
 /* bouton son des dés, en haut à droite de la piste */
 .splash .dsound{position:absolute;right:34px;top:calc(var(--pt) + 32px);z-index:3;width:34px;height:34px;border-radius:50%;border:1px solid rgba(244,239,227,.35);
@@ -2084,10 +2089,13 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 })();
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   if(VIEW){sp.remove();return}
-  const hide=()=>{sp.classList.add("hide");setTimeout(()=>sp.remove(),500)};
-  let going=false,gone=false;
-  const go=()=>{if(gone)return;gone=true;hide();seasonFlow()};
+  /* l'accueil reste dans la page (caché) : toucher le logo de l'appli y ramène, « Entrer » ramène à la partie en cours */
+  const hide=()=>sp.classList.add("hide");
+  let going=false,gone=false,entered=false;
+  const go=()=>{if(gone)return;gone=true;hide();if(!entered){entered=true;seasonFlow()}};
   window.splashGo=()=>{if(sp.isConnected&&!sp.classList.contains("hide"))go()};
+  window.splashShow=()=>{if(!sp.isConnected||!sp.classList.contains("hide"))return;gone=false;sp.classList.remove("hide");scrollTo(0,0)};
+  document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("header h1.brand"))window.splashShow()});
   /* « Jouer » : connecté → on joue ; Face ID sur ce téléphone → reconnaissance ; sinon choix e-mail / invité */
   document.getElementById("btnPlay").onclick=async e=>{if(going)return;going=true;
     try{if(typeof playGate==="function"&&!(await playGate(e.currentTarget)))return;go()}
@@ -2096,21 +2104,61 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   sp.addEventListener("touchmove",e=>{if(!sp.classList.contains("hide")&&!e.target.closest(".ihelp"))e.preventDefault()},{passive:false})})();
 /* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice)
-   Défi de la semaine : faire au moins 20 pts (sans la chance, points de la feuille) en 3 lancers pour faire apparaître
-   « Entrer au Yam's Club ». Réussi une fois → entrée libre jusqu'au lundi suivant (sur ce téléphone).
-   Taper 2 fois sur la piste = lancer ; toucher un dé = le garder (dé teinté bleu pâle) ; dé cassé (penché ou posé sur
-   un autre) = teinté rose, il faut relancer ce jet. Après chaque lancer : meilleure combinaison affichée (dés libres teintés or
-   + score), on peut continuer ; 20 pts ou plus = défi réussi. Fin du 3e lancer : tous les dés de la combinaison en or.
+   Défis de la semaine : 20 défis enchaînés (post-it), la progression repart à zéro chaque lundi. Le défi 1 (20 pts, sans
+   la chance, points de la feuille) ouvre « Entrer au Yam's Club » jusqu'au lundi suivant. Progression gardée sur ce
+   téléphone et, si on est connecté, sur le compte (fiche privée progres/{uid}).
+   Taper 2 fois sur la piste = lancer ; toucher un dé = le garder (bleu) ; dé cassé (penché ou posé sur un autre) = rose,
+   il faut relancer ce jet. Après chaque lancer : meilleure combinaison affichée (dés libres en or + score), on peut
+   continuer. Fin du 3e lancer : tous les dés de la combinaison en or.
    Sans 3D (pas de WebGL, animations réduites, échec de chargement) : pas de défi, le bouton est là tout de suite. */
 (()=>{const sp=document.getElementById("splash"),zone=document.getElementById("dice3d");if(!sp||!zone||!sp.isConnected)return;
   const btn=document.getElementById("btnPlay"),post=document.getElementById("postit"),felt=document.getElementById("feltMsg"),scoreEl=document.getElementById("dScore");
-  const KEY="yamsDefiSemaine";
+  /* ---- les 20 défis : [nom, consigne, test sur le lancer] (c = contexte du lancer, voir evalThrow) ---- */
+  const DEFIS=[
+    ["Ticket d’entrée","Fais 20 pts pour entrer au club",c=>c.best>=20],
+    ["Trio","Fais un brelan",c=>c.mx>=3],
+    ["Maison pleine","Fais un full",c=>c.full],
+    ["Petit escalier","Fais une petite suite",c=>c.run4],
+    ["Quatre as","Fais un carré",c=>c.mx>=4],
+    ["Grand escalier","Fais une grande suite",c=>c.run5],
+    ["Coup d’envoi","20 pts dès le 1ᵉʳ lancer",c=>c.n===1&&c.best>=20],
+    ["Brelan royal","Fais un brelan de 6",c=>c.cnt[6]>=3],
+    ["Full express","Un full en 2 lancers max.",c=>c.full&&c.n<=2],
+    ["Mains libres","20 pts sans garder aucun dé",c=>c.best>=20&&!c.kept],
+    ["YAM’S !","Fais un Yam’s",c=>c.mx===5],
+    ["Carré de 6","Fais un carré de 6",c=>c.cnt[6]>=4],
+    ["Suite éclair","Grande suite en 2 lancers max.",c=>c.run5&&c.n<=2],
+    ["Doublé","Un full, puis un carré au tour suivant",c=>c.mx>=4&&c.prevFull],
+    ["Gros bras","27 pts ou + avec un brelan ou un carré",c=>c.mx>=3&&c.sum>=27],
+    ["Yam’s éclair","Un Yam’s en 2 lancers max.",c=>c.mx===5&&c.n<=2],
+    ["Yam’s de 6","Fais cinq 6",c=>c.cnt[6]===5],
+    ["Coup de foudre","Un Yam’s dès le 1ᵉʳ lancer",c=>c.mx===5&&c.n===1],
+    ["En série","3 tours d’affilée à 25 pts ou +",c=>c.streak>=3],
+    ["Grand chelem","Brelan, carré, full, 2 suites et Yam’s dans la session",c=>c.slam]];
+  /* ---- progression de la semaine : { w: lundi de la semaine, n: défis réussis } ---- */
+  const PKEY="yamsDefis",OLDKEY="yamsDefiSemaine";
   const monday=()=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-  const defiOk=()=>{try{return localStorage.getItem(KEY)===monday()}catch(e){return false}};
+  const prog={w:monday(),n:0};
+  try{const p=JSON.parse(localStorage.getItem(PKEY)||"null");if(p&&p.w===prog.w)prog.n=Math.max(0,Math.min(20,p.n|0));
+    if(localStorage.getItem(OLDKEY)===prog.w)prog.n=Math.max(prog.n,1)}catch(e){}
+  const fresh=()=>{if(prog.w!==monday()){prog.w=monday();prog.n=0;store();paintPost();lockBtn()}}; /* lundi passé pendant que l'appli était ouverte */
+  const store=()=>{try{localStorage.setItem(PKEY,JSON.stringify(prog))}catch(e){}};
+  /* compte connecté : fiche privée progres/{uid} ; on garde la progression la plus avancée de la semaine */
+  const acct=()=>{try{const a=typeof fbAuth==="function"&&fbAuth(),u=a&&a.currentUser;
+    return u&&!u.isAnonymous&&typeof DB!=="undefined"&&DB?DB.collection("progres").doc(u.uid):null}catch(e){return null}};
+  const pushProg=()=>{const r=acct();if(r)r.set({semaine:prog.w,defis:prog.n,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{})};
+  const pullProg=async()=>{const r=acct();if(!r)return;try{fresh();const s=await r.get(),d=s.exists?s.data():null;
+    if(d&&d.semaine===prog.w&&(d.defis|0)>prog.n){prog.n=Math.min(20,d.defis|0);store();paintPost();if(prog.n>=1)unlock(false)}
+    else if(!d||d.semaine!==prog.w||(d.defis|0)<prog.n)pushProg()}catch(e){}};
+  (function watchAcct(k){const a=typeof fbAuth==="function"&&fbAuth();if(a)a.onAuthStateChanged(u=>{if(u&&!u.isAnonymous)pullProg()});else if(k<40)setTimeout(()=>watchAcct(k+1),500)})(0);
   const unlock=anim=>{if(!btn)return;btn.classList.remove("locked");if(anim){btn.classList.remove("pop");void btn.offsetWidth;btn.classList.add("pop")}};
-  const postOk=()=>{if(!post)return;post.classList.add("ok");post.innerHTML="<small>Défi de la semaine</small><b>Réussi ✓</b> entrée libre jusqu’à lundi"};
-  if(defiOk()){unlock(false);postOk()}
+  const lockBtn=()=>{if(btn&&prog.n<1&&sp.classList.contains("d3"))btn.classList.add("locked")};
+  const paintPost=anim=>{if(!post)return;post.classList.remove("ok","new");
+    if(prog.n>=20){post.classList.add("ok");post.innerHTML="<small>Défis de la semaine</small><b>20/20 ✓</b> Bravo ! Nouveaux défis lundi"}
+    else{const[nom,txt]=DEFIS[prog.n];post.innerHTML=`<small>Défi ${prog.n+1}/20</small><b>${nom}</b> ${txt}`}
+    if(anim){void post.offsetWidth;post.classList.add("new")}};
+  paintPost();if(prog.n>=1)unlock(false);
   const no3d=()=>{sp.classList.remove("d3");unlock(false)};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return no3d();
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return no3d()}catch(e){return no3d()}
@@ -2203,11 +2251,27 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     if(pending)say("Dé cassé ! Tape 2 fois pour relancer");
     else if(done)say("Tape 2 fois pour rejouer");
     else say(`Lancer ${throws}/3 · ${throws===1&&!locked.size?"touche un dé pour le garder":"tape 2 fois pour relancer"}`)}
-  /* meilleure combinaison après chaque lancer ; défi réussi dès 20 pts */
-  const showBest=()=>{const b=bestCombo();win.clear();if(!b)return;b.ids.forEach(id=>win.add(id));const ok=b.pts>=20,first=ok&&!defiOk();
-    if(first)setTimeout(sfx.win,350);else setTimeout(()=>sfx.combo(b.pts),350);const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
-    if(first){try{localStorage.setItem(KEY,monday())}catch(e){}postOk();unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
-      setTimeout(()=>say("Défi réussi ! Entre au Yam’s Club",true),0);if(window.gtag)gtag("event","defi_accueil_reussi",{points:b.pts})}};
+  /* suivi pour les défis : dé gardé pendant le tour, full du tour précédent, série de tours à 25+, combinaisons de la session */
+  let kept=false,turnBest=0,turnFull=false,prevFull=false,streakDone=0,postT=0;const slam=new Set();
+  const newTurn=()=>{prevFull=turnFull;streakDone=turnBest>=25?streakDone+1:0;kept=false;turnBest=0;turnFull=false};
+  /* défi réussi : post-it vert, jingle, puis le défi suivant arrive sur un nouveau post-it */
+  const validate=()=>{const n=prog.n;prog.n=Math.min(20,n+1);store();pushProg();
+    if(prog.n===1)unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
+    if(post){post.classList.remove("new");post.classList.add("ok");post.innerHTML=`<small>Défi ${n+1}/20</small><b>Réussi ✓</b> ${DEFIS[n][0]}`}
+    clearTimeout(postT);postT=setTimeout(()=>paintPost(true),2600);
+    setTimeout(()=>say(n===0?"Défi réussi ! Entre au Yam’s Club":`Défi ${n+1} réussi !`,true),0);
+    if(window.gtag)gtag("event","defi_accueil_reussi",{defi:n+1})};
+  /* lancer valable : on regarde si le défi en cours est réussi */
+  const evalThrow=b=>{fresh();const v=rolls().map(r=>r.value);if(v.length!==5)return false;
+    const c=counts(v),mx=Math.max(...c),full=compute("full",v).pts>0,run4=hasRun(c,4),run5=hasRun(c,5);
+    turnBest=Math.max(turnBest,b?b.pts:0);if(full)turnFull=true;
+    if(mx>=3)slam.add("brelan");if(mx>=4)slam.add("carre");if(full)slam.add("full");if(run4)slam.add("petite");if(run5)slam.add("grande");if(mx===5)slam.add("yams");
+    const ctx={n:throws,best:b?b.pts:0,mx,cnt:c,sum:sum(v),full,run4,run5,kept,prevFull,streak:streakDone+(turnBest>=25?1:0),slam:slam.size>=6};
+    if(prog.n<20&&DEFIS[prog.n][2](ctx)){validate();return true}return false};
+  /* meilleure combinaison après chaque lancer (et défi en cours) */
+  const showBest=()=>{const b=bestCombo();win.clear();const ok=evalThrow(b);if(!b)return;b.ids.forEach(id=>win.add(id));
+    if(ok)setTimeout(sfx.win,350);else setTimeout(()=>sfx.combo(b.pts),350);const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
+  };
   const endTurn=()=>{done=true;throws=3;showBest();draw()};
   /* lance les dés donnés (rollId) ; à la fin : dé cassé → on rejoue ce jet, sinon le lancer compte */
   const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();rattle();hookImpacts();win.clear();scoreEl.classList.remove("on","ok");
@@ -2222,7 +2286,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     paint();b.onclick=e=>{e.stopPropagation();try{localStorage.setItem(SKEY,soundOn()?"0":"1")}catch(_){}paint();if(soundOn())sfx.lock()}};
   /* double tap sur la piste = lancer */
   const launch=()=>{if(pending)return toss(pending);
-    if(done||!allIds().length){done=false;throws=0;locked.clear();win.clear();scoreEl.classList.remove("on","ok");
+    if(done||!allIds().length){if(done)newTurn();done=false;throws=0;locked.clear();win.clear();scoreEl.classList.remove("on","ok");
       const ids=allIds();return ids.length?toss(ids):toss([0,1,2,3,4])}
     const free=allIds().filter(id=>!locked.has(id));
     if(!free.length)return endTurn(); /* tout est gardé : le tour s'arrête là */
@@ -2230,7 +2294,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const tap=e=>{if(!box||busy||!sp.isConnected)return;
     if(!pending&&!done&&allIds().length){const p=peek();if(p){const cr=p.canvas.getBoundingClientRect(),x=e.clientX-cr.left,y=e.clientY-cr.top;let hit=null,best=1e9;
       live().forEach(d=>{const g=geo(d),dist=Math.hypot(g.x-x,g.y-y);if(dist<g.size*.7&&dist<best){best=dist;hit=d.config.rollId}});
-      if(hit!=null){lastTap=0;clearTimeout(tapT);if(locked.has(hit)){locked.delete(hit);sfx.unlock()}else{locked.add(hit);sfx.lock()}return draw()}}}
+      if(hit!=null){lastTap=0;clearTimeout(tapT);if(locked.has(hit)){locked.delete(hit);sfx.unlock()}else{locked.add(hit);kept=true;sfx.lock()}return draw()}}}
     const now=Date.now();clearTimeout(tapT);
     if(now-lastTap<420){lastTap=0;return launch()}
     lastTap=now;tapT=setTimeout(()=>{if(lastTap)say(allIds().length&&!done&&!pending?"Encore un tap pour relancer":"Encore un tap pour lancer",true)},430)};
@@ -2600,6 +2664,7 @@ function accDelete(){
     b.onclick=async()=>{busy(b,true,"Suppression…");setErr(sh,"");
       try{const uid=Acc.user.uid;
         if(DB)await DB.collection("joueurs").doc(uid).delete().catch(()=>{});
+        if(DB)await DB.collection("progres").doc(uid).delete().catch(()=>{});
         const r=await api("/account/delete",{},true);
         try{await fbAuth().signInWithCustomToken(r.token);await fbAuth().currentUser.delete()}catch(e){await fbAuth().signOut().catch(()=>{})}
         setPkHere(false);ev("compte_supprime");closeSheet();toast("Compte supprimé.")}
@@ -2637,7 +2702,7 @@ function initAccounts(){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(initAccounts,0));else setTimeout(initAccounts,0);})();
 </script>
 <script>
-/* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le logo « Yam’s Club » */
+/* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le logo « Yam’s Club » de l'accueil */
 (function(){
   function show(){
     var old=document.getElementById("diagbox");if(old){old.remove();return}
@@ -2659,7 +2724,7 @@ function initAccounts(){
   if(/[?&]diag\b/.test(location.search))addEventListener("load",function(){setTimeout(show,800)});
   var n=0,t=0;
   document.addEventListener("click",function(e){
-    if(!e.target.closest||!e.target.closest("header h1"))return;
+    if(!e.target.closest||!e.target.closest(".splash .logo"))return;
     var now=Date.now();n=(now-t<600)?n+1:1;t=now;if(n>=5){n=0;show()}
   });
 })();
