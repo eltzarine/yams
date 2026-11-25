@@ -2106,7 +2106,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 /* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice)
    Défis de la semaine : 20 défis enchaînés (post-it), la progression repart à zéro chaque lundi. Le défi 1 (20 pts, sans
    la chance, points de la feuille) ouvre « Entrer au Yam's Club » jusqu'au lundi suivant. Progression gardée sur ce
-   téléphone et, si on est connecté, sur le compte (fiche privée progres/{uid}).
+   téléphone seulement.
    Taper 2 fois sur la piste = lancer ; toucher un dé = le garder (bleu) ; dé cassé (penché ou posé sur un autre) = rose,
    il faut relancer ce jet. Après chaque lancer : meilleure combinaison affichée (dés libres en or + score), on peut
    continuer. Fin du 3e lancer : tous les dés de la combinaison en or.
@@ -2143,15 +2143,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   try{const p=JSON.parse(localStorage.getItem(PKEY)||"null");if(p&&p.w===prog.w)prog.n=Math.max(0,Math.min(20,p.n|0));
     if(localStorage.getItem(OLDKEY)===prog.w)prog.n=Math.max(prog.n,1)}catch(e){}
   const fresh=()=>{if(prog.w!==monday()){prog.w=monday();prog.n=0;store();paintPost();lockBtn()}}; /* lundi passé pendant que l'appli était ouverte */
-  const store=()=>{try{localStorage.setItem(PKEY,JSON.stringify(prog))}catch(e){}};
-  /* compte connecté : fiche privée progres/{uid} ; on garde la progression la plus avancée de la semaine */
-  const acct=()=>{try{const a=typeof fbAuth==="function"&&fbAuth(),u=a&&a.currentUser;
-    return u&&!u.isAnonymous&&typeof DB!=="undefined"&&DB?DB.collection("progres").doc(u.uid):null}catch(e){return null}};
-  const pushProg=()=>{const r=acct();if(r)r.set({semaine:prog.w,defis:prog.n,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{})};
-  const pullProg=async()=>{const r=acct();if(!r)return;try{fresh();const s=await r.get(),d=s.exists?s.data():null;
-    if(d&&d.semaine===prog.w&&(d.defis|0)>prog.n){prog.n=Math.min(20,d.defis|0);store();paintPost();if(prog.n>=1)unlock(false)}
-    else if(!d||d.semaine!==prog.w||(d.defis|0)<prog.n)pushProg()}catch(e){}};
-  (function watchAcct(k){const a=typeof fbAuth==="function"&&fbAuth();if(a)a.onAuthStateChanged(u=>{if(u&&!u.isAnonymous)pullProg()});else if(k<40)setTimeout(()=>watchAcct(k+1),500)})(0);
+  const store=()=>{try{localStorage.setItem(PKEY,JSON.stringify(prog))}catch(e){}}; /* gardée sur ce téléphone seulement */
   const unlock=anim=>{if(!btn)return;btn.classList.remove("locked");if(anim){btn.classList.remove("pop");void btn.offsetWidth;btn.classList.add("pop")}};
   const lockBtn=()=>{if(btn&&prog.n<1&&sp.classList.contains("d3"))btn.classList.add("locked")};
   const paintPost=anim=>{if(!post)return;post.classList.remove("ok","new");
@@ -2255,7 +2247,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   let kept=false,turnBest=0,turnFull=false,prevFull=false,streakDone=0,postT=0;const slam=new Set();
   const newTurn=()=>{prevFull=turnFull;streakDone=turnBest>=25?streakDone+1:0;kept=false;turnBest=0;turnFull=false};
   /* défi réussi : post-it vert, jingle, puis le défi suivant arrive sur un nouveau post-it */
-  const validate=()=>{const n=prog.n;prog.n=Math.min(20,n+1);store();pushProg();
+  const validate=()=>{const n=prog.n;prog.n=Math.min(20,n+1);store();
     if(prog.n===1)unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
     if(post){post.classList.remove("new");post.classList.add("ok");post.innerHTML=`<small>Défi ${n+1}/20</small><b>Réussi ✓</b> ${DEFIS[n][0]}`}
     clearTimeout(postT);postT=setTimeout(()=>paintPost(true),2600);
@@ -2664,7 +2656,6 @@ function accDelete(){
     b.onclick=async()=>{busy(b,true,"Suppression…");setErr(sh,"");
       try{const uid=Acc.user.uid;
         if(DB)await DB.collection("joueurs").doc(uid).delete().catch(()=>{});
-        if(DB)await DB.collection("progres").doc(uid).delete().catch(()=>{});
         const r=await api("/account/delete",{},true);
         try{await fbAuth().signInWithCustomToken(r.token);await fbAuth().currentUser.delete()}catch(e){await fbAuth().signOut().catch(()=>{})}
         setPkHere(false);ev("compte_supprime");closeSheet();toast("Compte supprimé.")}

@@ -85,26 +85,5 @@ await t("joueur rejoint avec expireAt",assertSucceeds(setDoc(doc(anon,"direct/K7
 await t("liste des joueurs d'une partie (hôte)",assertSucceeds(getDocs(collection(anon,"direct/K7P2Q/joueurs"))));
 await env.cleanup();
 }
-// ---------- Progression des défis de l'accueil ----------
-{
-const env=await initializeTestEnvironment({projectId:"demo-regles4",firestore:{rules,host:"127.0.0.1",port:8085}});
-const anon=env.unauthenticatedContext().firestore();
-const a1=env.authenticatedContext("anon1",{firebase:{sign_in_provider:"anonymous"}}).firestore();
-const lea=env.authenticatedContext("uL",{pseudo:"Léa",firebase:{sign_in_provider:"custom"}}).firestore();
-const tom=env.authenticatedContext("uT",{pseudo:"Tom",firebase:{sign_in_provider:"custom"}}).firestore();
-const pr=(x={})=>({semaine:"2026-11-23",defis:4,updatedAt:serverTimestamp(),...x});
-await t("compte écrit sa progression",assertSucceeds(setDoc(doc(lea,"progres/uL"),pr())));
-await t("compte relit sa progression",assertSucceeds(getDoc(doc(lea,"progres/uL"))));
-await t("un autre compte ne lit pas",assertFails(getDoc(doc(tom,"progres/uL"))));
-await t("non connecté ne lit pas",assertFails(getDoc(doc(anon,"progres/uL"))));
-await t("un autre compte n'écrit pas",assertFails(setDoc(doc(tom,"progres/uL"),pr())));
-await t("identité anonyme refusée",assertFails(setDoc(doc(a1,"progres/anon1"),pr())));
-await t("plus de 20 défis refusé",assertFails(setDoc(doc(lea,"progres/uL"),pr({defis:21}))));
-await t("défis négatifs refusés",assertFails(setDoc(doc(lea,"progres/uL"),pr({defis:-1}))));
-await t("semaine mal formée refusée",assertFails(setDoc(doc(lea,"progres/uL"),pr({semaine:"lundi"}))));
-await t("champ en trop refusé",assertFails(setDoc(doc(lea,"progres/uL"),pr({x:1}))));
-await t("compte supprime sa progression",assertSucceeds(deleteDoc(doc(lea,"progres/uL"))));
-await env.cleanup();
-}
 console.log(`Règles : ${n - f}/${n}`);
 if (f) process.exit(1);
