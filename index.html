@@ -400,7 +400,9 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
   100%{opacity:1;transform:translateX(-50%) skewX(-10deg) scale(1)}}
 /* défi réussi : le score clignote en blanc doré, comme un « K.O. » */
 @keyframes scoreglow{50%{color:#FFFBE6;filter:drop-shadow(0 0 8px rgba(255,200,40,.95))}}
-.splash .postit{position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 52px);z-index:2;pointer-events:none;width:132px;padding:7px 10px 8px;text-align:left;
+/* post-it du défi + bouton son épinglé en haut à droite du post-it */
+.splash .postwrap{position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 52px);z-index:3;pointer-events:none}
+.splash .postit{position:relative;pointer-events:none;width:132px;padding:7px 10px 8px;text-align:left;
   background:#FBE38A;color:#3B300C;font:600 16px/1.1 "Barlow Condensed",system-ui,sans-serif;transform:rotate(-4deg);box-shadow:2px 5px 10px rgba(0,0,0,.35);border-radius:2px 2px 10px 2px;transition:opacity .4s,transform .4s}
 .splash .postit small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
 .splash .postit b{color:#A3261F}
@@ -412,9 +414,9 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 /* nouveau défi : le post-it arrive en glissant */
 .splash .postit.new{animation:postin .55s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes postin{0%{opacity:0;transform:translateX(-46px) rotate(-16deg)}100%{opacity:1;transform:rotate(-4deg)}}
-@media (max-width:374px){.splash .postit{width:112px;font-size:14px;left:10px}.splash .play.enter{right:10px;padding:0 12px;font-size:15px;letter-spacing:.08em}}
+@media (max-width:374px){.splash .postwrap{left:10px}.splash .postit{width:112px;font-size:14px}.splash .play.enter{right:10px;padding:0 12px;font-size:15px;letter-spacing:.08em}}
 /* bouton son des dés, en haut à droite de la piste */
-.splash .dsound{position:absolute;right:34px;top:calc(var(--pt) + 32px);z-index:3;width:34px;height:34px;border-radius:50%;border:1px solid rgba(244,239,227,.35);
+.splash .dsound{position:absolute;right:-14px;top:-16px;z-index:4;pointer-events:auto;width:32px;height:32px;border-radius:50%;border:1px solid rgba(244,239,227,.45);box-shadow:0 2px 6px rgba(0,0,0,.4);
   background:rgba(20,14,8,.45);color:#F4EFE3;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
 .splash .dsound svg{width:18px;height:18px;filter:none}
 .splash .dsound .mute,.splash .dsound.off .on{display:none}
@@ -678,8 +680,10 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
-  <button class="dsound" id="dSound" type="button" aria-label="Couper le son des dés" aria-pressed="false"><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><svg class="mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/></svg></button>
+  <div class="postwrap">
   <div class="postit" id="postit" aria-live="polite"><small>Défi de la semaine</small>Fais <b>20 pts</b> en 3 lancers pour entrer</div>
+  <button class="dsound" id="dSound" type="button" aria-label="Couper le son des dés" aria-pressed="false"><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><svg class="mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/></svg></button>
+  </div>
   <button class="play enter locked" id="btnPlay">Entrer au Yam’s Club<span class="arr" aria-hidden="true">→</span></button>
   <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
   <div class="foot">
