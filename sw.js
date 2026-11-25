@@ -1,5 +1,5 @@
 /* Yam's Club — service worker (installation + hors connexion) */
-const VERSION = "yams-v71";
+const VERSION = "yams-v72";
 const SHELL = [
   "./",
   "./index.html",
@@ -9,6 +9,11 @@ const SHELL = [
   "./webauthn.js",
   "./logo-yams-club.webp",
   "./piste.webp",
+  "./story/story.css",
+  "./story/story.js",
+  "./story/parvis.png",
+  "./story/nico_sprite.png",
+  "./story/nico_head_sprite.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",

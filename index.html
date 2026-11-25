@@ -68,6 +68,8 @@ gtag('config','G-WQ8CDEPL7G',GA_BASE);
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="qrcode.js"></script>
+<link rel="stylesheet" href="story/story.css">
+<script defer src="story/story.js"></script>
 <script>
 /* ⬇️ Colle ici la config de TON projet Firebase (Console Firebase > Paramètres du projet > Tes applis > Web) */
 window.FIREBASE_CONFIG = {
@@ -1906,11 +1908,13 @@ function choiceHTML(){
   <div class="setup choice"><h2>On joue ?</h2>
   <button class="primary big" id="cCreate">🎲 Créer une partie</button>
   <button class="secondary big" id="cJoin">${QR_ICON}Rejoindre une partie</button>
-  <p class="hint">Rejoindre : scanne le QR code ou entre le code. Si la partie n'a pas commencé, tu joues ; sinon, tu la regardes en direct.</p></div>`;
+  <p class="hint">Rejoindre : scanne le QR code ou entre le code. Si la partie n'a pas commencé, tu joues ; sinon, tu la regardes en direct.</p></div>
+  ${typeof storyHTML==="function"?storyHTML():""}`;
 }
 function bindChoice(){
   document.getElementById("cCreate").onclick=()=>{ui.created=true;render()};
   document.getElementById("cJoin").onclick=()=>openJoin();
+  if(typeof bindStory==="function")bindStory();
   loadReturn();
   const kh=document.getElementById("keepGo");if(kh)kh.onclick=()=>{if(typeof accTap==="function")accTap()};
   if(typeof bindAcctBtn==="function")bindAcctBtn();
