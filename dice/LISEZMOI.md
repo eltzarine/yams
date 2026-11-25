@@ -12,3 +12,5 @@ Pour retravailler les dés : les fichiers Blender sources sont dans le dépôt `
 Le thème du Yam's Club se règle dans `assets/themes/yams/theme.config.json` (texture des points `pips-red.png`, relief `pips-normal.png`).
 
 Modification Yam's Club (nov. 2026) : le worker physique intégré (base64) accepte insetPx et wallH pour ajouter des murs bas sur le bord intérieur de la piste — les dés partent du rebord et passent par-dessus.
+
+Modification Yam's Club (25 nov. 2026) : l'accueil utilise le rendu sur la page (`offscreen:false`) ; `world.onscreen.min.js` expose `globalThis.__yamsWorld.yamsPeek()` (scène, dés, canvas) pour toucher un dé précis, dessiner les néons (dé gardé en bleu, dé cassé en rouge) et repérer un dé penché ou posé sur un autre.

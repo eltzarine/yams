@@ -33,7 +33,7 @@
   ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
 })();
 </script>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0E5A36">
@@ -367,6 +367,14 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
   filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
 /* zone 3D = piste + 20 px autour : les dés arrivent par-dessus le rebord ; les murs (bas) sont posés sur le bord intérieur du cuir (insetPx) */
 .splash .dice3d{left:-12px;right:-12px;top:calc(var(--pt) - 20px);bottom:calc(var(--pb) - 20px)}
+/* dés gardés (néon bleu) / dé cassé (néon rouge) + compteur de lancers sur le cuir du bas */
+.splash .dice3d .dring{position:absolute;left:0;top:0;pointer-events:none;box-sizing:border-box;border-radius:24%;border:2.5px solid #5ff4ff;
+  box-shadow:0 0 6px #5ff4ff,0 0 16px #1aa8ff,0 0 28px rgba(26,168,255,.55),inset 0 0 10px rgba(95,244,255,.75);transition:border-color .2s,box-shadow .2s}
+.splash .dice3d .dring.ko{border-color:#ff5a76;box-shadow:0 0 6px #ff5a76,0 0 16px #ff1f4b,0 0 28px rgba(255,31,75,.55),inset 0 0 10px rgba(255,90,118,.75);animation:dko .5s ease-in-out 2}
+@keyframes dko{50%{transform-origin:center;opacity:.35}}
+.splash .dhud{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--pb) + 10px);z-index:2;pointer-events:none;white-space:nowrap;
+  font:600 13px/1 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.3px;color:#F4EFE3;background:rgba(20,14,8,.62);padding:6px 12px;border-radius:99px}
+.splash .dhud.ko{color:#fff;background:rgba(160,18,44,.85)}
 
 /* stats de l'historique */
 .stats{background:var(--bg);border-radius:14px;padding:4px 12px;margin:0 0 14px}
@@ -2039,22 +2047,71 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 /* iOS ignore parfois overflow:hidden : on bloque le glisser sur l'accueil (sauf dans l'aide d'installation) */
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   sp.addEventListener("touchmove",e=>{if(!sp.classList.contains("hide")&&!e.target.closest(".ihelp"))e.preventDefault()},{passive:false})})();
-/* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice) — les dés dessinés restent si la 3D ne charge pas */
+/* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice) — les dés dessinés restent si la 3D ne charge pas
+   Jeu sur l'accueil : toucher un dé = le garder (néon bleu) ; toucher la piste = relancer les dés libres ; 3 lancers par tour,
+   puis on relance les 5. Dé cassé (penché ou posé sur un autre) = néon rouge, on relance les dés de ce jet et ça ne compte pas. */
 (()=>{const sp=document.getElementById("splash"),zone=document.getElementById("dice3d");if(!sp||!zone||!sp.isConnected)return;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return}catch(e){return}
-  const base=new URL(".",location.href);let box=null,busy=false;
-  const roll=()=>{if(!box||busy||!sp.isConnected)return;busy=true;
-    box.roll("5dpip").catch(()=>{}).finally(()=>{busy=false})};
+  const base=new URL(".",location.href);let box=null,busy=false,throws=0,pending=null,hudT=0;
+  const locked=new Set(),broken=new Set(),rings=new Map();
+  const hud=document.createElement("div");hud.className="dhud";hud.setAttribute("aria-live","polite");
+  const peek=()=>globalThis.__yamsWorld&&globalThis.__yamsWorld.yamsPeek();
+  const allIds=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls.map(x=>x.rollId):[]};
+  const live=()=>{const p=peek();return p?Object.values(p.dice).filter(d=>d.mesh&&d.mesh.rotationQuaternion&&d.config&&d.config.rollId!=null):[]};
+  /* position à l'écran, taille, angle et assise de chaque dé (projection de la caméra Babylon) */
+  const geo=d=>{const p=peek(),m=p.scene.getTransformMatrix().m,cv=p.canvas,W=cv.clientWidth,H=cv.clientHeight;
+    const pr=(x,y,z)=>{const X=x*m[0]+y*m[4]+z*m[8]+m[12],Y=x*m[1]+y*m[5]+z*m[9]+m[13],w=x*m[3]+y*m[7]+z*m[11]+m[15];return[(X/w+1)/2*W,(1-Y/w)/2*H]};
+    const q=d.mesh.rotationQuaternion,o=d.mesh.position;
+    const rot=(x,y,z)=>{const tx=2*(q.y*z-q.z*y),ty=2*(q.z*x-q.x*z),tz=2*(q.x*y-q.y*x);
+      return[x+q.w*tx+(q.y*tz-q.z*ty),y+q.w*ty+(q.z*tx-q.x*tz),z+q.w*tz+(q.x*ty-q.y*tx)]};
+    const ax=[rot(1,0,0),rot(0,1,0),rot(0,0,1)];let k=0;ax.forEach((a,i)=>{if(Math.abs(a[1])>Math.abs(ax[k][1]))k=i});
+    const up=ax[k].map(v=>v*Math.sign(ax[k][1])),side=ax[(k+1)%3];
+    const e=d.mesh.getBoundingInfo().boundingBox.extendSize,h=Math.max(e.x,e.y,e.z)*Math.abs(d.mesh.scaling.x)||.33; /* demi-arête */
+    const floor=Math.min(...live().map(x=>x.mesh.position.y)); /* le dé le plus bas est posé sur le tapis */
+    const t=[o.x+up[0]*h,o.y+up[1]*h,o.z+up[2]*h],c=pr(...t),s=pr(t[0]+side[0]*h,t[1]+side[1]*h,t[2]+side[2]*h);
+    const dx=s[0]-c[0],dy=s[1]-c[1];
+    return{x:c[0],y:c[1],size:2*Math.hypot(dx,dy),ang:Math.atan2(dy,dx),flat:Math.abs(up[1]),lift:(o.y-floor)/h}};
+  const isBroken=d=>{const g=geo(d);return g.flat<.978||g.lift>1}; /* penché de plus de 12° ou posé sur un autre dé */
+  const say=(t,flash)=>{hud.textContent=t;hud.classList.toggle("ko",!!pending);clearTimeout(hudT);
+    if(flash)hudT=setTimeout(draw,1600)};
+  function draw(){const p=peek();if(!p)return;const cr=p.canvas.getBoundingClientRect(),zr=zone.getBoundingClientRect();
+    const seen=new Set();
+    live().forEach(d=>{const id=d.config.rollId,on=locked.has(id)||broken.has(id);if(!on)return;seen.add(id);
+      let r=rings.get(id);if(!r){r=document.createElement("i");r.className="dring";r.setAttribute("aria-hidden","true");zone.appendChild(r);rings.set(id,r)}
+      const g=geo(d);r.classList.toggle("ko",broken.has(id));
+      r.style.cssText=`width:${g.size*1.12}px;height:${g.size*1.12}px;transform:translate(${cr.left-zr.left+g.x}px,${cr.top-zr.top+g.y}px) translate(-50%,-50%) rotate(${g.ang}rad)`});
+    rings.forEach((r,id)=>{if(!seen.has(id)){r.remove();rings.delete(id)}});
+    if(pending)say("Dé cassé ! Touche pour relancer");
+    else if(throws>=3)say("Lancer 3/3 · touche pour rejouer");
+    else say(`Lancer ${throws}/3${throws===1&&!locked.size?" · touche un dé pour le garder":""}`)}
+  /* lance les dés donnés (rollId) ; à la fin : dé cassé → on rejoue ce jet, sinon le lancer compte */
+  const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();
+    rings.forEach((r,id)=>{if(ids.includes(id)){r.remove();rings.delete(id)}});
+    const rolls=box.getRollResults()[0];
+    const p=rolls?box.reroll(rolls.rolls.filter(r=>ids.includes(r.rollId)),{remove:true}):box.roll("5dpip");
+    p.then(()=>{live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))broken.add(d.config.rollId)});
+      if(broken.size){pending=ids;if(navigator.vibrate)navigator.vibrate(60)}else{pending=null;throws++}})
+     .catch(()=>{}).finally(()=>{busy=false;draw()})};
+  const tap=e=>{if(!box||busy||!sp.isConnected)return;
+    if(pending)return toss(pending);
+    if(throws>=3){locked.clear();throws=0;return toss(allIds())}
+    const p=peek();if(p){const cr=p.canvas.getBoundingClientRect(),x=e.clientX-cr.left,y=e.clientY-cr.top;let hit=null,best=1e9;
+      live().forEach(d=>{const g=geo(d),dist=Math.hypot(g.x-x,g.y-y);if(dist<g.size*.7&&dist<best){best=dist;hit=d.config.rollId}});
+      if(hit!=null){locked.has(hit)?locked.delete(hit):locked.add(hit);return draw()}}
+    const free=allIds().filter(id=>!locked.has(id));
+    if(!free.length)return say("Tous les dés sont gardés",true);
+    toss(free)};
   import("./dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
     if(!sp.isConnected)return;
-    box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",
+    box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",offscreen:!1,
       theme:"yams",themeColor:"#FBF8F1",scale:5,gravity:1.2,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05});
     await box.init();if(!sp.isConnected)return;
-    sp.classList.add("d3");roll();
-    zone.addEventListener("click",roll);
+    sp.classList.add("d3");sp.appendChild(hud);toss([0,1,2,3,4]);
+    zone.addEventListener("click",tap);
+    let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
     /* pas de box.clear() à la fermeture : vider pendant un lancer fait planter dice-box ; le rendu s'arrête seul quand les dés sont posés */
-  }).catch(e=>{console.warn("dés 3D indisponibles",e);sp.classList.remove("d3")});
+  }).catch(e=>{console.warn("dés 3D indisponibles",e);sp.classList.remove("d3");hud.remove()});
 })();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
 (()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;
