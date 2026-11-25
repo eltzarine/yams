@@ -1043,8 +1043,8 @@ function setupHTML(){
   <h2>Qui joue ?</h2><p>Ajoute les joueurs dans l'ordre du tour. Glisse ⠿ pour changer l'ordre. Les noms tapés à la main jouent en invité (#guest).</p>
   ${(()=>{const me=typeof meName==="function"?meName():null;const meIn=me&&S.players.some(n=>pkey(n)===pkey(me));
   return `<div id="plist" data-me="${esc(me||"")}">${S.players.map((n,i)=>{const k=kd[i],mine=k==="me",acct=k==="acct",pend=k==="pend",joined=!!joinOf(n),ro=mine||acct||pend||joined,
-    st=i===0&&ui.starter&&pkey(n)===pkey(ui.starter),val=k==="guest"?baseN(n):n;
-    return `<div class="prow${mine?" me":acct?" ac":pend?" pd":val?" g":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(val)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(val)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":acct?" (compte)":val?" (invité)":""}" placeholder="Joueur ${i+1}" maxlength="${k==="guest"?GUEST_MAX:30}" autocomplete="off" enterkeyhint="next"${ro?" readonly":""}>${st?`<span class="startchip">commence</span>`:mine?`<span class="mechip">moi</span>`:acct?`<span class="acchip">compte</span>`:pend?`<span class="pdchip" data-pend="${esc(pkey(n))}">${pendLabel(n)}</span>`:val?`<span class="gchip">${GUEST}</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
+    st=i===0&&ui.starter&&pkey(n)===pkey(ui.starter),val=k==="guest"?baseN(n):n,jid=joined?joinOf(n):null,jx=jid&&joinLeft(jid)<=JOIN_WARN;
+    return `<div class="prow${mine?" me":acct?" ac":pend?" pd":val?" g":""}" data-row="${i}"><button class="grip" data-grip="${i}" aria-label="Déplacer ${esc(val)||"Joueur "+(i+1)} (flèches haut/bas)">⠿</button><input value="${esc(val)}" data-i="${i}" aria-label="Nom du joueur ${i+1}${mine?" (moi)":acct?" (compte)":val?" (invité)":""}" placeholder="Joueur ${i+1}" maxlength="${k==="guest"?GUEST_MAX:30}" autocomplete="off" enterkeyhint="next"${ro?" readonly":""}>${jx?`<span class="pdchip" data-jexp="${esc(jid)}">${joinLabel(jid)}</span>`:st?`<span class="startchip">commence</span>`:mine?`<span class="mechip">moi</span>`:acct?`<span class="acchip">compte</span>`:pend?`<span class="pdchip" data-pend="${esc(pkey(n))}">${pendLabel(n)}</span>`:val?`<span class="gchip">${GUEST}</span>`:""}<button data-del="${i}" aria-label="${mine?"Me retirer de la partie":"Retirer"}">×</button></div>`}).join("")}</div>
   ${me&&!meIn?`<button class="add addme" id="addMe">+ M’ajouter (${esc(me)})</button>`:""}`})()}
   ${matesHTML()}
   <button class="add" id="addP">Ajouter un joueur</button>
@@ -1196,7 +1196,9 @@ function openNew(){
     <button class="primary dangerbg" id="change">Oui</button>
     <button class="secondary" id="keep">Non</button>`,
   sh=>{
-    sh.querySelector("#change").onclick=()=>{trackAbandon();resetGame();S.started=false;ui.created=true;save();closeSheet();render()};
+    sh.querySelector("#change").onclick=()=>{trackAbandon();resetGame();S.started=false;ui.created=true;
+      for(const j of Object.values(S.joins||{}))if(!j.off)j.at=Date.now(); // retour à la préparation : les 15 min repartent de zéro
+      save();closeSheet();render()};
     sh.querySelector("#keep").onclick=closeSheet;
   });
 }
@@ -1681,10 +1683,12 @@ function onJoins(docs){
   for(const d of docs){const x=d.data()||{},acct=x.compte===true;
     const n=acct?String(x.pseudo||"").trim().slice(0,16):guestN(x.pseudo);
     if(!n||(acct&&n.includes("#")))continue;
-    const j=S.joins[d.id];
+    const dat=x.at&&typeof x.at.toMillis==="function"?x.at.toMillis():Date.now();
+    let j=S.joins[d.id];
+    if(j&&j.off&&j.exp&&dat>(+j.at||0)){delete S.joins[d.id];j=null} // retiré au bout de 15 min puis a rejoint à nouveau
     if(!j){
       if(S.started)continue; // on ne rejoint qu'avant le début de la partie
-      S.joins[d.id]={n,acct};if(acct)addAcct(n);changed=true;
+      S.joins[d.id]={n,acct,at:dat};if(acct)addAcct(n);changed=true;
       if(acct&&S.pending&&S.pending[pkey(n)]){stopInvWatch(pkey(n));delete S.pending[pkey(n)];msgs.push(`${n} a accepté l'invitation`)}
       if(S.players.some(p=>String(p).trim()===n))continue; // déjà à la table (ajouté depuis « Déjà joué avec »)
       const e=S.players.findIndex(p=>!String(p).trim());
@@ -1701,6 +1705,26 @@ function onJoins(docs){
   if(changed){save();pushLive(true);render()}
   if(msgs.length)toast(msgs.join(" · "));
 }
+/* joueur qui a rejoint (compte ou invité) : retiré si la partie n'a pas commencé 15 min après son arrivée */
+const JOIN_MS=15*60e3,JOIN_WARN=2*60e3;
+function joinLeft(id){const j=(S.joins||{})[id];return j?JOIN_MS-(Date.now()-(+j.at||0)):0}
+function joinLabel(id){const t=Math.max(0,Math.ceil(joinLeft(id)/1000));return`retiré dans ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
+function joinTick(){
+  if(VIEW||S.started||!S.joins)return;
+  const gone=[];
+  for(const id of Object.keys(S.joins)){const j=S.joins[id];if(j.off||joinLeft(id)>0)continue;
+    j.off=true;j.exp=true;
+    const i=S.players.findIndex(p=>p===j.n);
+    if(i>=0){if(S.players.length>1)S.players.splice(i,1);else S.players=[""]}
+    gone.push(j.n)}
+  if(gone.length){save();pushLive(true);render();toast(`${gone.join(", ")} ${gone.length>1?"retirés":"retiré"} : la partie n'a pas commencé dans les 15 min`);return}
+  document.querySelectorAll("[data-jexp]").forEach(el=>{el.textContent=joinLabel(el.dataset.jexp)});
+  if(!ui.created)return;
+  // passage sous les 2 dernières minutes : on réaffiche pour montrer le décompte
+  const need=Object.keys(S.joins).some(id=>!S.joins[id].off&&joinLeft(id)<=JOIN_WARN&&!document.querySelector(`[data-jexp="${id}"]`)&&S.players.includes(S.joins[id].n));
+  if(need&&!document.activeElement?.matches?.("#plist input"))render();
+}
+setInterval(joinTick,1000);
 /* ---------- rejoindre une partie (téléphone d'un autre joueur) ---------- */
 const JOIN_KEY="yams-rejoint",GID_KEY="yams-gid";
 function myGid(){try{let g=localStorage.getItem(GID_KEY);
@@ -1981,7 +2005,7 @@ function watchLive(){
   setInterval(resync,10000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)resync()});
 }
-let viewMates=false;
+let viewMates=false,viewSeen=false;
 /* ma colonne dans la partie suivie : nom du « rejoindre » gardé sur ce téléphone, ou mon pseudo de compte */
 function viewMyIdx(jn){
   if(jn){const i=S.players.indexOf(jn.n);if(i>=0)return i}
@@ -2001,11 +2025,14 @@ function renderView(){
   const jn=getJoin(VIEW),logged=typeof meName==="function"&&!!meName();
   const loginBtn=jn&&!jn.acct&&!logged?`<button class="secondary" id="vLogin">Me connecter pour jouer avec mon pseudo</button>`:"";
   const myIdx=viewMyIdx(jn),host=S.hote?esc(S.hote):"celui qui tient la feuille";
+  if(jn&&myIdx>=0)viewSeen=true;
+  // retiré par l'hôte au bout de 15 min sans début de partie (vu dans la liste puis disparu, ou jamais ajouté passé le délai)
+  const kicked=VS==="ok"&&!S.started&&jn&&myIdx<0&&(viewSeen||Date.now()-(+jn.at||0)>=JOIN_MS);
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
       denied:"Accès refusé par la base Firebase.",error:"Impossible de se connecter pour le moment. Vérifie ta connexion."}[VS]
       ||`La partie n'a pas encore commencé.${S.players.filter(Boolean).length?" Joueurs : "+S.players.filter(Boolean).map(nm).join(", ")+".":""}`;
-    const x=VS==="ok"&&!S.started?(jn?`<div class="joined">✓ Tu es dans la partie sous le nom <b>${nm(jn.n)}</b>. Elle commence dès que celui qui tient la feuille la lance.</div>${loginBtn}`:`<button class="primary" id="vJoin">Rejoindre la partie</button>`):"";
+    const x=kicked?`<div class="joined">Tu as été retiré : la partie n'a pas commencé dans les 15 minutes.</div><button class="primary" id="vRejoin">Rejoindre à nouveau</button>`:VS==="ok"&&!S.started?(jn?`<div class="joined">✓ Tu es dans la partie sous le nom <b>${nm(jn.n)}</b>. Elle commence dès que celui qui tient la feuille la lance.</div>${loginBtn}`:`<button class="primary" id="vJoin">Rejoindre la partie</button>`):"";
     app.innerHTML=box(`Partie ${esc(VIEW)}`,m,x);
   }else{
     const tot=S.players.map((_,p)=>totals(p)),best=Math.max(...tot.map(t=>t.total)),anyScore=tot.some(t=>t.total>0);
@@ -2031,6 +2058,9 @@ function renderView(){
     if(!viewMates){viewMates=true;addPartners(S.players.filter(n=>!isGuestN(n)))}
   }
   const vj=document.getElementById("vJoin");if(vj)vj.onclick=()=>openJoin(VIEW);
+  const vr=document.getElementById("vRejoin");if(vr)vr.onclick=async()=>{busy(vr,true,"Un instant…");
+    try{const r=await joinGame(VIEW,baseN(jn.n));viewSeen=false;render();toast(r.spect?"La partie a commencé : tu la suis en spectateur":`Tu es de nouveau dans la partie : ${r.name}`)}
+    catch(e){busy(vr,false);toast(e.message||"Impossible de rejoindre la partie.")}};
   const vl=document.getElementById("vLogin");if(vl)vl.onclick=()=>{if(typeof accTap==="function")accTap()};
   document.getElementById("btnQuit").onclick=()=>openQuitView(myIdx>=0||(!!jn&&!S.started));
   if(typeof bindAcctBtn==="function")bindAcctBtn();
