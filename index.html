@@ -607,6 +607,7 @@ td.cell.mine{background:color-mix(in srgb,var(--gold) 14%,transparent)}
 /* invités (#guest), comptes, code pour rejoindre, « Déjà joué avec » */
 .gtag{font-size:.7em;font-weight:500;opacity:.6;margin-left:1px;letter-spacing:0}
 thead th .gtag{display:block;font-size:11px;line-height:1.1;margin:1px 0 0}
+.keep{border:1px solid var(--gold);border-radius:14px;padding:12px 14px;margin:0 0 12px;font-size:15px;line-height:1.45}.keep .kt{font-size:19px;font-weight:700;margin:0 0 4px}.keep p{margin:4px 0}.keep .primary{margin:10px 0 0}.keep small{display:block;margin-top:6px;color:var(--muted);font-size:13px}
 .joined.vg{margin:0 0 12px}.joined.vg .secondary{margin-top:8px;height:42px}
 .prow.g input{padding-right:70px}.prow.ac input{padding-right:84px;font-weight:700}
 .gchip,.acchip{position:absolute;right:62px;top:50%;transform:translateY(-50%);border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;pointer-events:none}
@@ -1499,7 +1500,7 @@ async function syncGame(){
   const sig=JSON.stringify([S.players,S.scores]);
   if(S.savedSig===sig)return;
   if(!S.gid)S.gid="g"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  const gid=S.gid;
+  const gid=S.gid;if(typeof noteClaims==="function")noteClaims(gid);
   if(!S.savedSig)syncState=null;
   const d=gameData();if(S.gdate)d.date=S.gdate;else S.gdate=d.date;
   outboxPut(gid,d); // gardée sur l'appareil tant que Firebase n'a pas confirmé
@@ -1686,7 +1687,9 @@ function onJoins(docs){
     const dat=x.at&&typeof x.at.toMillis==="function"?x.at.toMillis():Date.now();
     let j=S.joins[d.id];
     if(j&&j.reinv&&!j.off&&dat>(+(j.doc||j.at)||0)){ // invitation pour la nouvelle partie acceptée
-      j.reinv=false;j.at=dat;j.doc=dat;const k=pkey(j.n);if(S.pending&&S.pending[k]){stopInvWatch(k);delete S.pending[k]}
+      const k=pkey(j.n);if(S.pending&&S.pending[k]){stopInvWatch(k);delete S.pending[k]}
+      if(j.n!==n){const i=S.players.findIndex(p=>p===j.n);if(i>=0)S.players[i]=n;if(acct)addAcct(n);j.n=n;j.acct=acct}
+      j.reinv=false;j.at=dat;j.doc=dat;
       msgs.push(`${j.n} a accepté l'invitation`);changed=true;continue}
     if(j&&j.off&&j.exp&&dat>(+(j.doc||j.at)||0)){delete S.joins[d.id];j=null} // retiré (15 min ou invitation sans réponse) puis a rejoint à nouveau
     if(!j){
@@ -1705,7 +1708,7 @@ function onJoins(docs){
       j.n=n;j.acct=acct;j.doc=dat;changed=true; // la connexion réécrit sa fiche : ce n'est pas une réponse à une invitation
     }
   }
-  if(changed){save();pushLive(true);render()}
+  if(changed){save();pushLive(true);render();setTimeout(claimSweep,1500)}
   if(msgs.length)toast(msgs.join(" · "));
 }
 /* joueur qui a rejoint (compte ou invité) : retiré si la partie n'a pas commencé 15 min après son arrivée */
@@ -1759,6 +1762,80 @@ async function joinGame(code,guestName){
   if(window.gtag)gtag("event","partie_rejointe",{compte:me?"oui":"non"});
   return{name};
 }
+/* ---------- fin de partie en invité : garder son score en créant son compte ----------
+   Le téléphone de l'invité garde une copie (24 h). À la création du compte, il réécrit sa place à la table
+   (direct/{code}/joueurs/{gid}) sous son pseudo ; l'appli de l'hôte, seule propriétaire de la partie enregistrée,
+   y remplace alors « Nom#guest » par le pseudo. */
+const KEEP_KEY="yams-a-garder",KEEP_MS=24*3600e3;
+function readKeeps(){try{const a=JSON.parse(localStorage.getItem(KEEP_KEY)||"[]");return Array.isArray(a)?a.filter(k=>k&&typeof k.code==="string"&&/^g[a-z0-9]{16}$/.test(k.jid||"")&&Date.now()-(+k.at||0)<KEEP_MS):[]}catch(e){return[]}}
+function writeKeeps(a){try{a.length?localStorage.setItem(KEEP_KEY,JSON.stringify(a.slice(-10))):localStorage.removeItem(KEEP_KEY)}catch(e){}}
+function ordinal(i){return i===1?"1er":i+"e"}
+function keepCardHTML(myIdx,tot){
+  const jn=getJoin(VIEW),n=S.players[myIdx],t=tot[myIdx].total;
+  if(jn&&!readKeeps().some(k=>k.code===VIEW&&k.jid===jn.jid))writeKeeps([...readKeeps(),{code:VIEW,jid:jn.jid,n,t,at:Date.now()}]);
+  // place dans la saison (avec cette partie, même si l'hôte ne l'a pas encore envoyée)
+  const rk=seasonRank([...(HIST||[]),{date:new Date().toISOString(),ranking:[{n,t}]}]),pos=rk.findIndex(x=>pkey(x.n)===pkey(n))+1;
+  // revanche : le compte juste au-dessus de moi dans cette partie
+  const above=S.players.map((x,p)=>({x,t:tot[p].total})).filter(o=>!isGuestN(o.x)&&o.t>t).sort((a,b)=>a.t-b.t)[0];
+  return`<div class="keep"><p class="kt">Ton ${t} va disparaître.</p>
+    ${pos?`<p>Tu es <b>${ordinal(pos)}</b> de ${esc(SEASON.th.n)} sous « ${nm(n)} ». Garde cette place à ton nom.</p>`:""}
+    ${above?`<p><b>${esc(above.x)}</b> t'a battu de ${above.t-t} point${above.t-t>1?"s":""}. Crée ton compte pour qu'il te retrouve à la revanche.</p>`:""}
+    <button class="primary" id="vKeep">Garder mon score · 30 secondes</button><small>Possible pendant 24 h avec ton e-mail, sans mot de passe.</small></div>`;
+}
+function keepHomeHTML(){
+  if(typeof meName==="function"&&meName())return"";
+  const k=readKeeps().slice(-1)[0];if(!k)return"";
+  const h=Math.max(1,Math.ceil((KEEP_MS-(Date.now()-k.at))/3600e3));
+  return`<div class="keep"><p class="kt">Ton ${k.t} en invité t'attend.</p><p>Crée ton compte et ta partie ${esc(k.code)} passe à ton nom (encore ${h} h).</p><button class="primary" id="keepGo">Garder mon score</button></div>`;
+}
+/* compte créé (ou connecté) : on réclame les parties gardées sur ce téléphone */
+let keepBusy=false;
+async function claimKeeps(){
+  const me=typeof meName==="function"?meName():null;if(!DB||!me||keepBusy||!Acc.user)return;
+  const ks=readKeeps();if(!ks.length)return;keepBusy=true;
+  try{for(const k of ks){
+    try{await joinRef(k.code,k.jid).set({pseudo:me,compte:true,uid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp(),expireAt:expireIn(864e5)});
+      writeKeeps(readKeeps().filter(x=>!(x.code===k.code&&x.jid===k.jid)));
+      const j=readJoin();if(j&&j.code===k.code&&j.jid===k.jid){j.n=me;j.acct=true;setJoin(j)}
+      toast(`${k.t} ajouté à ton compte ✓`);if(VIEW)render()}
+    catch(e){if(isDenied(e))writeKeeps(readKeeps().filter(x=>!(x.code===k.code&&x.jid===k.jid)))}}}
+  finally{keepBusy=false}
+}
+/* côté hôte : parties finies avec des invités venus de leur téléphone, surveillées 24 h */
+const CLAIM_KEY="yams-rattache";
+function readClaims(){try{const a=JSON.parse(localStorage.getItem(CLAIM_KEY)||"[]");return Array.isArray(a)?a.filter(c=>c&&typeof c.gid==="string"&&typeof c.code==="string"&&c.g&&Date.now()-(+c.at||0)<KEEP_MS):[]}catch(e){return[]}}
+function writeClaims(a){try{a.length?localStorage.setItem(CLAIM_KEY,JSON.stringify(a.slice(-20))):localStorage.removeItem(CLAIM_KEY)}catch(e){}}
+function noteClaims(gid){
+  if(!S.live||!S.joins)return;const g={};
+  for(const [id,j] of Object.entries(S.joins))if(/^g/.test(id)&&!j.off&&isGuestN(j.n)&&S.players.includes(j.n))g[id]=j.n;
+  if(!Object.keys(g).length)return;
+  writeClaims([...readClaims().filter(c=>c.gid!==gid),{gid,code:S.live,g,at:Date.now()}]);
+}
+let sweeping=false;
+async function claimSweep(){
+  if(VIEW||!DB||sweeping)return;const cs=readClaims();writeClaims(cs);if(!cs.length)return;
+  sweeping=true;
+  try{for(const c of cs){
+    let snap;try{snap=await DB.collection("direct").doc(c.code).collection("joueurs").get()}catch(e){continue}
+    const ren={};
+    for(const d of snap.docs){const x=d.data()||{},old=c.g[d.id];if(!old)continue;
+      const p=String(x.pseudo||"").trim();if(x.compte===true&&p&&!p.includes("#"))ren[old]=p}
+    if(!Object.keys(ren).length)continue;
+    try{const ref=DB.collection("parties").doc(c.gid),gd=await ref.get();
+      if(gd.exists){const x=gd.data()||{},f=n=>ren[n]||n;
+        const d={date:x.date,winner:f(x.winner),top:x.top,ranking:(x.ranking||[]).map(r=>({...r,n:f(r.n)}))};
+        if(Array.isArray(x.sheet))d.sheet=x.sheet.map(r=>({...r,n:f(r.n)}));
+        const chg=JSON.stringify(d.ranking)!==JSON.stringify(x.ranking)||d.winner!==x.winner;
+        if(chg)await pushGame(ref,d,true);
+        if(S.gid===c.gid&&S.players.some(n=>ren[n])){S.players=S.players.map(f);persist();render()}
+        if(chg)toast(Object.entries(ren).map(([o,p])=>`${baseN(o)}#guest est devenu ${p} ✓`).join(" · "))}
+      const left=readClaims().map(e=>{if(e.gid!==c.gid)return e;const g={...e.g};for(const id in g)if(ren[g[id]])delete g[id];return{...e,g}}).filter(e=>Object.keys(e.g).length);
+      writeClaims(left)}
+    catch(e){if(isDenied(e))writeClaims(readClaims().filter(e2=>e2.gid!==c.gid))}
+  }}finally{sweeping=false}
+}
+setTimeout(claimSweep,5000);setInterval(claimSweep,60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)claimSweep()});
 /* invité qui se connecte (ou crée son compte) après avoir rejoint : son nom devient son pseudo, même en cours de partie */
 let upBusy=false;
 async function upgradeJoin(){
@@ -1822,6 +1899,7 @@ function choiceHTML(){
   ${seasonBarHTML()}
   ${inviteHTML()}
   ${returnHTML()}
+  ${keepHomeHTML()}
   <div class="setup choice"><h2>On joue ?</h2>
   <button class="primary big" id="cCreate">🎲 Créer une partie</button>
   <button class="secondary big" id="cJoin">${QR_ICON}Rejoindre une partie</button>
@@ -1831,6 +1909,7 @@ function bindChoice(){
   document.getElementById("cCreate").onclick=()=>{ui.created=true;render()};
   document.getElementById("cJoin").onclick=()=>openJoin();
   loadReturn();
+  const kh=document.getElementById("keepGo");if(kh)kh.onclick=()=>{if(typeof accTap==="function")accTap()};
   if(typeof bindAcctBtn==="function")bindAcctBtn();
   bindInvite();
 }
@@ -2068,7 +2147,8 @@ function renderView(){
         <div class="who">Au tour de ${nm(S.players[cur.p])} <small style="font-size:16px;color:var(--muted);font-weight:500">· tour ${cur.round}/${ALL.length}</small></div>
         ${L?`<div class="lst">Dernier coup : ${nm(S.players[L.p])}, ${L.v?`${L.v} en ${LABEL[L.k]}`:`${LABEL[L.k]} barré`}</div>`:""}`;
     }
-    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div>${myIdx>=0?`<div class="joined vg">🎲 <b>Tu joues dans cette partie</b> (colonne ${nm(S.players[myIdx])}). ${S.hote?`<b>${host}</b>`:"Celui qui tient la feuille"} inscrit les scores.${jn&&!jn.acct&&!logged?` Tu joues en invité : connecte-toi et ton nom devient ton pseudo.${loginBtn}`:""}</div>`:""}<div class="live">
+    const keepBox=over&&myIdx>=0&&jn&&!jn.acct&&!logged?keepCardHTML(myIdx,tot):"";
+    app.innerHTML=`${top}${seasonBarHTML()}<div class="livebar" aria-live="polite">${bar}</div>${keepBox||(myIdx>=0?`<div class="joined vg">🎲 <b>Tu joues dans cette partie</b> (colonne ${nm(S.players[myIdx])}). ${S.hote?`<b>${host}</b>`:"Celui qui tient la feuille"} inscrit les scores.${jn&&!jn.acct&&!logged?` Tu joues en invité : connecte-toi et ton nom devient ton pseudo.${loginBtn}`:""}</div>`:"")}<div class="live">
       ${boardHTML(head,UPPER.map(u=>row(u[0])),LOWER.map(l=>row(l[0])),tot,t=>t.prime?`<td class="got">+${t.prime}</td>`:`<td>${t.upperDone?"–":"encore "+t.manque}</td>`,`Prime <small>${S.settings.seuil}+</small>`)}</div>
       <p class="hint">${myIdx>=0?`Ta colonne est surlignée. Seul ${host} peut inscrire les scores.`:"Tu regardes la partie en spectateur : seul celui qui tient la feuille peut inscrire les scores."}</p>`;
     if(!viewMates){viewMates=true;addPartners(S.players.filter(n=>!isGuestN(n)))}
@@ -2081,6 +2161,7 @@ function renderView(){
   const vf=document.getElementById("vRefuse");if(vf)vf.onclick=async()=>{const uid=Acc.user&&Acc.user.uid;
     if(DB&&uid)await DB.collection("invitations").doc(uid).update({refus:true}).catch(()=>{});
     try{localStorage.removeItem(JOIN_KEY)}catch(e){}location.href=location.pathname};
+  const vk=document.getElementById("vKeep");if(vk)vk.onclick=()=>{if(typeof accTap==="function")accTap()};
   const vl=document.getElementById("vLogin");if(vl)vl.onclick=()=>{if(typeof accTap==="function")accTap()};
   document.getElementById("btnQuit").onclick=()=>openQuitView(myIdx>=0||(!!jn&&!S.started));
   if(typeof bindAcctBtn==="function")bindAcctBtn();
@@ -2483,7 +2564,7 @@ function acctUI(){
   const on=!!(Acc.user&&Acc.pseudo);
   const sp=document.getElementById("acctChip");
   if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Me connecter";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
-  upgradeJoin();
+  claimKeeps().finally(upgradeJoin);
   if(VIEW){if(Acc.ready)render();return}
   watchMyInvite();
   const inSetup=!VIEW&&!S.started&&document.querySelector("#app header");

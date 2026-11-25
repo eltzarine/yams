@@ -89,6 +89,8 @@ with sync_playwright() as p:
     G.click("#vRejoin");G.wait_for_timeout(3000)
     names=A.eval_on_selector_all("#plist input","e=>e.map(x=>x.value)")
     ok("Léa" in names and G.locator(".joined").count()==1 and G.locator("#vRejoin").count()==0,"Léa a rejoint à nouveau "+str(names))
+    K=mk("Max");boot(K);K.click("#cJoin");K.fill("#fcode",code);K.fill("#jname","Max");K.click("#jgo");K.wait_for_url("**partie=*",timeout=10000);K.wait_for_selector(".joined",timeout=10000)
+    A.wait_for_timeout(2500)
     A.click("#go");A.wait_for_timeout(1500)
     A.click("#tabBoard");A.wait_for_timeout(300);A.click('td.cell button[data-p="0"][data-k="chance"]');A.fill("#man","20");A.click("#manOk");A.wait_for_timeout(2500)
     J.wait_for_timeout(1500)
@@ -105,17 +107,31 @@ with sync_playwright() as p:
     d,st=rq("GET","parties");docs=[fields(x) for x in d.get("documents",[])] if st==200 else []
     mine=[x for x in docs if "Léa" in [r["n"] for r in x.get("ranking",[])]]
     ok(bool(mine) and mine[0].get("owner")=="uA","partie finie enregistrée, propriétaire = compte de l'hôte")
+    # fin de partie en invité : Max garde son score en créant son compte
+    K.wait_for_selector("#vKeep",timeout=10000);kt=K.inner_text(".keep")
+    ok("va disparaître" in kt and "de " in kt and "e de" in kt.replace("1er de","1e de"),"Max : « Ton score va disparaître » + place dans la saison")
+    ok("t'a battu" not in kt,"Max a gagné : pas de message de revanche");K.screenshot(path="/tmp/keep.png")
+    ok(K.evaluate("readKeeps().length")==1,"Max : partie gardée sur son téléphone")
+    A.evaluate("joinSub&&joinSub();joinSub=null")  # l'appli de l'hôte n'écoute plus (fermée)
+    K.evaluate("__login('uM','Max')");K.wait_for_timeout(3500)
+    ok(K.evaluate("readKeeps().length")==0 and K.locator(".keep").count()==0,"Max : compte créé, partie réclamée")
+    A.evaluate("claimSweep()");A.wait_for_timeout(3500)
+    d,st=rq("GET","parties");docs=[fields(x) for x in d.get("documents",[])]
+    rk=[[r["n"] for r in x.get("ranking",[])] for x in docs if any(r["n"] in ("Max","Max#guest") for r in x.get("ranking",[]))]
+    ok(bool(rk) and "Max" in rk[0] and "Max#guest" not in rk[0],"partie enregistrée : Max#guest → Max "+str(rk))
+    ok(A.evaluate("readClaims().length")==0,"hôte : plus rien à rattacher")
+    watch=A.evaluate("watchJoins()")
     # l'hôte quitte la partie : ceux qui avaient rejoint reçoivent une invitation (5 min, bloque Commencer)
     A.evaluate("openNew()");A.wait_for_selector("#change");A.click("#change");A.wait_for_timeout(2500)
-    ok(A.locator(".pdchip").count()==2 and A.is_disabled("#go") and "en attente" in A.inner_text("#plist") and ":" not in A.inner_text("#plist"),"quitter : Jojo et Léa en attente, sans décompte, Commencer bloqué")
+    ok(A.locator(".pdchip").count()==3 and A.is_disabled("#go") and "en attente" in A.inner_text("#plist") and ":" not in A.inner_text("#plist"),"quitter : Jojo et Léa en attente, sans décompte, Commencer bloqué")
     d,st=rq("GET","invitations/uJ");ok(st==200,"invitation envoyée à Jojo (compte)")
     J.wait_for_selector("#vRejoin",timeout=8000);ok("relance" in J.inner_text("#app"),"Jojo : « César relance une partie » Accepter / Refuser")
     J.click("#vRejoin");J.wait_for_timeout(3000)
-    ok(A.locator(".prow.ac input[value='Jojo']").count()==1 and A.locator(".pdchip").count()==1,"Jojo a accepté : redevient compte chez l'hôte")
+    ok(A.locator(".prow.ac input[value='Jojo']").count()==1 and A.locator(".pdchip").count()==2,"Jojo a accepté : redevient compte chez l'hôte")
     ok(J.locator(".joined").count()==1 and J.locator("#vRejoin").count()==0,"Jojo : de nouveau dans la partie")
     A.evaluate("Object.values(S.pending).forEach(p=>p.until=Date.now()-1)");A.wait_for_timeout(1800)
     names=A.eval_on_selector_all("#plist input","e=>e.map(x=>x.value)")
-    ok("Léa" not in names and "Jojo" in names and not A.is_disabled("#go"),"Léa sans réponse : retirée, Commencer débloqué "+str(names))
+    ok("Léa" not in names and "Max" not in names and "Jojo" in names and not A.is_disabled("#go"),"Léa et Max sans réponse : retirée, Commencer débloqué "+str(names))
     # hôte sans compte : identité anonyme invisible
     H=mk("Hôte sans compte");boot(H);H.click("#cCreate");H.wait_for_selector("#plist input");H.fill("#plist input >> nth=0","Paul");H.fill("#plist input >> nth=1","Zoé");H.click("#go");H.wait_for_timeout(800)
     H.evaluate("S.players.forEach((_,p)=>{S.scores[p]={};ALL.forEach(k=>S.scores[p][k]=3)});save();render()");H.wait_for_timeout(5000)
@@ -126,7 +142,7 @@ with sync_playwright() as p:
     H.click("#look") if H.locator("#look").count() else None
     ok("enregistrée" in H.evaluate("document.getElementById('syncSt')?document.getElementById('syncSt').innerText:'enregistrée'"),"message « Partie enregistrée »")
     A.screenshot(path="/tmp/e2e-fin.png");J.wait_for_timeout(1500);J.screenshot(path="/tmp/e2e-jojo-fin.png")
-    errs=sum(len(x.errs) for x in (A,J,G,S_,H));ok(errs==0,"aucune erreur JavaScript ("+str(errs)+")")
+    errs=sum(len(x.errs) for x in (A,J,G,S_,H,K));ok(errs==0,"aucune erreur JavaScript ("+str(errs)+")")
     # sondes de sécurité : client anonyme sans appli
     _,st=rq("GET","direct",owner=False);ok(st==403,f"sonde : lister tous les directs sans compte → refusé ({st})")
     d,_=rq("GET","parties");pid=d["documents"][0]["name"].split("/")[-1]
