@@ -40,12 +40,12 @@ html.story-on,html.story-on body{overflow:hidden;overscroll-behavior:none}
 .story .sdice{position:absolute;inset:-20px;z-index:1;outline:none}
 .story .sdice canvas{width:100%;height:100%;display:block;outline:none}
 .story .sdice canvas:focus{outline:none}
-.story .ssay{position:absolute;left:30px;right:30px;top:40px;z-index:4;pointer-events:none;transition:opacity .3s}
+.story .ssay{position:absolute;left:12px;right:12px;top:-6px;z-index:4;pointer-events:none;transition:opacity .3s}
 .story .ssay.off{opacity:0}
 .story .ssay p{margin:0;background:#F4EFE3;color:#3a2a1a;font:600 15px/1.2 "Barlow Condensed",sans-serif;padding:8px 11px;border-radius:12px;position:relative;box-shadow:0 4px 10px rgba(0,0,0,.35)}
 .story .ssay p::before{content:"";position:absolute;right:14px;top:-9px;border:9px solid transparent;border-top:0;border-bottom-color:#F4EFE3}
 .story .ssay b{color:#A3261F}
-.story .sscore{position:absolute;left:50%;top:-8px;z-index:5;transform:translateX(-50%) skewX(-10deg);font-size:19px;white-space:nowrap;opacity:0;pointer-events:none;text-shadow:0 2px 0 #C4320A,0 3px 0 #4A1404,0 0 10px rgba(255,140,0,.6)}
+.story .sscore{position:absolute;left:50%;top:44%;z-index:5;transform:translateX(-50%) skewX(-10deg);font-size:26px;white-space:nowrap;opacity:0;pointer-events:none;text-shadow:0 2px 0 #C4320A,0 3px 0 #4A1404,0 0 10px rgba(255,140,0,.6)}
 .story .sscore.on{animation:spop 1.6s cubic-bezier(.2,1.4,.4,1) both}
 .story .shint{position:absolute;left:44px;right:44px;bottom:58px;z-index:2;text-align:center;pointer-events:none;font:700 15px/1.1 "Barlow Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(244,239,227,.5)}
 .story .shudl{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:7px;white-space:nowrap;pointer-events:none;
@@ -126,3 +126,19 @@ html.story-on,html.story-on body{overflow:hidden;overscroll-behavior:none}
   font:600 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .storybox button:active{transform:scale(.97)}
 .storybox .sb-done{display:inline-block;margin-left:8px;font:600 13px/1 "Barlow Condensed",sans-serif;color:#9fd4a8}
+
+/* ligne d'info au-dessus des cases : à qui est la grille, prime des cases 1 à 6 */
+.story .sinfo{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 4px 6px;font:600 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.03em;color:#e8dcc4;image-rendering:auto}
+.story .sinfo span:first-child{text-transform:uppercase;letter-spacing:.1em;color:#FFE14D}
+.story .sinfo span.bot{color:#ff9a7a}
+.story .sinfo b{font:400 13px/1 "Bungee",sans-serif;color:#FFE14D}
+.story .sgrid.bot .sc{background:linear-gradient(#3a1e18,#1c0e0a)}
+.story .sgrid.bot .sc.hot{background:linear-gradient(#ffb08a,#e0592a);color:#3a0e00;border-color:#3a0e00;box-shadow:inset 0 1px 0 #ffd6c0,0 3px 0 #3a0e00,0 0 14px rgba(255,110,40,.8)}
+.story .sgrid.bot .sc.hot b{color:#3a0e00}
+.story .shudl.ko{background:rgba(160,18,44,.88)}
+.story .snico{display:flex;align-items:center;gap:10px;text-align:left;background:#F4EFE3;color:#3a2a1a;border-radius:12px;padding:8px 10px;margin:0 0 6px}
+.story .snico img{width:40px;height:40px;image-rendering:pixelated;border-radius:6px;flex:none;background:#3b2216}
+.story .snico p{margin:0;color:#3a2a1a;font:600 15px/1.2 "Barlow Condensed",sans-serif}
+.story .scr.shake{animation:sshake .35s steps(6)}.story .scr.shake2{animation:sshake2 .7s steps(12)}
+@keyframes sshake{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,-2px)}80%{transform:translate(3px,3px)}}
+@keyframes sshake2{0%,100%{transform:none}10%{transform:translate(-10px,5px)}20%{transform:translate(9px,-6px)}30%{transform:translate(-8px,-4px)}40%{transform:translate(7px,6px)}50%{transform:translate(-6px,3px)}60%{transform:translate(5px,-4px)}70%{transform:translate(-4px,-2px)}80%{transform:translate(3px,3px)}90%{transform:translate(-2px,1px)}}
