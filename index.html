@@ -2140,7 +2140,7 @@ function renderView(){
     let bar;
     if(over){
       const r=S.players.map((n,p)=>({n,t:tot[p].total})).sort((a,b)=>b.t-a.t);
-      bar=`<div class="on">Partie terminée · ${esc(VIEW)}</div><div class="who">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`🏆 ${nm(r[0].n)} gagne avec ${r[0].t}`}</div>
+      bar=`<div class="on">Partie terminée · ${esc(VIEW)}</div><div class="who">${r[1]&&r[1].t===r[0].t?`Égalité à ${r[0].t} points`:`🏆 ${nm(r[0].n)} gagne`}</div>
         <ol class="rank">${r.map((x,i)=>`<li><b>${i+1}</b><span>${nm(x.n)}</span><em>${x.t}</em></li>`).join("")}</ol>`;
     }else{
       bar=`<div class="on"><i aria-hidden="true"></i>En direct · partie ${esc(VIEW)}</div>
