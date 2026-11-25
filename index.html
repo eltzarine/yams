@@ -2098,7 +2098,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   let going=false,gone=false,entered=false;
   const go=()=>{if(gone)return;gone=true;hide();if(!entered){entered=true;seasonFlow()}};
   window.splashGo=()=>{if(sp.isConnected&&!sp.classList.contains("hide"))go()};
-  window.splashShow=()=>{if(!sp.isConnected||!sp.classList.contains("hide"))return;gone=false;sp.classList.remove("hide");scrollTo(0,0)};
+  window.splashShow=()=>{if(!sp.isConnected||!sp.classList.contains("hide"))return;gone=false;sp.classList.remove("hide");scrollTo(0,0);if(typeof prefetchBio==="function")prefetchBio()};
   document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("header h1.brand"))window.splashShow()});
   /* « Jouer » : connecté → on joue ; Face ID sur ce téléphone → reconnaissance ; sinon choix e-mail / invité */
   document.getElementById("btnPlay").onclick=async e=>{if(going)return;going=true;
@@ -2576,7 +2576,7 @@ function accBioOffer(fromSettings){
    (iPhone exige que Face ID suive immédiatement le geste) */
 let bioPre=null;
 function prefetchBio(){if(!ACC_ON||!PK_OK||!pkHere()||(Acc.user&&Acc.ready))return;
-  if(bioPre&&Date.now()-bioPre.at<4*60e3)return;
+  if(bioPre&&Date.now()-bioPre.at<3*60e3)return;
   const at=Date.now();bioPre={at,p:loadWebAuthn().then(()=>api("/passkey/login/options",{}))};bioPre.p.catch(()=>{if(bioPre&&bioPre.at===at)bioPre=null})}
 async function bioAuth(){
   let o=null;
@@ -2697,6 +2697,10 @@ function initAccounts(){
     Acc.ready=true;acctUI();refreshMe();
   });
 }
+/* Face ID au toucher de « Entrer » : iPhone n'ouvre Face ID que si la demande part tout de suite après le toucher.
+   La demande est donc préparée à l'avance et rafraîchie toutes les 2 min tant qu'on est sur l'accueil (on peut y
+   jouer aux dés longtemps avant d'entrer). */
+setInterval(()=>{const sp=document.getElementById("splash");if(sp&&sp.isConnected&&!sp.classList.contains("hide")&&!document.hidden)prefetchBio()},120e3);
 (()=>{const c=document.getElementById("acctChip");if(c)c.onclick=accTap;
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)prefetchBio()});
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(initAccounts,0));else setTimeout(initAccounts,0);})();
