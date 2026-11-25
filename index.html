@@ -401,10 +401,10 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 /* défi réussi : le score clignote en blanc doré, comme un « K.O. » */
 @keyframes scoreglow{50%{color:#FFFBE6;filter:drop-shadow(0 0 8px rgba(255,200,40,.95))}}
 /* post-it du défi + bouton son épinglé en haut à droite du post-it */
-.splash .postwrap{position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 52px);z-index:3;pointer-events:none}
+.splash .postwrap{position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 52px);z-index:3;pointer-events:none;transform:rotate(-4deg)}
 .splash .postit{position:relative;pointer-events:none;width:132px;padding:7px 10px 8px;text-align:left;
-  background:#FBE38A;color:#3B300C;font:600 16px/1.1 "Barlow Condensed",system-ui,sans-serif;transform:rotate(-4deg);box-shadow:2px 5px 10px rgba(0,0,0,.35);border-radius:2px 2px 10px 2px;transition:opacity .4s,transform .4s}
-.splash .postit small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
+  background:#FBE38A;color:#3B300C;font:600 16px/1.1 "Barlow Condensed",system-ui,sans-serif;box-shadow:2px 5px 10px rgba(0,0,0,.35);border-radius:2px 2px 10px 2px;transition:opacity .4s,transform .4s}
+.splash .postit small{display:block;padding-right:18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
 .splash .postit b{color:#A3261F}
 /* défi réussi : le post-it passe au vert, le bouton d'entrée apparaît à sa droite */
 .splash .postit.ok{background:#CFE8B0;color:#1F3A10}
@@ -413,15 +413,16 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .postit{font-size:14px}
 /* nouveau défi : le post-it arrive en glissant */
 .splash .postit.new{animation:postin .55s cubic-bezier(.2,1.4,.4,1) both}
-@keyframes postin{0%{opacity:0;transform:translateX(-46px) rotate(-16deg)}100%{opacity:1;transform:rotate(-4deg)}}
+@keyframes postin{0%{opacity:0;transform:translateX(-46px) rotate(-12deg)}100%{opacity:1;transform:none}}
 @media (max-width:374px){.splash .postwrap{left:10px}.splash .postit{width:112px;font-size:14px}.splash .play.enter{right:10px;padding:0 12px;font-size:15px;letter-spacing:.08em}}
 /* bouton son des dés, en haut à droite de la piste */
-.splash .dsound{position:absolute;right:-14px;top:-16px;z-index:4;pointer-events:auto;width:32px;height:32px;border-radius:50%;border:1px solid rgba(244,239,227,.45);box-shadow:0 2px 6px rgba(0,0,0,.4);
-  background:rgba(20,14,8,.45);color:#F4EFE3;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
-.splash .dsound svg{width:18px;height:18px;filter:none}
+/* bouton son : petite icône dans le coin en haut à droite du post-it, à l'encre du post-it */
+.splash .dsound{position:absolute;right:5px;top:5px;z-index:4;pointer-events:auto;width:26px;height:26px;border-radius:50%;border:0;box-shadow:none;
+  background:transparent;color:rgba(59,48,12,.75);display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
+.splash .dsound svg{width:15px;height:15px;filter:none}
 .splash .dsound .mute,.splash .dsound.off .on{display:none}
 .splash .dsound.off .mute{display:block}
-.splash .dsound.off{color:rgba(244,239,227,.6)}
+.splash .dsound.off{color:rgba(59,48,12,.45)}
 .splash .dsound:active{transform:scale(.92)}
 .splash:not(.d3) .dsound{display:none}
 /* sans dés 3D : pas de défi, on entre directement */
