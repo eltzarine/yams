@@ -1058,8 +1058,8 @@ function bindSetup(){
     S.players[+inp.dataset.i]=v;save()});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del,mine=typeof isMe==="function"&&isMe(S.players[i]);
     if(mine)S.meOff=true;
+    const pk=pkey(S.players[i]);if(S.pending&&S.pending[pk]){cancelInvite(pk);return}
     const jid=joinOf(S.players[i]);if(jid)S.joins[jid].off=true;
-    const pk=pkey(S.players[i]);if(S.pending&&S.pending[pk]){cancelInvite(pk);}
     if(S.players.length>1)S.players.splice(i,1);else if(mine||jid)S.players=[""];else return;
     save();render()});
   const am=document.getElementById("addMe");if(am)am.onclick=()=>{S.meOff=false;ensureMe();render()};
@@ -1197,7 +1197,7 @@ function openNew(){
     <button class="secondary" id="keep">Non</button>`,
   sh=>{
     sh.querySelector("#change").onclick=()=>{trackAbandon();resetGame();S.started=false;ui.created=true;
-      for(const j of Object.values(S.joins||{}))if(!j.off)j.at=Date.now(); // retour à la préparation : les 15 min repartent de zéro
+      for(const [id,j] of Object.entries(S.joins||{}))if(!j.off)reinvite(id,j); // ceux qui avaient rejoint reçoivent une invitation pour la nouvelle partie
       save();closeSheet();render()};
     sh.querySelector("#keep").onclick=closeSheet;
   });
@@ -1614,7 +1614,7 @@ async function shareLink(url){
 }
 function liveData(){
   const scores={};if(S.started)S.players.forEach((_,p)=>{const r=S.scores[p];if(r)scores[p]={...r}});
-  const pl=S.started?S.players.slice(0,12).map(n=>String(n).slice(0,30)):finalNames().filter(Boolean).slice(0,12);
+  const pl=S.started?S.players.slice(0,12).map(n=>String(n).slice(0,30)):finalNames().filter((n,i)=>n&&!((S.pending||{})[pkey(S.players[i])]||{}).re).slice(0,12);
   return{players:pl.length?pl:[""],hote:(typeof meName==="function"&&meName())||null,scores,settings:{...S.settings},started:!!S.started,
     last:S.started&&S.last?{p:S.last.p,k:S.last.k,v:S.last.v}:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),expireAt:expireIn(864e5)};
 }
@@ -1685,10 +1685,13 @@ function onJoins(docs){
     if(!n||(acct&&n.includes("#")))continue;
     const dat=x.at&&typeof x.at.toMillis==="function"?x.at.toMillis():Date.now();
     let j=S.joins[d.id];
-    if(j&&j.off&&j.exp&&dat>(+j.at||0)){delete S.joins[d.id];j=null} // retiré au bout de 15 min puis a rejoint à nouveau
+    if(j&&j.reinv&&!j.off&&dat>(+(j.doc||j.at)||0)){ // invitation pour la nouvelle partie acceptée
+      j.reinv=false;j.at=dat;j.doc=dat;const k=pkey(j.n);if(S.pending&&S.pending[k]){stopInvWatch(k);delete S.pending[k]}
+      msgs.push(`${j.n} a accepté l'invitation`);changed=true;continue}
+    if(j&&j.off&&j.exp&&dat>(+(j.doc||j.at)||0)){delete S.joins[d.id];j=null} // retiré (15 min ou invitation sans réponse) puis a rejoint à nouveau
     if(!j){
       if(S.started)continue; // on ne rejoint qu'avant le début de la partie
-      S.joins[d.id]={n,acct,at:dat};if(acct)addAcct(n);changed=true;
+      S.joins[d.id]={n,acct,at:dat,doc:dat};if(acct)addAcct(n);changed=true;
       if(acct&&S.pending&&S.pending[pkey(n)]){stopInvWatch(pkey(n));delete S.pending[pkey(n)];msgs.push(`${n} a accepté l'invitation`)}
       if(S.players.some(p=>String(p).trim()===n))continue; // déjà à la table (ajouté depuis « Déjà joué avec »)
       const e=S.players.findIndex(p=>!String(p).trim());
@@ -1699,7 +1702,7 @@ function onJoins(docs){
       // invité qui se connecte ou crée son compte : son nom devient son pseudo, ses scores restent à leur place
       const i=S.players.findIndex(p=>p===j.n);if(acct)addAcct(n);
       if(i>=0){S.players[i]=n;msgs.push(`${j.n} joue maintenant sous le nom ${n}`)}
-      j.n=n;j.acct=acct;changed=true;
+      j.n=n;j.acct=acct;j.doc=dat;changed=true; // la connexion réécrit sa fiche : ce n'est pas une réponse à une invitation
     }
   }
   if(changed){save();pushLive(true);render()}
@@ -1712,7 +1715,7 @@ function joinLabel(id){const t=Math.max(0,Math.ceil(joinLeft(id)/1000));return`r
 function joinTick(){
   if(VIEW||S.started||!S.joins)return;
   const gone=[];
-  for(const id of Object.keys(S.joins)){const j=S.joins[id];if(j.off||joinLeft(id)>0)continue;
+  for(const id of Object.keys(S.joins)){const j=S.joins[id];if(j.off||j.reinv||joinLeft(id)>0)continue;
     j.off=true;j.exp=true;
     const i=S.players.findIndex(p=>p===j.n);
     if(i>=0){if(S.players.length>1)S.players.splice(i,1);else S.players=[""]}
@@ -1721,7 +1724,7 @@ function joinTick(){
   document.querySelectorAll("[data-jexp]").forEach(el=>{el.textContent=joinLabel(el.dataset.jexp)});
   if(!ui.created)return;
   // passage sous les 2 dernières minutes : on réaffiche pour montrer le décompte
-  const need=Object.keys(S.joins).some(id=>!S.joins[id].off&&joinLeft(id)<=JOIN_WARN&&!document.querySelector(`[data-jexp="${id}"]`)&&S.players.includes(S.joins[id].n));
+  const need=Object.keys(S.joins).some(id=>!S.joins[id].off&&!S.joins[id].reinv&&joinLeft(id)<=JOIN_WARN&&!document.querySelector(`[data-jexp="${id}"]`)&&S.players.includes(S.joins[id].n));
   if(need&&!document.activeElement?.matches?.("#plist input"))render();
 }
 setInterval(joinTick,1000);
@@ -1858,7 +1861,7 @@ function refreshReturn(){const el=document.getElementById("retbox");if(!el||VIEW
 const INV_MS=120000;
 function pendCount(){const P=S.pending||{};return Object.keys(P).length}
 function pendLeft(k){const p=(S.pending||{})[k];return p?Math.max(0,Math.ceil((p.until-Date.now())/1000)):0}
-function pendLabel(n){const t=pendLeft(pkey(n));return`en attente ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
+function pendLabel(n){if(((S.pending||{})[pkey(n)]||{}).re)return"en attente";const t=pendLeft(pkey(n));return`en attente ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
 function ensureCodeOn(){if(S.live)return;S.live=newCode();S.joins={};S.liveOff=false;persist();pushLive(true);watchJoins()}
 async function sendInvite(n,btn){
   const me=typeof meName==="function"?meName():null;
@@ -1888,12 +1891,23 @@ function watchInvSent(k){
 function endInvite(k,why){
   const p=(S.pending||{})[k];if(!p)return;
   stopInvWatch(k);delete S.pending[k];
+  const jid=joinOf(p.n);if(jid)Object.assign(S.joins[jid],{off:true,exp:true,reinv:false}); // pourra revenir en rejoignant à nouveau
   const i=S.players.findIndex(x=>pkey(x)===k);
   if(i>=0){if(S.players.length>1)S.players.splice(i,1);else S.players=[""]}
-  if(DB)DB.collection("invitations").doc(p.uid).get().then(d=>{const x=d.exists?d.data():null;if(x&&x.hoteUid===(Acc.user&&Acc.user.uid))d.ref.delete().catch(()=>{})}).catch(()=>{});
+  if(DB&&p.uid)DB.collection("invitations").doc(p.uid).get().then(d=>{const x=d.exists?d.data():null;if(x&&x.hoteUid===(Acc.user&&Acc.user.uid))d.ref.delete().catch(()=>{})}).catch(()=>{});
   save();if(!S.started&&!VIEW)render();if(why)toast(`${p.n} ${why}`);
 }
 function cancelInvite(k){endInvite(k,"")}
+/* partie quittée : chaque joueur qui avait rejoint reçoit une invitation pour la suivante (5 min, bloque « Commencer ») */
+const REINV_MS=5*60e3;
+function reinvite(id,j){
+  const k=pkey(j.n),acct=!!j.acct&&!/^g/.test(id);j.reinv=true;
+  S.pending=S.pending||{};S.pending[k]={uid:acct?id:null,n:j.n,until:Date.now()+REINV_MS,code:S.live,re:true};
+  const me=typeof meName==="function"?meName():null;
+  if(acct&&DB&&S.live&&me&&Acc.user){
+    DB.collection("invitations").doc(id).set({code:S.live,hote:me,hoteUid:Acc.user.uid,at:firebase.firestore.FieldValue.serverTimestamp(),expireAt:expireIn(6e5)}).catch(()=>{});
+    watchInvSent(k)}
+}
 function pendTick(){
   if(VIEW||!pendCount())return;
   let ended=false;
@@ -1904,7 +1918,7 @@ function pendTick(){
 setInterval(pendTick,1000);
 /* côté invité : invitation reçue */
 let INV=null,invUnsub=null,invUid=null,invT=0;
-function invFresh(){return INV&&INV.code&&Date.now()-INV.ms<INV_MS}
+function invFresh(){return INV&&INV.code&&Date.now()-INV.ms<REINV_MS}
 function watchMyInvite(){
   const uid=Acc.user&&Acc.pseudo?Acc.user.uid:null;
   if(uid===invUid)return;
@@ -1915,7 +1929,7 @@ function watchMyInvite(){
     const x=d.exists?d.data():null;
     const ms=x&&x.at&&typeof x.at.toMillis==="function"?x.at.toMillis():Date.now();
     INV=x&&!x.refus&&typeof x.code==="string"?{code:x.code,hote:String(x.hote||"").slice(0,16),ms:Math.min(ms,Date.now())}:null;
-    clearTimeout(invT);if(invFresh())invT=setTimeout(refreshInvite,INV_MS-(Date.now()-INV.ms)+200);
+    clearTimeout(invT);if(invFresh())invT=setTimeout(refreshInvite,REINV_MS-(Date.now()-INV.ms)+200);
     refreshInvite();
   },()=>{invUnsub=null;invUid=null});
 }
@@ -2005,7 +2019,7 @@ function watchLive(){
   setInterval(resync,10000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)resync()});
 }
-let viewMates=false,viewSeen=false;
+let viewMates=false,viewSeen=false,viewWasStarted=false;
 /* ma colonne dans la partie suivie : nom du « rejoindre » gardé sur ce téléphone, ou mon pseudo de compte */
 function viewMyIdx(jn){
   if(jn){const i=S.players.indexOf(jn.n);if(i>=0)return i}
@@ -2026,13 +2040,15 @@ function renderView(){
   const loginBtn=jn&&!jn.acct&&!logged?`<button class="secondary" id="vLogin">Me connecter pour jouer avec mon pseudo</button>`:"";
   const myIdx=viewMyIdx(jn),host=S.hote?esc(S.hote):"celui qui tient la feuille";
   if(jn&&myIdx>=0)viewSeen=true;
+  if(VS==="ok"&&S.started)viewWasStarted=true;
   // retiré par l'hôte au bout de 15 min sans début de partie (vu dans la liste puis disparu, ou jamais ajouté passé le délai)
   const kicked=VS==="ok"&&!S.started&&jn&&myIdx<0&&(viewSeen||Date.now()-(+jn.at||0)>=JOIN_MS);
   if(VS!=="ok"||!S.started){
     const m={loading:"Connexion à la partie…",missing:"Cette partie n'existe pas, ou le direct a été arrêté. Vérifie le code.",
       denied:"Accès refusé par la base Firebase.",error:"Impossible de se connecter pour le moment. Vérifie ta connexion."}[VS]
       ||`La partie n'a pas encore commencé.${S.players.filter(Boolean).length?" Joueurs : "+S.players.filter(Boolean).map(nm).join(", ")+".":""}`;
-    const x=kicked?`<div class="joined">Tu as été retiré : la partie n'a pas commencé dans les 15 minutes.</div><button class="primary" id="vRejoin">Rejoindre à nouveau</button>`:VS==="ok"&&!S.started?(jn?`<div class="joined">✓ Tu es dans la partie sous le nom <b>${nm(jn.n)}</b>. Elle commence dès que celui qui tient la feuille la lance.</div>${loginBtn}`:`<button class="primary" id="vJoin">Rejoindre la partie</button>`):"";
+    const x=kicked&&viewWasStarted?`<div class="joined">🎲 <b>${host}</b> relance une partie.</div><button class="primary" id="vRejoin">Accepter</button><button class="secondary" id="vRefuse">Refuser</button>`
+      :kicked?`<div class="joined">Tu as été retiré : la partie n'a pas commencé dans les 15 minutes.</div><button class="primary" id="vRejoin">Rejoindre à nouveau</button>`:VS==="ok"&&!S.started?(jn?`<div class="joined">✓ Tu es dans la partie sous le nom <b>${nm(jn.n)}</b>. Elle commence dès que celui qui tient la feuille la lance.</div>${loginBtn}`:`<button class="primary" id="vJoin">Rejoindre la partie</button>`):"";
     app.innerHTML=box(`Partie ${esc(VIEW)}`,m,x);
   }else{
     const tot=S.players.map((_,p)=>totals(p)),best=Math.max(...tot.map(t=>t.total)),anyScore=tot.some(t=>t.total>0);
@@ -2059,8 +2075,12 @@ function renderView(){
   }
   const vj=document.getElementById("vJoin");if(vj)vj.onclick=()=>openJoin(VIEW);
   const vr=document.getElementById("vRejoin");if(vr)vr.onclick=async()=>{busy(vr,true,"Un instant…");
-    try{const r=await joinGame(VIEW,baseN(jn.n));viewSeen=false;render();toast(r.spect?"La partie a commencé : tu la suis en spectateur":`Tu es de nouveau dans la partie : ${r.name}`)}
+    try{const r=await joinGame(VIEW,baseN(jn.n));viewSeen=false;viewWasStarted=false;
+      if(DB&&Acc.user)DB.collection("invitations").doc(Acc.user.uid).delete().catch(()=>{});render();toast(r.spect?"La partie a commencé : tu la suis en spectateur":`Tu es de nouveau dans la partie : ${r.name}`)}
     catch(e){busy(vr,false);toast(e.message||"Impossible de rejoindre la partie.")}};
+  const vf=document.getElementById("vRefuse");if(vf)vf.onclick=async()=>{const uid=Acc.user&&Acc.user.uid;
+    if(DB&&uid)await DB.collection("invitations").doc(uid).update({refus:true}).catch(()=>{});
+    try{localStorage.removeItem(JOIN_KEY)}catch(e){}location.href=location.pathname};
   const vl=document.getElementById("vLogin");if(vl)vl.onclick=()=>{if(typeof accTap==="function")accTap()};
   document.getElementById("btnQuit").onclick=()=>openQuitView(myIdx>=0||(!!jn&&!S.started));
   if(typeof bindAcctBtn==="function")bindAcctBtn();

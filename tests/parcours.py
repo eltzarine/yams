@@ -105,6 +105,17 @@ with sync_playwright() as p:
     d,st=rq("GET","parties");docs=[fields(x) for x in d.get("documents",[])] if st==200 else []
     mine=[x for x in docs if "Léa" in [r["n"] for r in x.get("ranking",[])]]
     ok(bool(mine) and mine[0].get("owner")=="uA","partie finie enregistrée, propriétaire = compte de l'hôte")
+    # l'hôte quitte la partie : ceux qui avaient rejoint reçoivent une invitation (5 min, bloque Commencer)
+    A.evaluate("openNew()");A.wait_for_selector("#change");A.click("#change");A.wait_for_timeout(2500)
+    ok(A.locator(".pdchip").count()==2 and A.is_disabled("#go") and "en attente" in A.inner_text("#plist") and ":" not in A.inner_text("#plist"),"quitter : Jojo et Léa en attente, sans décompte, Commencer bloqué")
+    d,st=rq("GET","invitations/uJ");ok(st==200,"invitation envoyée à Jojo (compte)")
+    J.wait_for_selector("#vRejoin",timeout=8000);ok("relance" in J.inner_text("#app"),"Jojo : « César relance une partie » Accepter / Refuser")
+    J.click("#vRejoin");J.wait_for_timeout(3000)
+    ok(A.locator(".prow.ac input[value='Jojo']").count()==1 and A.locator(".pdchip").count()==1,"Jojo a accepté : redevient compte chez l'hôte")
+    ok(J.locator(".joined").count()==1 and J.locator("#vRejoin").count()==0,"Jojo : de nouveau dans la partie")
+    A.evaluate("Object.values(S.pending).forEach(p=>p.until=Date.now()-1)");A.wait_for_timeout(1800)
+    names=A.eval_on_selector_all("#plist input","e=>e.map(x=>x.value)")
+    ok("Léa" not in names and "Jojo" in names and not A.is_disabled("#go"),"Léa sans réponse : retirée, Commencer débloqué "+str(names))
     # hôte sans compte : identité anonyme invisible
     H=mk("Hôte sans compte");boot(H);H.click("#cCreate");H.wait_for_selector("#plist input");H.fill("#plist input >> nth=0","Paul");H.fill("#plist input >> nth=1","Zoé");H.click("#go");H.wait_for_timeout(800)
     H.evaluate("S.players.forEach((_,p)=>{S.scores[p]={};ALL.forEach(k=>S.scores[p][k]=3)});save();render()");H.wait_for_timeout(5000)
