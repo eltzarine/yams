@@ -340,6 +340,20 @@ html:has(#splash:not(.hide)),html:has(#splash:not(.hide)) body{overflow:hidden;o
 /* tous les verts de l'appli = tapis de l'accueil (vert #0E5A36 + grain feutrine) */
 .primary,thead th,tr.grand th.cat,tr.grand td,.seg button.on,.thead,.tabs button[aria-pressed="true"],.splash .ihelp .ok,.updbar-btn,.sbar,.mechip,.acctbtn .ini{background-image:var(--felt-light),var(--felt-tex);background-size:100% 100%,160px 160px}
 thead th,tr.grand th.cat,tr.grand td{background-attachment:local}
+/* en-tête : bandeau tapis vert (jusque sous la barre d'état), boutons translucides */
+header{background-color:var(--felt);background-image:var(--felt-light),var(--felt-tex);background-size:100% 100%,160px 160px;color:var(--felt-ink);
+  margin:calc(-12px - env(safe-area-inset-top,0px)) -12px 12px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+@media (min-width:745px){header{border-radius:0 0 16px 16px}}
+header .iconbtn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.32);color:#fff}
+header .iconbtn svg{color:#fff}
+header .iconbtn.invite{background:var(--gold);border-color:var(--gold);color:#1B2620}
+header .iconbtn.invite svg{color:#1B2620}
+header .iconbtn.liveon{border-color:#FF8A80;color:#FFD2CC}
+header .iconbtn.liveon i{background:#FF6B60}
+header .iconbtn.liveoff{color:rgba(255,255,255,.75)}
+header .iconbtn.liveoff i{background:rgba(255,255,255,.7)}
+header .iconbtn.acctbtn.on{border-color:var(--gold);color:#fff}
+header .acctbtn .ini{background:var(--gold);background-image:none;color:#1B2620}
 /* logo Yam's Club dans les en-têtes */
 header h1.brand{line-height:0;overflow:visible}
 header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;display:block;filter:drop-shadow(0 0 4px rgba(255,46,170,.55))}
