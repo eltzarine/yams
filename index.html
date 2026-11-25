@@ -2576,7 +2576,7 @@ function accBioOffer(fromSettings){
 /* options Face ID préparées à l'avance : au toucher, la reconnaissance part tout de suite
    (iPhone exige que Face ID suive immédiatement le geste) */
 let bioPre=null;
-function prefetchBio(){if(!ACC_ON||!PK_OK||!pkHere()||(Acc.user&&Acc.ready))return;
+function prefetchBio(force){if(!ACC_ON||!PK_OK||(!pkHere()&&!force)||(Acc.user&&Acc.ready))return;
   if(bioPre&&Date.now()-bioPre.at<3*60e3)return;
   const at=Date.now();bioPre={at,p:loadWebAuthn().then(()=>api("/passkey/login/options",{}))};bioPre.p.catch(()=>{if(bioPre&&bioPre.at===at)bioPre=null})}
 async function bioAuth(){
@@ -2591,26 +2591,32 @@ async function bioAuth(){
 }
 /* « Jouer » : si Face ID existe sur ce téléphone et qu'on n'est pas connecté, on reconnaît d'abord.
    Annulé ou raté : on propose le code par e-mail ou le jeu en invité. Renvoie true si on peut jouer tout de suite. */
+let bioWhy="";
 async function playGate(btn){
   if(!ACC_ON||!Acc.ready||Acc.user)return true;
-  if(PK_OK&&pkHere()&&!bioBusy){await bioBeforePlay(btn);if(Acc.user)return true}
+  bioWhy="";if(PK_OK&&pkHere()&&!bioBusy){await bioBeforePlay(btn);if(Acc.user)return true}
   openPlayChoice();return false;
 }
 function openPlayChoice(){
+  /* bouton Face ID toujours proposé si le téléphone sait le faire : la clé peut exister même si ce téléphone l'a oubliée,
+     et ce nouveau toucher ouvre Face ID à coup sûr (demande préparée dès l'ouverture du volet) */
+  if(PK_OK)prefetchBio(true);
   openSheet(`${CLOSE}<h3 id="sheetTitle">Avant de jouer</h3>
     <div class="sub">Avec un compte, tes scores comptent pour ton palmarès et la saison. Pas de mot de passe.</div>
-    <div class="acc">
-      <button class="primary" id="pcMail">Recevoir un code par e-mail</button>
+    <div class="acc"><p class="accerr" role="alert" ${bioWhy?"":"hidden"}>${bioWhy}</p>
+      ${PK_OK?`<button class="primary" id="pcBio">Me connecter avec ${BIO_T}</button>`:""}
+      <button class="${PK_OK?"secondary":"primary"}" id="pcMail">Recevoir un code par e-mail</button>
       <button class="replay" id="pcGuest">Jouer en invité</button>
     </div>`,
-  sh=>{sh.querySelector("#pcMail").onclick=()=>accEmail();
+  sh=>{sh.querySelector("#pcMail").onclick=()=>accEmail();const pb=sh.querySelector("#pcBio");if(pb)pb.onclick=()=>bioLogin(pb,sh);
     sh.querySelector("#pcGuest").onclick=()=>{closeSheet();if(window.splashGo)splashGo()}});
 }
 async function bioBeforePlay(btn){
   if(!ACC_ON||!Acc.ready||!PK_OK||!pkHere()||Acc.user||bioBusy)return;
   bioBusy=true;if(btn){btn.disabled=true;btn.dataset.t=btn.innerHTML;btn.textContent=BIO_T+"…"}
   try{const r=await bioAuth();if(r.pseudo)toast(`Salut ${r.pseudo} 🎲`)}
-  catch(err){if(err&&err.code==="passkey_inconnue")setPkHere(false)}
+  catch(err){if(err&&err.code==="passkey_inconnue")setPkHere(false);
+    bioWhy=bioCancel(err)?`${BIO_T} annulé ou bloqué. Réessaie avec le bouton ci-dessous.`:`${BIO_T} n’a pas pu s’ouvrir (${(err&&(err.code||err.name))||"erreur"}). Réessaie avec le bouton ci-dessous.`}
   finally{bioBusy=false;if(btn){btn.disabled=false;if(btn.dataset.t)btn.innerHTML=btn.dataset.t}}
 }
 const bioCancel=err=>err&&(err.name==="NotAllowedError"||err.name==="AbortError");
