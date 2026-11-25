@@ -383,9 +383,16 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .feltmsg.off{opacity:0}
 .splash .dscore{position:absolute;left:50%;top:calc(var(--pt) - 22px);z-index:2;pointer-events:none;transform:translateX(-50%);white-space:nowrap;
   font:700 30px/1 "Barlow Condensed",system-ui,sans-serif;color:#F3CF5E;background:rgba(20,14,8,.7);padding:8px 18px;border-radius:99px;opacity:0}
-.splash .dscore.on{animation:scorepop .55s cubic-bezier(.2,1.6,.4,1) both}
+/* score qui monte du bas de la piste jusqu'au rebord du haut, façon jeu vidéo : traînée, impact, rebond */
+.splash .dscore.on{animation:scorerise .9s cubic-bezier(.3,.75,.3,1) both;--rise:calc(100vh - var(--pt) - var(--pb) - 40px)}
+.splash .dscore.on.ok{animation:scorerise .9s cubic-bezier(.3,.75,.3,1) both,scoreglow 1.2s .9s ease-out 2}
 .splash .dscore.on.ok{color:#1B2620;background:#F3CF5E}
-@keyframes scorepop{0%{opacity:0;transform:translateX(-50%) scale(.5)}100%{opacity:1;transform:translateX(-50%)}}
+@keyframes scorerise{0%{opacity:0;transform:translateX(-50%) translateY(var(--rise)) scale(.4,1.6);filter:blur(3px)}
+  35%{opacity:1;filter:blur(1.5px)}
+  70%{transform:translateX(-50%) translateY(-14px) scale(1.25,.8);filter:none}
+  85%{transform:translateX(-50%) translateY(4px) scale(.94,1.06)}
+  100%{opacity:1;transform:translateX(-50%) scale(1)}}
+@keyframes scoreglow{0%{box-shadow:0 0 0 0 rgba(243,207,94,.9)}100%{box-shadow:0 0 0 22px rgba(243,207,94,0)}}
 .splash .postit{position:absolute;left:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 52px);z-index:2;pointer-events:none;width:168px;padding:7px 10px 8px;text-align:left;
   background:#FBE38A;color:#3B300C;font:600 16px/1.1 "Barlow Condensed",system-ui,sans-serif;transform:rotate(-4deg);box-shadow:2px 5px 10px rgba(0,0,0,.35);border-radius:2px 2px 10px 2px;transition:opacity .4s,transform .4s}
 .splash .postit small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
@@ -2139,7 +2146,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     else say(`Lancer ${throws}/3 · ${throws===1&&!locked.size?"touche un dé pour le garder":"tape 2 fois pour relancer"}`)}
   /* meilleure combinaison après chaque lancer ; défi réussi dès 20 pts */
   const showBest=()=>{const b=bestCombo();win.clear();if(!b)return;b.ids.forEach(id=>win.add(id));const ok=b.pts>=20,first=ok&&!defiOk();
-    scoreEl.textContent=`+${b.pts} ${b.label}`;scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
+    const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
     if(first){try{localStorage.setItem(KEY,monday())}catch(e){}postOk();unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
       setTimeout(()=>say("Défi réussi ! Entre au Yam’s Club",true),0);if(window.gtag)gtag("event","defi_accueil_reussi",{points:b.pts})}};
   const endTurn=()=>{done=true;throws=3;showBest();draw()};
