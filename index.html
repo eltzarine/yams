@@ -2179,34 +2179,39 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const say=(t,flash)=>{hud.textContent=t;hud.classList.toggle("ko",!!pending);clearTimeout(hudT);
     if(flash)hudT=setTimeout(draw,1600)};
   /* teinte du dé entier : corps coloré et points de la même couleur en plus foncé ; dé blanc = points rouges */
-  /* ---- sons (fabriqués avec Web Audio, aucun fichier) : chocs des dés, garder, cassé, combinaison, défi réussi ----
-     Actif par défaut, bouton haut-parleur pour couper (gardé sur ce téléphone). Respecte le mode silencieux de l'iPhone. */
-  const SKEY="yamsSon";let actx=null,noise=null,lastAny=0;
+  /* ---- sons : vrais bruits de dés sur feutrine (dice/sounds, dice-box-threejs, licence MIT) + petits sons doux fabriqués
+     avec Web Audio pour le reste. Actif par défaut, bouton haut-parleur pour couper (gardé sur ce téléphone).
+     Respecte le mode silencieux de l'iPhone. */
+  const SKEY="yamsSon";let actx=null,master=null,lastAny=0;const BUF={felt:[],click:[]};
   const soundOn=()=>{try{return localStorage.getItem(SKEY)!=="0"}catch(e){return true}};
+  const loadSounds=a=>{const get=(list,name,n)=>{for(let i=1;i<=n;i++)fetch(base.pathname+`dice/sounds/${name}${i}.mp3`).then(r=>r.arrayBuffer())
+      .then(b=>new Promise((ok,ko)=>a.decodeAudioData(b,ok,ko))).then(x=>list.push(x)).catch(()=>{})};
+    get(BUF.felt,"surface_felt",7);get(BUF.click,"dicehit_plastic",5)};
   const audio=()=>{if(!soundOn())return null;
     if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
       try{if(navigator.audioSession)navigator.audioSession.type="ambient"}catch(e){}
-      actx=new AC();const n=actx.sampleRate*.4;noise=actx.createBuffer(1,n,actx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1}
+      actx=new AC();master=actx.createGain();master.gain.value=.8;
+      const lp=actx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;master.connect(lp).connect(actx.destination);loadSounds(actx)}
     if(actx.state==="suspended")actx.resume();return actx};
-  const env=(a,g,t,peak,dur)=>{g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+.004);g.gain.exponentialRampToValueAtTime(0.0001,t+dur)};
-  /* choc d'un dé : bruit filtré très court + petit « toc » ; v = force (0..1) */
-  const clack=v=>{const a=audio();if(!a)return;const now=a.currentTime;if(now-lastAny<.018)return;lastAny=now;
-    v=Math.max(.08,Math.min(1,v));const t=now+Math.random()*.006;
-    const s=a.createBufferSource();s.buffer=noise;s.playbackRate.value=.9+Math.random()*.3;
-    const bp=a.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1800+Math.random()*1600;bp.Q.value=1.4;
-    const g=a.createGain();env(a,g,t,.55*v,.035+.03*v);s.connect(bp).connect(g).connect(a.destination);s.start(t,Math.random()*.3,.09);
-    const o=a.createOscillator();o.type="triangle";o.frequency.setValueAtTime(700+Math.random()*500,t);o.frequency.exponentialRampToValueAtTime(260,t+.04);
-    const g2=a.createGain();env(a,g2,t,.22*v,.045);o.connect(g2).connect(a.destination);o.start(t);o.stop(t+.06)};
-  const rattle=()=>{for(let i=0;i<5;i++)setTimeout(()=>clack(.25+Math.random()*.25),i*45+Math.random()*25)};
-  const beep=(f,dur,type,vol,at,slide)=>{const a=audio();if(!a)return;const t=a.currentTime+(at||0);const o=a.createOscillator();o.type=type||"square";
-    o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);const g=a.createGain();env(a,g,t,vol||.12,dur);
-    const lp=a.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3200;o.connect(lp).connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.02)};
+  const env=(g,t,peak,dur)=>{g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+.006);g.gain.exponentialRampToValueAtTime(0.0001,t+dur)};
+  const play=(list,vol,rate)=>{const a=audio();if(!a||!list.length)return false;const s=a.createBufferSource();s.buffer=list[Math.random()*list.length|0];
+    s.playbackRate.value=rate||(.92+Math.random()*.16);const g=a.createGain();g.gain.value=vol;s.connect(g).connect(master);s.start(a.currentTime+Math.random()*.008);return true};
+  /* choc d'un dé sur le tapis ; v = force (0..1) — le son du feutre, doux */
+  const clack=v=>{const a=audio();if(!a)return;const now=a.currentTime;if(now-lastAny<.03)return;lastAny=now;
+    v=Math.max(.1,Math.min(1,v));if(play(BUF.felt,.25+.55*v))return;
+    /* sons pas encore chargés : petit choc sourd fabriqué */
+    const o=a.createOscillator();o.type="sine";o.frequency.setValueAtTime(220+Math.random()*60,now);o.frequency.exponentialRampToValueAtTime(110,now+.06);
+    const g=a.createGain();env(g,now,.18*v,.08);o.connect(g).connect(master);o.start(now);o.stop(now+.1)};
+  const rattle=()=>{for(let i=0;i<3;i++)setTimeout(()=>{if(!play(BUF.click,.12+Math.random()*.08))clack(.2)},i*70+Math.random()*30)};
+  const beep=(f,dur,type,vol,at,slide)=>{const a=audio();if(!a)return;const t=a.currentTime+(at||0);const o=a.createOscillator();o.type=type||"triangle";
+    o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);const g=a.createGain();env(g,t,vol||.08,dur);
+    o.connect(g).connect(master);o.start(t);o.stop(t+dur+.02)};
   const sfx={
-    lock:()=>beep(1900,.05,"sine",.18),
-    unlock:()=>beep(1150,.05,"sine",.14),
-    broken:()=>{beep(110,.22,"sawtooth",.14,0,80);beep(116,.22,"sawtooth",.1,0,82)},
-    combo:pts=>{const b=pts>=50?988:pts>=25?784:659;beep(b,.08,"square",.07);beep(b*1.5,.12,"square",.07,.07)},
-    win:()=>[523,659,784,1047,0,1047,1319].forEach((f,i)=>f&&beep(f,i>4?.22:.1,"square",.08,i*.085))};
+    lock:()=>{if(!play(BUF.click,.22,1.05))beep(900,.04,"sine",.08)},
+    unlock:()=>{if(!play(BUF.click,.14,.8))beep(600,.04,"sine",.06)},
+    broken:()=>{beep(150,.25,"sine",.12,0,90)},
+    combo:pts=>{const b=pts>=50?880:pts>=25?698:587;beep(b,.12,"triangle",.07);beep(b*1.5,.18,"triangle",.06,.08)},
+    win:()=>[523,659,784,1047].forEach((f,i)=>beep(f,i===3?.4:.14,"triangle",.08,i*.1))};
   /* chocs repérés en suivant chaque dé : grosse perte de vitesse d'une mise à jour à l'autre = il a tapé quelque chose */
   const track={};let hooked=false;
   const hookImpacts=()=>{const p=peek();if(hooked||!p||!p.scene)return;hooked=true;
@@ -2297,7 +2302,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
     await box.init();clearTimeout(safety);if(!sp.isConnected)return;
-    sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();
+    sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();audio(); /* prépare les sons (chargés en avance, joués au 1er lancer) */
     zone.addEventListener("click",tap);
     let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
     /* pas de box.clear() à la fermeture : vider pendant un lancer fait planter dice-box ; le rendu s'arrête seul quand les dés sont posés */
