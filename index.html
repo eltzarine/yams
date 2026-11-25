@@ -408,6 +408,15 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .postit.ok{background:#CFE8B0;color:#1F3A10}
 .splash .postit.ok b{color:#2F6B12}
 @media (max-width:374px){.splash .postit{width:112px;font-size:14px;left:10px}.splash .play.enter{right:10px;padding:0 12px;font-size:15px;letter-spacing:.08em}}
+/* bouton son des dés, en haut à droite de la piste */
+.splash .dsound{position:absolute;right:34px;top:calc(var(--pt) + 32px);z-index:3;width:34px;height:34px;border-radius:50%;border:1px solid rgba(244,239,227,.35);
+  background:rgba(20,14,8,.45);color:#F4EFE3;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
+.splash .dsound svg{width:18px;height:18px;filter:none}
+.splash .dsound .mute,.splash .dsound.off .on{display:none}
+.splash .dsound.off .mute{display:block}
+.splash .dsound.off{color:rgba(244,239,227,.6)}
+.splash .dsound:active{transform:scale(.92)}
+.splash:not(.d3) .dsound{display:none}
 /* sans dés 3D : pas de défi, on entre directement */
 .splash:not(.d3) .feltmsg,.splash:not(.d3) .postit,.splash:not(.d3) .dscore{display:none}
 
@@ -664,6 +673,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
+  <button class="dsound" id="dSound" type="button" aria-label="Couper le son des dés" aria-pressed="false"><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><svg class="mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/></svg></button>
   <div class="postit" id="postit" aria-live="polite"><small>Défi de la semaine</small>Fais <b>20 pts</b> en 3 lancers pour entrer</div>
   <button class="play enter locked" id="btnPlay">Entrer au Yam’s Club<span class="arr" aria-hidden="true">→</span></button>
   <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
@@ -2129,6 +2139,46 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const say=(t,flash)=>{hud.textContent=t;hud.classList.toggle("ko",!!pending);clearTimeout(hudT);
     if(flash)hudT=setTimeout(draw,1600)};
   /* teinte du dé entier : corps coloré et points de la même couleur en plus foncé ; dé blanc = points rouges */
+  /* ---- sons (fabriqués avec Web Audio, aucun fichier) : chocs des dés, garder, cassé, combinaison, défi réussi ----
+     Actif par défaut, bouton haut-parleur pour couper (gardé sur ce téléphone). Respecte le mode silencieux de l'iPhone. */
+  const SKEY="yamsSon";let actx=null,noise=null,lastAny=0;
+  const soundOn=()=>{try{return localStorage.getItem(SKEY)!=="0"}catch(e){return true}};
+  const audio=()=>{if(!soundOn())return null;
+    if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+      try{if(navigator.audioSession)navigator.audioSession.type="ambient"}catch(e){}
+      actx=new AC();const n=actx.sampleRate*.4;noise=actx.createBuffer(1,n,actx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1}
+    if(actx.state==="suspended")actx.resume();return actx};
+  const env=(a,g,t,peak,dur)=>{g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+.004);g.gain.exponentialRampToValueAtTime(0.0001,t+dur)};
+  /* choc d'un dé : bruit filtré très court + petit « toc » ; v = force (0..1) */
+  const clack=v=>{const a=audio();if(!a)return;const now=a.currentTime;if(now-lastAny<.018)return;lastAny=now;
+    v=Math.max(.08,Math.min(1,v));const t=now+Math.random()*.006;
+    const s=a.createBufferSource();s.buffer=noise;s.playbackRate.value=.9+Math.random()*.3;
+    const bp=a.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1800+Math.random()*1600;bp.Q.value=1.4;
+    const g=a.createGain();env(a,g,t,.55*v,.035+.03*v);s.connect(bp).connect(g).connect(a.destination);s.start(t,Math.random()*.3,.09);
+    const o=a.createOscillator();o.type="triangle";o.frequency.setValueAtTime(700+Math.random()*500,t);o.frequency.exponentialRampToValueAtTime(260,t+.04);
+    const g2=a.createGain();env(a,g2,t,.22*v,.045);o.connect(g2).connect(a.destination);o.start(t);o.stop(t+.06)};
+  const rattle=()=>{for(let i=0;i<5;i++)setTimeout(()=>clack(.25+Math.random()*.25),i*45+Math.random()*25)};
+  const beep=(f,dur,type,vol,at,slide)=>{const a=audio();if(!a)return;const t=a.currentTime+(at||0);const o=a.createOscillator();o.type=type||"square";
+    o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);const g=a.createGain();env(a,g,t,vol||.12,dur);
+    const lp=a.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3200;o.connect(lp).connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.02)};
+  const sfx={
+    lock:()=>beep(1900,.05,"sine",.18),
+    unlock:()=>beep(1150,.05,"sine",.14),
+    broken:()=>{beep(110,.22,"sawtooth",.14,0,80);beep(116,.22,"sawtooth",.1,0,82)},
+    combo:pts=>{const b=pts>=50?988:pts>=25?784:659;beep(b,.08,"square",.07);beep(b*1.5,.12,"square",.07,.07)},
+    win:()=>[523,659,784,1047,0,1047,1319].forEach((f,i)=>f&&beep(f,i>4?.22:.1,"square",.08,i*.085))};
+  /* chocs repérés en suivant chaque dé : grosse perte de vitesse d'une mise à jour à l'autre = il a tapé quelque chose */
+  const track={};let hooked=false;
+  const hookImpacts=()=>{const p=peek();if(hooked||!p||!p.scene)return;hooked=true;
+    p.scene.onAfterRenderObservable.add(()=>{if(!soundOn())return;const t=performance.now();
+      Object.values(p.dice).forEach(d=>{if(!d.mesh||!d.config)return;const id=d.config.rollId,o=d.mesh.position,q=track[id];
+        if(o.y<-50){delete track[id];return}
+        if(q&&q.x===o.x&&q.y===o.y&&q.z===o.z)return; /* pas de nouvelle position de la physique sur cette image */
+        if(!q){track[id]={x:o.x,y:o.y,z:o.z,t,s:0,last:0};return}
+        const dt=(t-q.t)/1000;if(dt<=0||dt>.3){Object.assign(q,{x:o.x,y:o.y,z:o.z,t,s:0});return}
+        const s=Math.hypot(o.x-q.x,o.y-q.y,o.z-q.z)/dt;
+        if(q.s>1.2&&s<q.s*.55&&t-q.last>70){clack(q.s/9);q.last=t}
+        Object.assign(q,{x:o.x,y:o.y,z:o.z,t,s})})})};
   const TINT={base:"#FBF8F1",on:"#86AAD6",ko:"#F0A49A",win:"#F3CF5E"}; /* points du dé teinté : même couleur, foncée (shader dans dice/world.onscreen.min.js) */
   const tint=(d,kind)=>{const b=d.mesh.instancedBuffers;if(!b||!b.customColor)return;const h=TINT[kind];
     if(b.customColor.__k===kind)return;const c=new b.customColor.constructor(parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255);
@@ -2155,17 +2205,21 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     else say(`Lancer ${throws}/3 · ${throws===1&&!locked.size?"touche un dé pour le garder":"tape 2 fois pour relancer"}`)}
   /* meilleure combinaison après chaque lancer ; défi réussi dès 20 pts */
   const showBest=()=>{const b=bestCombo();win.clear();if(!b)return;b.ids.forEach(id=>win.add(id));const ok=b.pts>=20,first=ok&&!defiOk();
-    const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
+    if(first)setTimeout(sfx.win,350);else setTimeout(()=>sfx.combo(b.pts),350);const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
     if(first){try{localStorage.setItem(KEY,monday())}catch(e){}postOk();unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
       setTimeout(()=>say("Défi réussi ! Entre au Yam’s Club",true),0);if(window.gtag)gtag("event","defi_accueil_reussi",{points:b.pts})}};
   const endTurn=()=>{done=true;throws=3;showBest();draw()};
   /* lance les dés donnés (rollId) ; à la fin : dé cassé → on rejoue ce jet, sinon le lancer compte */
-  const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();win.clear();scoreEl.classList.remove("on","ok");
+  const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();rattle();hookImpacts();win.clear();scoreEl.classList.remove("on","ok");
     const rs=box.getRollResults()[0];
     const p=rs?box.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true}):box.roll("5dpip");
     p.then(()=>{live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))broken.add(d.config.rollId)});
-      if(broken.size){pending=ids;if(navigator.vibrate)navigator.vibrate(60)}else{pending=null;throws++;if(throws>=3)return endTurn();showBest()}})
+      if(broken.size){pending=ids;sfx.broken();if(navigator.vibrate)navigator.vibrate(60)}else{pending=null;throws++;if(throws>=3)return endTurn();showBest()}})
      .catch(()=>{}).finally(()=>{busy=false;draw()})};
+  /* bouton haut-parleur : couper / remettre le son */
+  const soundBtn=()=>{const b=document.getElementById("dSound");if(!b)return;
+    const paint=()=>{const on=soundOn();b.classList.toggle("off",!on);b.setAttribute("aria-label",on?"Couper le son des dés":"Activer le son des dés");b.setAttribute("aria-pressed",String(!on))};
+    paint();b.onclick=e=>{e.stopPropagation();try{localStorage.setItem(SKEY,soundOn()?"0":"1")}catch(_){}paint();if(soundOn())sfx.lock()}};
   /* double tap sur la piste = lancer */
   const launch=()=>{if(pending)return toss(pending);
     if(done||!allIds().length){done=false;throws=0;locked.clear();win.clear();scoreEl.classList.remove("on","ok");
@@ -2176,16 +2230,18 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const tap=e=>{if(!box||busy||!sp.isConnected)return;
     if(!pending&&!done&&allIds().length){const p=peek();if(p){const cr=p.canvas.getBoundingClientRect(),x=e.clientX-cr.left,y=e.clientY-cr.top;let hit=null,best=1e9;
       live().forEach(d=>{const g=geo(d),dist=Math.hypot(g.x-x,g.y-y);if(dist<g.size*.7&&dist<best){best=dist;hit=d.config.rollId}});
-      if(hit!=null){lastTap=0;clearTimeout(tapT);locked.has(hit)?locked.delete(hit):locked.add(hit);return draw()}}}
+      if(hit!=null){lastTap=0;clearTimeout(tapT);if(locked.has(hit)){locked.delete(hit);sfx.unlock()}else{locked.add(hit);sfx.lock()}return draw()}}}
     const now=Date.now();clearTimeout(tapT);
     if(now-lastTap<420){lastTap=0;return launch()}
     lastTap=now;tapT=setTimeout(()=>{if(lastTap)say(allIds().length&&!done&&!pending?"Encore un tap pour relancer":"Encore un tap pour lancer",true)},430)};
   import("./dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
     if(!sp.isConnected)return;
     box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",offscreen:!1,
-      theme:"yams",themeColor:TINT.base,scale:5,gravity:1.2,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05});
+      theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
+      /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
+      gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
     await box.init();clearTimeout(safety);if(!sp.isConnected)return;
-    sp.classList.add("d3");sp.appendChild(hud);draw();
+    sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();
     zone.addEventListener("click",tap);
     let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
     /* pas de box.clear() à la fermeture : vider pendant un lancer fait planter dice-box ; le rendu s'arrête seul quand les dés sont posés */
