@@ -49,8 +49,8 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&family=Bungee&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@500;600;700&family=Bungee&display=swap"></noscript>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQ8CDEPL7G"></script>
 <script>
@@ -386,18 +386,20 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .feltmsg{position:absolute;left:8px;right:8px;top:var(--pt);bottom:var(--pb);z-index:1;pointer-events:none;display:flex;align-items:center;justify-content:center;
   font:700 34px/1.05 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:rgba(244,239,227,.42);text-shadow:0 1px 0 rgba(0,0,0,.25);transition:opacity .3s}
 .splash .feltmsg.off{opacity:0}
-.splash .dscore{position:absolute;left:50%;top:calc(var(--pt) - 22px);z-index:2;pointer-events:none;transform:translateX(-50%);white-space:nowrap;
-  font:700 30px/1 "Barlow Condensed",system-ui,sans-serif;color:#F3CF5E;background:rgba(20,14,8,.7);padding:8px 18px;border-radius:99px;opacity:0}
-/* score qui monte du bas de la piste jusqu'au rebord du haut, façon jeu vidéo : traînée, impact, rebond */
+/* score façon Street Fighter (police Bungee) : jaune, contour brun, ombre orange, penché, posé sur le rebord du haut */
+.splash .dscore{position:absolute;left:50%;top:calc(var(--pt) - 16px);z-index:2;pointer-events:none;transform:translateX(-50%) skewX(-10deg);white-space:nowrap;
+  font:400 17px/1 "Bungee","Barlow Condensed",system-ui,sans-serif;color:#FFE14D;-webkit-text-stroke:1px #4A1404;
+  text-shadow:0 2px 0 #C4320A,0 3px 0 #4A1404,0 0 10px rgba(255,140,0,.6);opacity:0}
+/* le score monte du bas de la piste jusqu'au rebord du haut, façon jeu vidéo : traînée, impact, rebond */
 .splash .dscore.on{animation:scorerise .9s cubic-bezier(.3,.75,.3,1) both;--rise:calc(100vh - var(--pt) - var(--pb) - 40px)}
-.splash .dscore.on.ok{animation:scorerise .9s cubic-bezier(.3,.75,.3,1) both,scoreglow 1.2s .9s ease-out 2}
-.splash .dscore.on.ok{color:#1B2620;background:#F3CF5E}
-@keyframes scorerise{0%{opacity:0;transform:translateX(-50%) translateY(var(--rise)) scale(.4,1.6);filter:blur(3px)}
+.splash .dscore.on.ok{animation:scorerise .9s cubic-bezier(.3,.75,.3,1) both,scoreglow .6s .9s ease-in-out 3}
+@keyframes scorerise{0%{opacity:0;transform:translateX(-50%) translateY(var(--rise)) skewX(-10deg) scale(.4,1.6);filter:blur(3px)}
   35%{opacity:1;filter:blur(1.5px)}
-  70%{transform:translateX(-50%) translateY(-14px) scale(1.25,.8);filter:none}
-  85%{transform:translateX(-50%) translateY(4px) scale(.94,1.06)}
-  100%{opacity:1;transform:translateX(-50%) scale(1)}}
-@keyframes scoreglow{0%{box-shadow:0 0 0 0 rgba(243,207,94,.9)}100%{box-shadow:0 0 0 22px rgba(243,207,94,0)}}
+  70%{transform:translateX(-50%) translateY(-10px) skewX(-10deg) scale(1.3,.8);filter:none}
+  85%{transform:translateX(-50%) translateY(3px) skewX(-10deg) scale(.94,1.06)}
+  100%{opacity:1;transform:translateX(-50%) skewX(-10deg) scale(1)}}
+/* défi réussi : le score clignote en blanc doré, comme un « K.O. » */
+@keyframes scoreglow{50%{color:#FFFBE6;filter:drop-shadow(0 0 8px rgba(255,200,40,.95))}}
 .splash .postit{position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 52px);z-index:2;pointer-events:none;width:132px;padding:7px 10px 8px;text-align:left;
   background:#FBE38A;color:#3B300C;font:600 16px/1.1 "Barlow Condensed",system-ui,sans-serif;transform:rotate(-4deg);box-shadow:2px 5px 10px rgba(0,0,0,.35);border-radius:2px 2px 10px 2px;transition:opacity .4s,transform .4s}
 .splash .postit small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
