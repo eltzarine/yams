@@ -374,7 +374,12 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .dhud.ko{color:#fff;background:rgba(160,18,44,.85)}
 .splash .dhud:empty{display:none}
 /* accueil v3 : défi de la semaine (20 pts en 3 lancers) pour entrer, lancer en tapant 2 fois */
-.splash .play.enter{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 50px);z-index:3;margin:0;font-size:21px;height:52px;min-width:0;padding:0 22px;animation:none;transition:opacity .35s,transform .35s}
+/* bouton d'entrée : cuir de la piste, surpiqûre crème, centré */
+.splash .play.enter{position:absolute;left:0;right:0;width:max-content;bottom:calc(env(safe-area-inset-bottom,0px) + 56px);z-index:3;margin:0 auto;min-width:0;height:42px;padding:0 20px;
+  background:#5A2E1A;color:#F4EFE3;border:1px solid #3A1C0E;border-radius:21px;outline:1px dashed rgba(244,220,170,.7);outline-offset:-5px;
+  font:600 17px/1 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,.4);
+  animation:none;transition:opacity .35s,transform .35s}
+.splash .play.enter .arr{opacity:.8;margin-left:4px}
 .splash .play.enter.locked{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(10px) scale(.9)}
 .splash .play.enter.pop{animation:enterpop .7s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes enterpop{0%{opacity:0;transform:translateY(12px) scale(.7)}100%{opacity:1;transform:none}}
@@ -656,7 +661,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
   <div class="postit" id="postit" aria-live="polite"><small>Défi de la semaine</small>Fais <b>20 pts</b> en 3 lancers pour entrer</div>
-  <button class="play enter locked" id="btnPlay">Entrer au Yam’s Club</button>
+  <button class="play enter locked" id="btnPlay">Entrer au Yam’s Club<span class="arr" aria-hidden="true">→</span></button>
   <div class="ihelp" id="ihelp" role="dialog" aria-label="Installer l’appli" hidden></div>
   <div class="foot">
     <button class="install" id="btnInstall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Installer l’appli</button>
