@@ -367,11 +367,8 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
   filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
 /* zone 3D = piste + 20 px autour : les dés arrivent par-dessus le rebord ; les murs (bas) sont posés sur le bord intérieur du cuir (insetPx) */
 .splash .dice3d{left:-12px;right:-12px;top:calc(var(--pt) - 20px);bottom:calc(var(--pb) - 20px)}
-/* dés gardés (néon bleu) / dé cassé (néon rouge) + compteur de lancers sur le cuir du bas */
-.splash .dice3d .dring{position:absolute;left:0;top:0;pointer-events:none;box-sizing:border-box;border-radius:24%;border:2.5px solid #5ff4ff;
-  box-shadow:0 0 6px #5ff4ff,0 0 16px #1aa8ff,0 0 28px rgba(26,168,255,.55),inset 0 0 10px rgba(95,244,255,.75);transition:border-color .2s,box-shadow .2s}
-.splash .dice3d .dring.ko{border-color:#ff5a76;box-shadow:0 0 6px #ff5a76,0 0 16px #ff1f4b,0 0 28px rgba(255,31,75,.55),inset 0 0 10px rgba(255,90,118,.75);animation:dko .5s ease-in-out 2}
-@keyframes dko{50%{transform-origin:center;opacity:.35}}
+/* compteur de lancers sur le cuir du bas ; pas de contour de focus sur la piste 3D (2 traits bleus sur iPhone) */
+.splash .dice3d,.splash .dice3d canvas,.splash .dice3d:focus,.splash .dice3d canvas:focus{outline:none}
 .splash .dhud{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--pb) + 10px);z-index:2;pointer-events:none;white-space:nowrap;
   font:600 13px/1 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.3px;color:#F4EFE3;background:rgba(20,14,8,.62);padding:6px 12px;border-radius:99px}
 .splash .dhud.ko{color:#fff;background:rgba(160,18,44,.85)}
@@ -2048,13 +2045,13 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 (()=>{const sp=document.getElementById("splash");if(!sp)return;
   sp.addEventListener("touchmove",e=>{if(!sp.classList.contains("hide")&&!e.target.closest(".ihelp"))e.preventDefault()},{passive:false})})();
 /* dés 3D de l'écran d'accueil (moteur dice-box, licence MIT, copié dans /dice) — les dés dessinés restent si la 3D ne charge pas
-   Jeu sur l'accueil : toucher un dé = le garder (néon bleu) ; toucher la piste = relancer les dés libres ; 3 lancers par tour,
+   Jeu sur l'accueil : toucher un dé = le garder (arêtes néon bleu) ; toucher la piste = relancer les dés libres ; 3 lancers par tour,
    puis on relance les 5. Dé cassé (penché ou posé sur un autre) = néon rouge, on relance les dés de ce jet et ça ne compte pas. */
 (()=>{const sp=document.getElementById("splash"),zone=document.getElementById("dice3d");if(!sp||!zone||!sp.isConnected)return;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return}catch(e){return}
   const base=new URL(".",location.href);let box=null,busy=false,throws=0,pending=null,hudT=0;
-  const locked=new Set(),broken=new Set(),rings=new Map();
+  const locked=new Set(),broken=new Set();
   const hud=document.createElement("div");hud.className="dhud";hud.setAttribute("aria-live","polite");
   const peek=()=>globalThis.__yamsWorld&&globalThis.__yamsWorld.yamsPeek();
   const allIds=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls.map(x=>x.rollId):[]};
@@ -2075,19 +2072,34 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const isBroken=d=>{const g=geo(d);return g.flat<.978||g.lift>1}; /* penché de plus de 12° ou posé sur un autre dé */
   const say=(t,flash)=>{hud.textContent=t;hud.classList.toggle("ko",!!pending);clearTimeout(hudT);
     if(flash)hudT=setTimeout(draw,1600)};
-  function draw(){const p=peek();if(!p)return;const cr=p.canvas.getBoundingClientRect(),zr=zone.getBoundingClientRect();
-    const seen=new Set();
-    live().forEach(d=>{const id=d.config.rollId,on=locked.has(id)||broken.has(id);if(!on)return;seen.add(id);
-      let r=rings.get(id);if(!r){r=document.createElement("i");r.className="dring";r.setAttribute("aria-hidden","true");zone.appendChild(r);rings.set(id,r)}
-      const g=geo(d);r.classList.toggle("ko",broken.has(id));
-      r.style.cssText=`width:${g.size*1.12}px;height:${g.size*1.12}px;transform:translate(${cr.left-zr.left+g.x}px,${cr.top-zr.top+g.y}px) translate(-50%,-50%) rotate(${g.ang}rad)`});
-    rings.forEach((r,id)=>{if(!seen.has(id)){r.remove();rings.delete(id)}});
+  /* néon sur les arêtes du dé lui-même : une « peau » à la forme exacte du dé posée dessus, transparente sur les faces
+     (les points restent visibles) et colorée sur les arêtes, repérées dans le volume du dé (là où deux côtés se rejoignent) */
+  const NEON={on:"0.25,0.95,1.0",ko:"1.0,0.08,0.2"};let rq=0;
+  const neon=(d,kind)=>{const m=d.mesh;if(!m)return;let n=m.__neon;
+    if(n&&n.__k!==kind){n.material.dispose();n.dispose();m.__neon=n=null}
+    if(!kind)return;
+    if(!n){const src=m.sourceMesh||m,CM=src.material.constructor,e=src.getBoundingInfo().boundingBox.extendSize;
+      const h=Math.max(e.x,e.y,e.z).toFixed(5),mat=new CM("neonmat"+d.config.rollId,peek().scene),C=src.material.emissiveColor.constructor;
+      mat.disableLighting=!0;mat.diffuseColor=new C(0,0,0);mat.specularColor=new C(0,0,0);mat.alpha=.99;mat.disableDepthWrite=!0;
+      mat.Vertex_Definitions("varying vec3 vNeonP;");mat.Vertex_MainEnd("vNeonP=position;");
+      mat.Fragment_Definitions("varying vec3 vNeonP;");
+      mat.Fragment_Before_FragColor(`vec3 nA=abs(vNeonP)/${h};float nMx=max(nA.x,max(nA.y,nA.z)),nMn=min(nA.x,min(nA.y,nA.z));
+        float nE=smoothstep(.74,.9,nA.x+nA.y+nA.z-nMx-nMn);vec3 nC=vec3(${NEON[kind]});
+        color=vec4(mix(nC,vec3(1.),nE*nE*.12),nE);`);
+      n=src.clone("neon"+d.config.rollId,null,!0);n.material=mat;n.isPickable=!1;n.__k=kind;
+      n.position.copyFrom(m.position);n.rotationQuaternion=m.rotationQuaternion.clone();n.scaling.copyFrom(m.scaling).scaleInPlace(1.012);
+      n.setEnabled(!0);n.isVisible=!0;m.__neon=n}};
+  const repaint=()=>{const p=peek();if(!p)return;cancelAnimationFrame(rq);let n=0;
+    const f=()=>{p.scene.render();if(++n<24)rq=requestAnimationFrame(f)};f()};
+  function draw(){const p=peek();if(!p)return;
+    live().forEach(d=>{const id=d.config.rollId;neon(d,broken.has(id)?"ko":locked.has(id)?"on":null)});
+    repaint();
     if(pending)say("Dé cassé ! Touche pour relancer");
     else if(throws>=3)say("Lancer 3/3 · touche pour rejouer");
     else say(`Lancer ${throws}/3${throws===1&&!locked.size?" · touche un dé pour le garder":""}`)}
   /* lance les dés donnés (rollId) ; à la fin : dé cassé → on rejoue ce jet, sinon le lancer compte */
   const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();
-    rings.forEach((r,id)=>{if(ids.includes(id)){r.remove();rings.delete(id)}});
+    live().forEach(d=>{if(ids.includes(d.config.rollId))neon(d,null)});
     const rolls=box.getRollResults()[0];
     const p=rolls?box.reroll(rolls.rolls.filter(r=>ids.includes(r.rollId)),{remove:true}):box.roll("5dpip");
     p.then(()=>{live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))broken.add(d.config.rollId)});
