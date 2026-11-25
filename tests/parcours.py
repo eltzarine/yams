@@ -34,7 +34,9 @@ def fields(doc):
         return val
     return {a:v(b) for a,b in doc.get("fields",{}).items()}
 for uid,ps in [("uJ","Jojo"),("uA","César")]:rq("PATCH","joueurs/"+uid,{"fields":{"pseudo":sval(ps)}})
-SEEN="localStorage.setItem('yams-saison-vue',SEASON.key);localStorage.setItem('yams-podium-vu',SEASON.key)"
+# défi de l'accueil déjà réussi cette semaine : le bouton « Entrer au Yam's Club » est affiché d'office
+DEFI="(()=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));localStorage.setItem('yamsDefiSemaine',d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'))})()"
+SEEN="localStorage.setItem('yams-saison-vue',SEASON.key);localStorage.setItem('yams-podium-vu',SEASON.key);"+DEFI
 with sync_playwright() as p:
     br=p.chromium.launch(**({"executable_path":os.environ["CHROME_BIN"]} if os.environ.get("CHROME_BIN") else {}),args=["--no-sandbox","--disable-features=LocalNetworkAccessChecks,PrivateNetworkAccessRespectPreflightResults"])
     def mk(name):
