@@ -54,11 +54,14 @@
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQ8CDEPL7G"></script>
 <script>
-window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+/* infos jointes à tous les événements : appli installée ou navigateur, joueur ou spectateur
+   (gtag('set') ne les transmettait pas : on les ajoute nous-mêmes à chaque événement, et au page_view via config) */
+window.GA_BASE={mode_appli:'navigateur',role:'joueur'};
+try{GA_BASE.mode_appli=(matchMedia('(display-mode: standalone)').matches||navigator.standalone)?'appli':'navigateur';GA_BASE.role=/[?&]partie=/.test(location.search)?'spectateur':'joueur'}catch(e){}
+window.dataLayer=window.dataLayer||[];
+function gtag(){if(arguments[0]==='event'){var p=arguments[2]||{},o={},k;for(k in GA_BASE)o[k]=GA_BASE[k];for(k in p)o[k]=p[k];arguments[2]=o;if(arguments.length<3)arguments.length=3}dataLayer.push(arguments);}
 gtag('js',new Date());
-/* infos jointes à tous les événements : appli installée ou navigateur, joueur ou spectateur */
-try{gtag('set',{mode_appli:(matchMedia('(display-mode: standalone)').matches||navigator.standalone)?'appli':'navigateur',role:/[?&]partie=/.test(location.search)?'spectateur':'joueur'})}catch(e){}
-gtag('config','G-WQ8CDEPL7G');
+gtag('config','G-WQ8CDEPL7G',GA_BASE);
 </script>
 <!-- Firebase (historique partagé) -->
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
