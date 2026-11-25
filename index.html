@@ -381,7 +381,7 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .feltmsg{position:absolute;left:8px;right:8px;top:var(--pt);bottom:var(--pb);z-index:1;pointer-events:none;display:flex;align-items:center;justify-content:center;
   font:700 34px/1.05 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:rgba(244,239,227,.42);text-shadow:0 1px 0 rgba(0,0,0,.25);transition:opacity .3s}
 .splash .feltmsg.off{opacity:0}
-.splash .dscore{position:absolute;left:50%;bottom:calc(var(--pb) + 50px);z-index:2;pointer-events:none;transform:translateX(-50%);white-space:nowrap;
+.splash .dscore{position:absolute;left:50%;top:calc(var(--pt) - 22px);z-index:2;pointer-events:none;transform:translateX(-50%);white-space:nowrap;
   font:700 30px/1 "Barlow Condensed",system-ui,sans-serif;color:#F3CF5E;background:rgba(20,14,8,.7);padding:8px 18px;border-radius:99px;opacity:0}
 .splash .dscore.on{animation:scorepop .55s cubic-bezier(.2,1.6,.4,1) both}
 .splash .dscore.on.ok{color:#1B2620;background:#F3CF5E}
@@ -2073,7 +2073,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
    Défi de la semaine : faire au moins 20 pts (sans la chance, points de la feuille) en 3 lancers pour faire apparaître
    « Entrer au Yam's Club ». Réussi une fois → entrée libre jusqu'au lundi suivant (sur ce téléphone).
    Taper 2 fois sur la piste = lancer ; toucher un dé = le garder (dé teinté bleu pâle) ; dé cassé (penché ou posé sur
-   un autre) = teinté rose, il faut relancer ce jet ; fin du 3e lancer = dés de la meilleure combinaison teintés or + score.
+   un autre) = teinté rose, il faut relancer ce jet. Après chaque lancer : meilleure combinaison affichée (dés libres teintés or
+   + score), on peut continuer ; 20 pts ou plus = défi réussi. Fin du 3e lancer : tous les dés de la combinaison en or.
    Sans 3D (pas de WebGL, animations réduites, échec de chargement) : pas de défi, le bouton est là tout de suite. */
 (()=>{const sp=document.getElementById("splash"),zone=document.getElementById("dice3d");if(!sp||!zone||!sp.isConnected)return;
   const btn=document.getElementById("btnPlay"),post=document.getElementById("postit"),felt=document.getElementById("feltMsg"),scoreEl=document.getElementById("dScore");
@@ -2111,8 +2112,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const isBroken=d=>{const g=geo(d);return g.flat<.978||g.lift>1}; /* penché de plus de 12° ou posé sur un autre dé */
   const say=(t,flash)=>{hud.textContent=t;hud.classList.toggle("ko",!!pending);clearTimeout(hudT);
     if(flash)hudT=setTimeout(draw,1600)};
-  /* teinte du dé entier (couleur du corps, les points restent rouges) */
-  const TINT={base:"#FBF8F1",on:"#BCCFE0",ko:"#F0A49A",win:"#F3CF5E"};
+  /* teinte du dé entier : corps coloré et points de la même couleur en plus foncé ; dé blanc = points rouges */
+  const TINT={base:"#FBF8F1",on:"#86AAD6",ko:"#F0A49A",win:"#F3CF5E"}; /* points du dé teinté : même couleur, foncée (shader dans dice/world.onscreen.min.js) */
   const tint=(d,kind)=>{const b=d.mesh.instancedBuffers;if(!b||!b.customColor)return;const h=TINT[kind];
     if(b.customColor.__k===kind)return;const c=new b.customColor.constructor(parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255);
     c.__k=kind;b.customColor=c};
@@ -2130,24 +2131,24 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     else ids=rs;
     return{...best,ids:ids.map(r=>r.rollId),label:up?`en ${up[2]}`:LBL[best.k]}};
   function draw(){if(!peek())return;
-    live().forEach(d=>{const id=d.config.rollId;tint(d,broken.has(id)?"ko":done&&win.has(id)?"win":!done&&locked.has(id)?"on":"base")});
+    live().forEach(d=>{const id=d.config.rollId;tint(d,broken.has(id)?"ko":done&&win.has(id)?"win":locked.has(id)?"on":win.has(id)?"win":"base")});
     repaint();felt.classList.toggle("off",!!allIds().length);
     if(!allIds().length)return say("");
     if(pending)say("Dé cassé ! Tape 2 fois pour relancer");
     else if(done)say("Tape 2 fois pour rejouer");
     else say(`Lancer ${throws}/3 · ${throws===1&&!locked.size?"touche un dé pour le garder":"tape 2 fois pour relancer"}`)}
-  const endTurn=()=>{done=true;throws=3;const b=bestCombo();win.clear();
-    if(b){b.ids.forEach(id=>win.add(id));const ok=b.pts>=20;
-      scoreEl.textContent=`+${b.pts} ${b.label}`;scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
-      if(ok&&!defiOk()){try{localStorage.setItem(KEY,monday())}catch(e){}postOk();unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
-        if(window.gtag)gtag("event","defi_accueil_reussi",{points:b.pts})}}
-    draw()};
+  /* meilleure combinaison après chaque lancer ; défi réussi dès 20 pts */
+  const showBest=()=>{const b=bestCombo();win.clear();if(!b)return;b.ids.forEach(id=>win.add(id));const ok=b.pts>=20,first=ok&&!defiOk();
+    scoreEl.textContent=`+${b.pts} ${b.label}`;scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
+    if(first){try{localStorage.setItem(KEY,monday())}catch(e){}postOk();unlock(true);if(navigator.vibrate)navigator.vibrate([40,60,90]);
+      setTimeout(()=>say("Défi réussi ! Entre au Yam’s Club",true),0);if(window.gtag)gtag("event","defi_accueil_reussi",{points:b.pts})}};
+  const endTurn=()=>{done=true;throws=3;showBest();draw()};
   /* lance les dés donnés (rollId) ; à la fin : dé cassé → on rejoue ce jet, sinon le lancer compte */
-  const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();
+  const toss=ids=>{if(!ids.length)return;busy=true;broken.clear();win.clear();scoreEl.classList.remove("on","ok");
     const rs=box.getRollResults()[0];
     const p=rs?box.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true}):box.roll("5dpip");
     p.then(()=>{live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))broken.add(d.config.rollId)});
-      if(broken.size){pending=ids;if(navigator.vibrate)navigator.vibrate(60)}else{pending=null;throws++;if(throws>=3)return endTurn()}})
+      if(broken.size){pending=ids;if(navigator.vibrate)navigator.vibrate(60)}else{pending=null;throws++;if(throws>=3)return endTurn();showBest()}})
      .catch(()=>{}).finally(()=>{busy=false;draw()})};
   /* double tap sur la piste = lancer */
   const launch=()=>{if(pending)return toss(pending);
