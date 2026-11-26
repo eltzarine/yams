@@ -250,6 +250,9 @@ function glove(at,v){if(!audio())return;nz(at,{type:"highpass",f:2200,v:v*.7,att
   tn(at,{f:240,f2:90,v:v*1.1,att:.002,dec:.12,out:room()});tn(at,{f:110,f2:50,v:v*1.2,att:.002,dec:.15})}
 function bell(at,v){[1,2.76,5.4].forEach((m,i)=>tn(at,{f:880*m,v:v/(i+1.5),att:.002,dec:1.1-i*.3}))}
 function crowd(at,dur,v){nz(at,{type:"bandpass",f:600,f2:900,q:.5,v,att:dur*.5,dec:dur*.6})}
+/* sons identiques à l'accueil : clic pour garder / lâcher un dé, petit carillon de combinaison après le lancer */
+function beep(f,dur,type,vol,at){const a=audio();if(!a)return;const t=a.currentTime+(at||0),o=a.createOscillator();o.type=type||"triangle";o.frequency.setValueAtTime(f,t);
+  const g=a.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.08,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(master);o.start(t);o.stop(t+dur+.02)}
 function voice(n){if(audio())play(BUF[n],1,1)}
 const sfx={
   light:()=>glove(0,.45),
@@ -257,6 +260,9 @@ const sfx={
   heavy:()=>{glove(0,.5);glove(.1,.5);bell(.22,.25)},
   super:()=>{[0,.12,.24].forEach(t=>glove(t,.5));bell(.36,.3);bell(.62,.3);crowd(.3,1.4,.35)},
   tap:()=>glove(0,.32),
+  lock:()=>{if(!play(BUF.click,.22,1.05))beep(900,.04,"sine",.08)},
+  unlock:()=>{if(!play(BUF.click,.14,.8))beep(600,.04,"sine",.06)},
+  combo:p=>{const b=p>=50?880:p>=25?698:587;beep(b,.12,"triangle",.07);beep(b*1.5,.18,"triangle",.06,.08)},
   miss:()=>nz(0,{type:"bandpass",f:600,f2:2500,q:2,v:.25,att:.04,dec:.14}),
   bell1:()=>bell(0,.28),
   broken:()=>{const a=audio();if(!a)return;const t=a.currentTime,o=a.createOscillator();o.type="sine";o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(90,t+.25);
@@ -287,7 +293,7 @@ async function myThrow(){if(G.busy||G.phase!=="me"||G.throws>=3&&!G.pending)retu
   if(r.broken){G.pending=ids;paintDice();grid();hud();hint("Tape 2 fois pour relancer");say("<b>Dé cassé !</b> Un dé est penché ou monté sur un autre : tape 2 fois pour relancer ce lancer.",0,true);return}
   if(G.pending)say("");G.pending=null;G.throws++;const v=r.v;
   const bt=best(G.me,v),win=new Set();
-  if(bt){pop(`+${bt.p} ${SAY[bt.k]}`);winIds(bt.k,win);}
+  if(bt){pop(`+${bt.p} ${SAY[bt.k]}`);winIds(bt.k,win);setTimeout(()=>sfx.combo(bt.p),350)}
   paintDice(win);grid();hud();paintHud();
   if(G.throws>=3){hint("");say(G.turn===1?"Plus de lancer ! Touche une case en bas. La <b>dorée</b> rapporte le plus.":"Plus de lancer : choisis une case.")}
   else{hint("");
@@ -301,7 +307,7 @@ function winIds(k,set){const rs=rolls(),u=UPPER.find(x=>x[0]===k);
 function tap(e){if(G.phase!=="me"||G.busy||!box)return;
   if(G.throws>0&&G.throws<3&&!G.pending){const p=peek();if(p){const cr=p.canvas.getBoundingClientRect(),x=e.clientX-cr.left,y=e.clientY-cr.top;let hit=null,bd=1e9;
     live().forEach(d=>{const g=geo(d),dist=Math.hypot(g.x-x,g.y-y);if(dist<g.size*.7&&dist<bd){bd=dist;hit=d.config.rollId}});
-    if(hit!=null){G.lastTap=0;clearTimeout(G.tapT);G.locked.has(hit)?G.locked.delete(hit):G.locked.add(hit);paintDice();
+    if(hit!=null){G.lastTap=0;clearTimeout(G.tapT);if(G.locked.has(hit)){G.locked.delete(hit);sfx.unlock()}else{G.locked.add(hit);sfx.lock()}paintDice();
       if(G.turn===1&&G.throws===1&&G.locked.size===1)say("C'est ça ! Garde ceux que tu veux, puis <b>tape 2 fois</b> pour relancer le reste.");return}}}
   const now=Date.now();clearTimeout(G.tapT);
   if(now-G.lastTap<420){G.lastTap=0;return myThrow()}
