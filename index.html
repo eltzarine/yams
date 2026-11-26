@@ -2479,7 +2479,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     lastTap=now;tapT=setTimeout(()=>{if(lastTap)say(allIds().length&&!done&&!pending?"Encore un tap pour relancer":"Encore un tap pour lancer",true)},430)};
   import("./dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
     if(!sp.isConnected)return;
-    box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",offscreen:!1,
+    box=new DiceBox({container:"#dice3d",origin:base.origin,assetPath:base.pathname+"dice/assets/",offscreen:!1,delay:0,
       theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
       /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});

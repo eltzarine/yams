@@ -174,7 +174,7 @@ function ownDice(){
   if(!gl){noDice();return boxP=Promise.resolve(null)}
   const base=new URL(".",location.href);
   return boxP=import("../dice/dice-box.es.min.js").then(async({default:DiceBox})=>{
-    box=new DiceBox({container:"#sdice",origin:base.origin,assetPath:base.pathname+"dice/assets/",offscreen:!1,
+    box=new DiceBox({container:"#sdice",origin:base.origin,assetPath:base.pathname+"dice/assets/",offscreen:!1,delay:0,
       theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
     await box.init();return box}).catch(e=>{console.warn("dés 3D indisponibles",e);noDice();return null})}
