@@ -429,6 +429,24 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .hko small{display:block;font:400 18px/1 "Bungee",sans-serif;color:#F4EFE3;-webkit-text-stroke:1px #2a1608;margin-bottom:4px}
 .splash .hko b{display:block;font:400 56px/1 "Bungee","Barlow Condensed",sans-serif;color:#FFE14D;-webkit-text-stroke:1px #4A1404;text-shadow:0 3px 0 #C4320A,0 5px 0 #4A1404,0 0 24px rgba(255,140,0,.7)}
 .splash .hko.go div{animation:sslam 1.6s cubic-bezier(.2,1.4,.4,1) both}
+/* chargement des dés 3D : 5 images du vrai dé (des-chargement.webp, rendu du thème yams) sortent de la boîte une à une,
+   le 5e arrive quand le tapis 3D est prêt. Pendant ce temps : logo + piste seulement. */
+.splash .dload{position:absolute;left:8px;right:8px;top:var(--pt);bottom:var(--pb);z-index:2;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .35s ease}
+.splash .dload.off{opacity:0}
+.splash .dload .row{display:flex;align-items:center;justify-content:center;gap:2px}
+.splash .dload i{width:min(15vw,62px);aspect-ratio:1;background:url(des-chargement.webp) 0 0/500% 100% no-repeat;opacity:0;filter:drop-shadow(0 7px 5px rgba(0,0,0,.38))}
+.splash .dload i:nth-child(1){background-position-x:0;--r:-8deg;--y:3px}
+.splash .dload i:nth-child(2){background-position-x:25%;--r:6deg;--y:-5px}
+.splash .dload i:nth-child(3){background-position-x:50%;--r:-3deg;--y:4px}
+.splash .dload i:nth-child(4){background-position-x:75%;--r:9deg;--y:-2px}
+.splash .dload i:nth-child(5){background-position-x:100%;--r:-6deg;--y:5px}
+.splash .dload i.on{animation:dout .5s cubic-bezier(.25,1.5,.45,1) both}
+@keyframes dout{0%{opacity:0;transform:translateY(-46px) scale(1.35) rotate(calc(var(--r) - 30deg))}45%{opacity:1}100%{opacity:1;transform:translateY(var(--y)) rotate(var(--r))}}
+.splash .dload span{font:600 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-ink);opacity:.55;animation:ldpulse 1.4s ease-in-out infinite}
+@keyframes ldpulse{50%{opacity:.25}}
+.splash.loading :is(.postwrap,.feltmsg,.dscore,.dhud,.dsound,.play.enter,.foot,.ihelp){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.splash.reveal :is(.postwrap,.feltmsg,.foot){animation:ldin .45s ease both}
+@keyframes ldin{from{opacity:0}}
 .splash.shake{animation:sshake .35s steps(6)}.splash.shake2{animation:sshake2 .7s steps(12)}
 /* score façon Street Fighter (police Bungee) : jaune, contour brun, ombre orange, penché, posé sur le rebord du haut */
 .splash .dscore{position:absolute;left:50%;top:calc(var(--pt) - 16px);z-index:2;pointer-events:none;transform:translateX(-50%) skewX(-10deg);white-space:nowrap;
@@ -2346,10 +2364,24 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       const se=document.querySelector(".dscore");if(se)se.classList.remove("on","ok");
       try{b.clear()}catch(e){}el.prepend(b.canvas);dispatchEvent(new Event("resize"));return b},
     give(){if(!box||!suspended)return;try{box.clear()}catch(e){}zone.prepend(box.canvas);suspended=false;dispatchEvent(new Event("resize"));try{draw()}catch(e){}}};
-  const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null)};
+  let endLoad=null; /* chargement : 5 dés qui sortent de la boîte (voir .dload) */
+  const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null);if(endLoad)endLoad()};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return no3d();
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return no3d()}catch(e){return no3d()}
   const safety=setTimeout(()=>{if(!box)no3d()},12000); /* réseau lent : on ne bloque pas l'entrée */
+  /* le 1er dé sort à 0,3 s (rien ne s'affiche si le tapis est prêt avant), puis de plus en plus lentement ; le 5e attend le tapis.
+     Tapis prêt : les dés restants sortent vite, petite pause, puis fondu vers le tapis 3D. */
+  {const ld=document.createElement("div");ld.className="dload";ld.setAttribute("aria-hidden","true");
+    ld.innerHTML='<div class="row"><i></i><i></i><i></i><i></i><i></i></div><span>On sort les dés…</span>';
+    const pi=sp.querySelector(".piste");if(pi)pi.after(ld);else sp.prepend(ld);sp.classList.add("loading");
+    const dz=[...ld.querySelectorAll("i")];let shown=0,ended=false;
+    const out=()=>{if(shown<5)dz[shown++].classList.add("on")};
+    const tm=[300,850,1550,2450].map(t=>setTimeout(out,t));
+    const finish=()=>{sp.classList.remove("loading");sp.classList.add("reveal");setTimeout(()=>sp.classList.remove("reveal"),600)};
+    endLoad=()=>{if(ended)return;ended=true;tm.forEach(clearTimeout);
+      if(!shown){ld.remove();sp.classList.remove("loading");return}
+      const rest=5-shown;for(let k=0;k<rest;k++)setTimeout(out,k*110);
+      setTimeout(()=>{ld.classList.add("off");finish();setTimeout(()=>ld.remove(),400)},rest*110+500)}}
   const base=new URL(".",location.href);let box=null,busy=false,throws=0,pending=null,done=false,hudT=0,lastTap=0,tapT=0;
   const locked=new Set(),broken=new Set(),win=new Set();
   /* Analytics : compteur de lancers gardé sur ce téléphone (total depuis la 1re ouverture) + lancers de la visite */
@@ -2538,7 +2570,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
       /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
-    await box.init();clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);
+    await box.init();clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);if(endLoad)endLoad();
     sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();audio(); /* prépare les sons (chargés en avance, joués au 1er lancer) */
     zone.addEventListener("click",tap);
     let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
