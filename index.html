@@ -423,6 +423,13 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .feltmsg{position:absolute;left:8px;right:8px;top:var(--pt);bottom:var(--pb);z-index:1;pointer-events:none;display:flex;align-items:center;justify-content:center;
   font:700 34px/1.05 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:rgba(244,239,227,.42);text-shadow:0 1px 0 rgba(0,0,0,.25);transition:opacity .3s}
 .splash .feltmsg.off{opacity:0}
+/* gros coup à l'accueil : bandeau « Combo ! » / « Yam's ! » et tremblement, comme le combat contre Nico */
+.splash .hko{position:absolute;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none}
+.splash .hko div{text-align:center;transform:skewX(-10deg);opacity:0}
+.splash .hko small{display:block;font:400 18px/1 "Bungee",sans-serif;color:#F4EFE3;-webkit-text-stroke:1px #2a1608;margin-bottom:4px}
+.splash .hko b{display:block;font:400 56px/1 "Bungee","Barlow Condensed",sans-serif;color:#FFE14D;-webkit-text-stroke:1px #4A1404;text-shadow:0 3px 0 #C4320A,0 5px 0 #4A1404,0 0 24px rgba(255,140,0,.7)}
+.splash .hko.go div{animation:sslam 1.6s cubic-bezier(.2,1.4,.4,1) both}
+.splash.shake{animation:sshake .35s steps(6)}.splash.shake2{animation:sshake2 .7s steps(12)}
 /* score façon Street Fighter (police Bungee) : jaune, contour brun, ombre orange, penché, posé sur le rebord du haut */
 .splash .dscore{position:absolute;left:50%;top:calc(var(--pt) - 16px);z-index:2;pointer-events:none;transform:translateX(-50%) skewX(-10deg);white-space:nowrap;
   font:400 17px/1 "Bungee","Barlow Condensed",system-ui,sans-serif;color:#FFE14D;-webkit-text-stroke:1px #4A1404;
@@ -719,6 +726,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
+  <div class="hko" id="dKo" aria-hidden="true"></div>
   <div class="postwrap">
   <div class="postit" id="postit" aria-live="polite"><small>Défi de la semaine</small>Fais <b>20 pts</b> en 3 lancers pour entrer</div>
   <button class="dsound" id="dSound" type="button" aria-label="Couper le son des dés" aria-pressed="false"><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><svg class="mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/></svg></button>
@@ -2412,7 +2420,34 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     unlock:()=>{if(!play(BUF.click,.14,.8))beep(600,.04,"sine",.06)},
     broken:()=>{beep(150,.25,"sine",.12,0,90)},
     combo:pts=>{const b=pts>=50?880:pts>=25?698:587;beep(b,.12,"triangle",.07);beep(b*1.5,.18,"triangle",.06,.08)},
-    win:()=>[523,659,784,1047].forEach((f,i)=>beep(f,i===3?.4:.14,"triangle",.08,i*.1))};
+    win:()=>{ringBell(0,.55);ringBell(.32,.55);ringBell(.64,.55)}};
+  /* bruitages du ring, les mêmes que le combat contre Nico : coups de gant (avec un peu de salle), cloche, foule */
+  let fxNoise=null,fxRoom=null;
+  const fxEnv=(g,t,v,att,dec)=>{g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+att+dec)};
+  const room=a=>{if(fxRoom&&fxRoom.context===a)return fxRoom;const i=a.createGain(),d=a.createDelay(),fb=a.createGain(),lp=a.createBiquadFilter();
+    d.delayTime.value=.09;fb.gain.value=.3;lp.type="lowpass";lp.frequency.value=2200;i.connect(master);i.connect(d);d.connect(lp).connect(fb).connect(d);lp.connect(master);return fxRoom=i};
+  const fxNz=(at,o)=>{const a=audio();if(!a)return;if(!fxNoise||fxNoise.sampleRate!==a.sampleRate){fxNoise=a.createBuffer(1,a.sampleRate,a.sampleRate);const d=fxNoise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+    const t=a.currentTime+at,n=a.createBufferSource();n.buffer=fxNoise;n.loop=true;const f=a.createBiquadFilter();f.type=o.type;f.frequency.setValueAtTime(o.f,t);if(o.f2)f.frequency.exponentialRampToValueAtTime(o.f2,t+o.att+o.dec);f.Q.value=o.q||.9;
+    const g=a.createGain();fxEnv(g,t,o.v,o.att,o.dec);n.connect(f).connect(g).connect(o.room?room(a):master);n.start(t);n.stop(t+o.att+o.dec+.05)};
+  const fxTn=(at,o)=>{const a=audio();if(!a)return;const t=a.currentTime+at,s=a.createOscillator();s.type="sine";s.frequency.setValueAtTime(o.f,t);if(o.f2)s.frequency.exponentialRampToValueAtTime(o.f2,t+o.att+o.dec);
+    const g=a.createGain();fxEnv(g,t,o.v,o.att,o.dec);s.connect(g).connect(o.room?room(a):master);s.start(t);s.stop(t+o.att+o.dec+.05)};
+  const glove=(at,v)=>{fxNz(at,{type:"highpass",f:2200,v:v*.7,att:.001,dec:.035,room:1});fxNz(at,{type:"bandpass",f:1100,q:.8,v,att:.002,dec:.08,room:1});
+    fxTn(at,{f:240,f2:90,v:v*1.1,att:.002,dec:.12,room:1});fxTn(at,{f:110,f2:50,v:v*1.2,att:.002,dec:.15})};
+  /* cloche de ring : métal frappé, plusieurs harmoniques, longue résonance */
+  const ringBell=(at,v)=>[[1,1],[2.76,.55],[5.4,.3],[8.9,.15]].forEach(([m,k],i)=>fxTn(at,{f:880*m,v:v*k,att:.002,dec:1.6-i*.35,room:1}));
+  const crowd=(at,dur,v)=>fxNz(at,{type:"bandpass",f:600,f2:900,q:.5,v,att:dur*.5,dec:dur*.6});
+  const ring={tap:()=>glove(0,.32),light:()=>glove(0,.45),medium:()=>{glove(0,.45);glove(.13,.45)},
+    heavy:()=>{glove(0,.5);glove(.1,.5);ringBell(.22,.3)},super:()=>{[0,.12,.24].forEach(t=>glove(t,.5));ringBell(.36,.4);ringBell(.62,.4);crowd(.3,1.4,.35)},
+    miss:()=>fxNz(0,{type:"bandpass",f:600,f2:2500,q:2,v:.25,att:.04,dec:.14})};
+  const koEl=document.getElementById("dKo"),splashEl=document.getElementById("splash");
+  const bandeau=(small,big)=>{if(!koEl)return;koEl.innerHTML=`<div><small>${small}</small><b>${big}</b></div>`;koEl.classList.remove("go");void koEl.offsetWidth;koEl.classList.add("go")};
+  /* même échelle que le combat : petit coup, coup moyen, gros coup (Full, Carré, Grande suite), super coup (Yam's) */
+  const coup=(k,p)=>{if(!p)return ring.miss();let lvl="tap";
+    if(k==="yams")lvl="super";else if(k==="grande"||k==="carre"||k==="full")lvl="heavy";else if(k==="petite"||p>=25)lvl="medium";else if(p>=18)lvl="light";
+    ring[lvl]();if(lvl==="tap")return;
+    if(lvl!=="light"&&splashEl){splashEl.classList.remove("shake","shake2");void splashEl.offsetWidth;splashEl.classList.add(lvl==="super"?"shake2":"shake")}
+    if(navigator.vibrate)try{navigator.vibrate(lvl==="super"?[30,40,30,40,80]:lvl==="heavy"?[30,40,60]:30)}catch(e){}
+    if(lvl==="super")setTimeout(()=>bandeau("Super combo","Yam's !"),300);else if(lvl==="heavy")setTimeout(()=>bandeau(LABEL[k]||"","Combo !"),250)};
   /* chocs repérés en suivant chaque dé : grosse perte de vitesse d'une mise à jour à l'autre = il a tapé quelque chose */
   const track={};let hooked=false;
   const hookImpacts=()=>{const p=peek();if(hooked||!p||!p.scene)return;hooked=true;
@@ -2467,8 +2502,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     const ctx={n:throws,best:b?b.pts:0,mx,cnt:c,sum:sum(v),full,run4,run5,kept,prevFull,streak:streakDone+(turnBest>=25?1:0),slam:slam.size>=6};
     if(prog.n<20&&DEFIS[prog.n][2](ctx)){validate();return true}return false};
   /* meilleure combinaison après chaque lancer (et défi en cours) */
-  const showBest=()=>{const b=bestCombo();win.clear();const ok=evalThrow(b);if(!b)return;b.ids.forEach(id=>win.add(id));
-    if(ok)setTimeout(sfx.win,350);else setTimeout(()=>sfx.combo(b.pts),350);const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
+  const showBest=()=>{const b=bestCombo();win.clear();const ok=evalThrow(b);if(!b){ring.miss();return}b.ids.forEach(id=>win.add(id));
+    coup(b.k,b.pts);if(ok)setTimeout(sfx.win,500);const t0=performance.now(),run=t=>{const k=Math.min(1,(t-t0)/600);scoreEl.textContent=`+${Math.round(b.pts*k*k*(3-2*k))} ${b.label}`;if(k<1&&scoreEl.classList.contains("on"))requestAnimationFrame(run)};scoreEl.textContent=`+0 ${b.label}`;requestAnimationFrame(run);scoreEl.classList.remove("on","ok");void scoreEl.offsetWidth;scoreEl.classList.add("on");scoreEl.classList.toggle("ok",ok);
   };
   const endTurn=()=>{done=true;throws=3;showBest();draw()};
   /* lance les dés donnés (rollId) ; à la fin : dé cassé → on rejoue ce jet, sinon le lancer compte */
