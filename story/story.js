@@ -100,9 +100,10 @@ function vs(){const b=BOSSES[0],n=me(),v=$("#sVs");
   <div class="f"><small>${b.lieu}</small><img class="sprite" src="${b.sprite}" alt="${b.nom}"><b class="sark">${b.nom}</b><small>${b.titre}</small></div>`;
   v.classList.remove("off");clearTimeout(vsT);vsT=setTimeout(skipVs,4900)}
 function skipVs(){if(G.phase!=="vs")return;clearTimeout(vsT);$("#sVs").classList.add("off");G.phase="ready";
-  ko("Round 1","Ready ?");voice("ready");
-  vsT=setTimeout(()=>{if(G.phase!=="ready")return;ko(BOSSES[0].nom+" vs "+me(),"Fight !");voice("fight");sfx.bell1();
-    vsT=setTimeout(()=>{if(G.phase==="ready")startMyTurn()},1000)},1100)}
+  voice("rf"); /* un seul fichier : « Ready ? » à 0,1 s, « Fight ! » à 1,8 s */
+  vsT=setTimeout(()=>{if(G.phase!=="ready")return;ko("Round 1","Ready ?");
+  vsT=setTimeout(()=>{if(G.phase!=="ready")return;ko(BOSSES[0].nom+" vs "+me(),"Fight !");sfx.bell1();
+    vsT=setTimeout(()=>{if(G.phase==="ready")startMyTurn()},1000)},1700)},100)}
 function ko(small,big){const k=$("#sKo");k.innerHTML=`<div><small>${small}</small><b class="sark">${big}</b></div>`;k.classList.remove("go");void k.offsetWidth;k.classList.add("go")}
 
 /* ---------- textes ---------- */
@@ -182,7 +183,7 @@ const issue=(a,b)=>a>b?"gagne":a===b?"egalite":"perdu";
 
 /* ---------- sons : vrais bruits de dés (mêmes fichiers que l'accueil) + coups façon Street Fighter fabriqués avec Web Audio ----------
    Réglage partagé avec l'accueil (bouton haut-parleur, clé yamsSon). Respecte le mode silencieux de l'iPhone. */
-const SKEY="yamsSon";let actx=null,master=null,lastAny=0,noiseBuf=null;const BUF={felt:[],click:[],ready:[],fight:[]};
+const SKEY="yamsSon";let actx=null,master=null,lastAny=0,noiseBuf=null;const BUF={felt:[],click:[],rf:[]};
 const soundOn=()=>{try{return localStorage.getItem(SKEY)!=="0"}catch(e){return true}};
 const MKEY="yamsMusique";
 const musicOn=()=>{try{return localStorage.getItem(MKEY)!=="0"}catch(e){return true}};
@@ -196,7 +197,7 @@ function ctx(){
     const base=new URL(".",location.href).pathname;
     const get=(list,name,n)=>{for(let i=1;i<=n;i++)fetch(base+`dice/sounds/${name}${i}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>actx.decodeAudioData(b,ok,ko))).then(x=>list.push(x)).catch(()=>{})};
     if(!BUF.felt.length){get(BUF.felt,"surface_felt",7);get(BUF.click,"dicehit_plastic",5)}
-    ["ready","fight"].forEach(n=>{if(!BUF[n].length)fetch(base+`story/voix/${n}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>actx.decodeAudioData(b,ok,ko))).then(x=>BUF[n].push(x)).catch(()=>{})});
+    ["rf"].forEach(n=>{if(!BUF[n].length)fetch(base+"story/voix/ready-fight.mp3").then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>actx.decodeAudioData(b,ok,ko))).then(x=>BUF[n].push(x)).catch(()=>{})});
     mbus=actx.createGain();mbus.connect(actx.destination);
     noiseBuf=actx.createBuffer(1,actx.sampleRate*.6,actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
   if(actx.state!=="running")actx.resume().catch(()=>{});return actx}
