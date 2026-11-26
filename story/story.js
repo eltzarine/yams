@@ -30,7 +30,7 @@ window.storyHTML=()=>{const p=prog(),won=p.nico==="win",b=BOSSES[0];
 /* l'histoire se joue avec un compte : sans connexion, même parcours que « Me connecter », puis le combat s'ouvre */
 const needLogin=()=>{try{return ACC_ON&&typeof meName==="function"&&!meName()}catch(e){return false}};
 window.bindStory=()=>{const b=document.getElementById("storyGo");if(b)b.onclick=()=>{
-  if(needLogin()&&typeof accTap==="function"){if(window.loginThen)loginThen(()=>{if(!needLogin())open()});accTap();return}
+  if(needLogin()&&typeof accTap==="function"){ga("histoire_connexion_demandee");if(window.loginThen)loginThen(()=>{if(!needLogin()){ga("histoire_connexion_ok");open()}});accTap();return}
   open()}};
 /* connexion / déconnexion pendant le combat : pastille à jour, et retour à l'accueil si on n'est plus connecté */
 window.storyAcct=()=>{if(!root||root.hidden)return;if(needLogin())return close();names()};
@@ -80,7 +80,7 @@ function open(){
   if(!root)build();
   names();
   root.hidden=false;document.documentElement.classList.add("story-on");
-  Object.assign(G,{phase:"vs",turn:1,throws:0,me:{},bot:{},busy:false,vals:[],tut:0,warned:false,warnK:null,pending:null,botLast:null});G.locked.clear();G.broken.clear();
+  Object.assign(G,{phase:"vs",turn:1,throws:0,me:{},bot:{},busy:false,vals:[],tut:0,warned:false,warnK:null,pending:null,botLast:null,t0:Date.now(),rollMs:[],nBroken:0});G.locked.clear();G.broken.clear();
   paintHud();grid();say("");hint("");hud();
   vs();initDice();ga("histoire_debut",{boss:"nico"});
 }
@@ -164,13 +164,17 @@ function initDice(){
 function noDice(){const z=$("#sZone");if(z.querySelector(".snod3"))return;const d=document.createElement("div");d.className="snod3";
   d.textContent="Le mode histoire a besoin des dés 3D, indisponibles sur cet appareil.";z.appendChild(d)}
 /* lance les dés donnés (rollId) et renvoie les 5 valeurs */
-async function toss(ids){const b=await initDice();if(!b)return null;G.busy=true;cancelAnimationFrame(rq);G.broken.clear();rattle();hookImpacts();
+async function toss(ids){const b=await initDice();if(!b)return null;G.busy=true;cancelAnimationFrame(rq);const tR=performance.now();G.broken.clear();rattle();hookImpacts();
   try{const rs=b.getRollResults()[0];
     if(rs&&rs.rolls.length===5)await b.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true});else await b.roll("5dpip");
     live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))G.broken.add(d.config.rollId)});
-    G.vals=rolls().map(r=>r.value);if(G.broken.size){sfx.broken();if(navigator.vibrate)navigator.vibrate(60)}
+    G.vals=rolls().map(r=>r.value);G.rollMs&&G.rollMs.push(Math.round(performance.now()-tR));if(G.broken.size){G.nBroken++;sfx.broken();if(navigator.vibrate)navigator.vibrate(60)}
     return{v:G.vals,broken:G.broken.size>0}}catch(e){return null}finally{G.busy=false}}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+/* mesures envoyées avec la fin ou l'abandon : durée de la partie et vitesse des lancers (repère les téléphones qui rament) */
+function stats(){const r=G.rollMs||[],moy=r.length?Math.round(r.reduce((x,y)=>x+y,0)/r.length):0;
+  return{duree_s:Math.round((Date.now()-(G.t0||Date.now()))/1000),lancers:r.length,lancer_moyen_ms:moy,lancer_max_ms:r.length?Math.max(...r):0,des_casses:G.nBroken||0}}
+const issue=(a,b)=>a>b?"gagne":a===b?"egalite":"perdu";
 
 /* ---------- sons : vrais bruits de dés (mêmes fichiers que l'accueil) + coups façon Street Fighter fabriqués avec Web Audio ----------
    Réglage partagé avec l'accueil (bouton haut-parleur, clé yamsSon). Respecte le mode silencieux de l'iPhone. */
@@ -307,25 +311,26 @@ async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.lo
 /* ---------- fin du combat ---------- */
 function end(){G.phase="end";paintHud();hud();hint("");say("");const a=total(G.me),b=total(G.bot),won=a>b,p=prog();
   if(won){p.nico="win";p.best=Math.max(p.best||0,a);saveProg(p)}
-  ga("histoire_fin",{boss:"nico",gagne:won?"oui":"non",score:a,boss_score:b});
+  ga("histoire_fin",{boss:"nico",gagne:won?"oui":"non",resultat:issue(a,b),score:a,boss_score:b,ecart:a-b,...stats()});
   ko(won?"Nico est battu":"Fin du combat",won?"K.O. !":a===b?"Égalité":"Perdu");if(won)sfx.ko();else sfx.heavy();
   setTimeout(()=>{modal(`<h3 class="sark">${won?"Victoire !":a===b?"Égalité":"Perdu…"}</h3>
     <p>${won?"« Pas mal le bleu, t'as ta place au Parvis. » Prochain adversaire : <b>"+NEXT+"</b>, bientôt.":"« Reviens quand tu veux, le bleu. » Nico t'attend pour la revanche."}</p>
     <div class="sres"><div><small>${E(me())}</small>${a}</div><div><small>Nico</small>${b}</div></div>
-    <div class="snico"><img src="${BOSSES[0].head}" alt=""><p>« Partage ton score et je t'offre un verre au Parvis ! »</p></div>
-    <button class="sbtn gold" id="sShare" type="button">Partager mon score</button>
+    <div class="snico"><img src="${BOSSES[0].head}" alt=""><p>${won?"« Partage ton score et je t'offre un verre au Parvis ! »":"« Partage ton score, que tout le Parvis sache qui paie la tournée ! »"}</p></div>
+    <button class="sbtn gold" id="sShare" type="button">${won?"Partager mon score":"Partager ma honte"}</button>
     <button class="sbtn" id="sAgain" type="button">${won?"Rejouer":"Revanche"}</button><button class="sbtn" id="sBack" type="button">Retour au club</button>`,
-    m=>{m.querySelector("#sShare").onclick=e=>share(e.currentTarget,a,b,won);m.querySelector("#sAgain").onclick=()=>{$("#sModal").hidden=true;open()};m.querySelector("#sBack").onclick=close})},1800)}
+    m=>{m.querySelector("#sShare").onclick=e=>share(e.currentTarget,a,b,won);m.querySelector("#sAgain").onclick=()=>{ga("histoire_revanche",{resultat:issue(a,b)});$("#sModal").hidden=true;open()};m.querySelector("#sBack").onclick=()=>{ga("histoire_retour_club",{resultat:issue(a,b)});close()}})},1800)}
 async function share(btn,a,b,won){const url=location.origin+location.pathname;
-  const text=`${won?"J'ai battu Nico":"J'ai affronté Nico"} au Parvis : ${a} à ${b} au Yam's Club ! À ton tour 🎲`;
-  ga("histoire_partage",{gagne:won?"oui":"non",score:a});
-  try{if(navigator.share){await navigator.share({title:"Yam's Club",text,url});btn.textContent="Merci ! Ton verre t'attend";return}}catch(e){if(e&&e.name==="AbortError")return}
-  try{await navigator.clipboard.writeText(text+" "+url);btn.textContent="Copié ! Colle-le où tu veux"}catch(e){btn.textContent="Partage indisponible"}}
+  const res=issue(a,b),text=won?`J'ai battu Nico au Parvis : ${a} à ${b} au Yam's Club ! À ton tour 🎲`:`Nico m'a mis une raclée au Parvis : ${a} à ${b} au Yam's Club 🍺 Viens me venger 🎲`;
+  const sent=(methode,etat)=>ga("histoire_partage",{gagne:won?"oui":"non",resultat:res,score:a,methode,etat});
+  try{if(navigator.share){await navigator.share({title:"Yam's Club",text,url});sent("partage","envoye");btn.textContent=won?"Merci ! Ton verre t'attend":"Envoyé. Assume, maintenant";return}}
+  catch(e){if(e&&e.name==="AbortError"){sent("partage","annule");return}}
+  try{await navigator.clipboard.writeText(text+" "+url);sent("copie","envoye");btn.textContent="Copié ! Colle-le où tu veux"}catch(e){sent("copie","echec");btn.textContent="Partage indisponible"}}
 function modal(html,bind){const m=$("#sModal"),bx=$("#sBox");bx.innerHTML=html;m.hidden=false;if(bind)bind(bx);const f=bx.querySelector("button");if(f)f.focus()}
 function askQuit(){if(G.phase==="end"||G.phase==="vs"&&!G.throws&&G.turn===1&&!Object.keys(G.me).length){G.phase="off";clearTimeout(vsT);return close()}
   modal(`<h3 class="sark">Quitter ?</h3><p>Le combat contre Nico sera abandonné.</p>
   <button class="sbtn gold" id="sStay" type="button">Continuer le combat</button><button class="sbtn" id="sLeave" type="button">Quitter</button>`,
-  m=>{m.querySelector("#sStay").onclick=()=>{$("#sModal").hidden=true};m.querySelector("#sLeave").onclick=()=>{ga("histoire_abandon",{tour:G.turn});close()}})}
+  m=>{m.querySelector("#sStay").onclick=()=>{$("#sModal").hidden=true};m.querySelector("#sLeave").onclick=()=>{ga("histoire_abandon",{tour:G.turn,score:total(G.me),boss_score:total(G.bot),ecart:total(G.me)-total(G.bot),...stats()});close()}})}
 function gear(){modal(`<h3 class="sark">Réglages</h3>
   <label class="stog">Conseils de Nico<input type="checkbox" id="sTips" ${tipsOn()?"checked":""}></label>
   <label class="stog">Son des dés et bruitages<input type="checkbox" id="sSnd" ${soundOn()?"checked":""}></label>
