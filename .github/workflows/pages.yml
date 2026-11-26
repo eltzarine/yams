@@ -33,7 +33,21 @@ jobs:
         if: steps.source.outputs.build_type == 'workflow'
         run: |
           mkdir _site
-          cp -r index.html manifest.json sw.js qrcode.js jsqr.js webauthn.js icons dice logo-yams-club.webp piste.webp story nico og-club.jpg og-nico.jpg nico-gagne og-nico-gagne.jpg _site/
+          cp -r index.html manifest.json sw.js qrcode.js jsqr.js webauthn.js icons dice logo-yams-club.webp piste.webp des-chargement.webp story nico og-club.jpg og-nico.jpg nico-gagne og-nico-gagne.jpg _site/
+          # version du service worker gravée dans la page (diagnostic « Version affichée »)
+          v=$(sed -n 's/^const VERSION = "yams-\(v[0-9]*\)";.*/\1/p' sw.js)
+          [ -n "$v" ] || { echo "::error::VERSION introuvable dans sw.js"; exit 1; }
+          sed -i "s/__YAMS_PAGE_VERSION__/$v/" _site/index.html
+      - name: Tous les fichiers du service worker sont publiés
+        if: steps.source.outputs.build_type == 'workflow'
+        # un seul fichier manquant fait échouer l'installation de la nouvelle version sur les téléphones (bloqués sur l'ancienne, sans « Mettre à jour »)
+        run: |
+          manque=0
+          for f in $(sed -n '/^const SHELL/,/^];/p' sw.js | grep -o '"\./[^"]*"' | tr -d '"'); do
+            [ "$f" = "./" ] && continue
+            [ -e "_site/${f#./}" ] || { echo "::error::$f est dans sw.js mais n'est pas publié (ajoute-le à « Fichiers du site »)"; manque=1; }
+          done
+          exit $manque
       - uses: actions/upload-pages-artifact@v3
         if: steps.source.outputs.build_type == 'workflow'
         with: { path: _site }
