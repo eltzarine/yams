@@ -445,6 +445,11 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 @keyframes dout{0%{opacity:0;transform:translateY(-46px) scale(1.35) rotate(-30deg)}45%{opacity:1}100%{opacity:1;transform:none}}
 .splash .dload span{font:600 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-ink);opacity:.55;animation:ldpulse 1.4s ease-in-out infinite}
 @keyframes ldpulse{50%{opacity:.25}}
+/* barre de chargement (~1 cm), même couleur que « Tape 2 fois » ; laisse la place au message une fois à 100 % */
+.splash .dload.bar .track{width:62px;height:4px;border-radius:2px;background:rgba(244,239,227,.13);overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.splash .dload.bar b{display:block;height:100%;width:0;border-radius:2px;background:rgba(244,239,227,.42)}
+.splash .dload.bar.go b{width:90%;transition:width 4.5s cubic-bezier(.15,.65,.3,1)}
+.splash .dload.bar.full b{width:100%;transition:width .3s ease-out}
 .splash.loading :is(.postwrap,.feltmsg,.dscore,.dhud,.dsound,.play.enter,.foot,.ihelp){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 .splash.reveal :is(.postwrap,.feltmsg,.foot){animation:ldin .45s ease both}
 @keyframes ldin{from{opacity:0}}
@@ -739,7 +744,7 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
     <button type="button" class="updbar-btn" id="updateBtn">Mettre à jour</button>
   </div>
 </div>
-<div class="splash" id="splash"><!-- loader désactivé : pour le remettre, ajouter la classe « loading » ici et décommenter le bloc #dLoad ci-dessous -->
+<div class="splash loading" id="splash"><!-- « loading » : barre de chargement (#dLoad) ; l'ancien loader des 5 dés est gardé en commentaire ci-dessous -->
   <h1 class="logo"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
   <div class="piste" aria-hidden="true"></div>
   <!-- LOADER DÉSACTIVÉ (26 nov. 2026)
@@ -750,6 +755,11 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
       var d=document.querySelectorAll("#dLoad i");[150,650,1300,2150].forEach(function(ms,i){L.t.push(setTimeout(function(){if(!L.done&&d[i])d[i].classList.add("on")},ms))})})});
     setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.remove("loading")},14000)})()</script>
   FIN LOADER -->
+  <div class="dload bar" id="dLoad" aria-hidden="true"><div class="track"><b></b></div></div>
+  <script>/* barre de chargement : se remplit jusqu'à 90 % après le 1er affichage (Safari joue les animations avant de peindre l'écran),
+     les 10 derniers % quand le tapis 3D est prêt (endLoad) */
+  (function(){requestAnimationFrame(function(){requestAnimationFrame(function(){var l=document.getElementById("dLoad");if(l&&!l.classList.contains("full"))l.classList.add("go")})});
+    setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.remove("loading")},14000)})()</script>
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
@@ -2378,6 +2388,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   let ldEnded=false;const endLoad=()=>{const ld=document.getElementById("dLoad");if(ldEnded||!ld)return;ldEnded=true; /* rien à faire si le loader est désactivé (bloc #dLoad commenté) */
     const fin=()=>{sp.classList.remove("loading");sp.classList.add("reveal");setTimeout(()=>sp.classList.remove("reveal"),600)};
     if(!ld||matchMedia("(prefers-reduced-motion: reduce)").matches){if(ld)ld.remove();return fin()}
+    if(ld.classList.contains("bar")){ld.classList.add("full");setTimeout(()=>{ld.classList.add("off");fin();setTimeout(()=>ld.remove(),400)},380);return}
     const L=window.__yamsLoad;if(L){L.done=true;L.t.forEach(clearTimeout)}
     let k=0;ld.querySelectorAll("i").forEach(d=>{if(d.classList.contains("on"))return;d.style.setProperty("--d",k*110+"ms");d.classList.add("on");k++});
     setTimeout(()=>{ld.classList.add("off");fin();setTimeout(()=>ld.remove(),400)},k*110+800)};
