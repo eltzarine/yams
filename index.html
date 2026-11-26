@@ -440,12 +440,9 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .dload i:nth-child(3){background-position-x:50%;--r:-3deg;--y:4px}
 .splash .dload i:nth-child(4){background-position-x:75%;--r:9deg;--y:-2px}
 .splash .dload i:nth-child(5){background-position-x:100%;--r:-6deg;--y:5px}
-.splash .dload i{animation:dout .5s cubic-bezier(.25,1.5,.45,1) both paused}
-.splash.loading .dload i:nth-child(-n+4){animation-play-state:running}
-.splash .dload i:nth-child(1){animation-delay:.15s}.splash .dload i:nth-child(2){animation-delay:.65s}
-.splash .dload i:nth-child(3){animation-delay:1.3s}.splash .dload i:nth-child(4){animation-delay:2.15s}
-.splash .dload i.on{animation:dout .5s cubic-bezier(.25,1.5,.45,1) both running;animation-delay:var(--d,0s)}
-@keyframes dout{0%{opacity:0;transform:translateY(-46px) scale(1.35) rotate(calc(var(--r) - 30deg))}45%{opacity:1}100%{opacity:1;transform:translateY(var(--y)) rotate(var(--r))}}
+.splash .dload i.on{animation:dout .5s cubic-bezier(.25,1.5,.45,1) var(--d,0s) both}
+.splash .dload i{rotate:var(--r);translate:0 var(--y)}
+@keyframes dout{0%{opacity:0;transform:translateY(-46px) scale(1.35) rotate(-30deg)}45%{opacity:1}100%{opacity:1;transform:none}}
 .splash .dload span{font:600 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-ink);opacity:.55;animation:ldpulse 1.4s ease-in-out infinite}
 @keyframes ldpulse{50%{opacity:.25}}
 .splash.loading :is(.postwrap,.feltmsg,.dscore,.dhud,.dsound,.play.enter,.foot,.ihelp){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
@@ -746,7 +743,11 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
   <h1 class="logo"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
   <div class="piste" aria-hidden="true"></div>
   <div class="dload" id="dLoad" aria-hidden="true"><div class="row"><i></i><i></i><i></i><i></i><i></i></div><span>On sort les dés…</span></div>
-  <script>setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.remove("loading")},14000)</script>
+  <script>/* sortie des 4 premiers dés, lancée APRÈS le 1er affichage (Safari joue les animations avant de peindre l'écran) ; le 5e attend le tapis 3D */
+  (function(){var L=window.__yamsLoad={t:[],go:false};
+    requestAnimationFrame(function(){requestAnimationFrame(function(){if(L.done)return;L.go=true;
+      var d=document.querySelectorAll("#dLoad i");[150,650,1300,2150].forEach(function(ms,i){L.t.push(setTimeout(function(){if(!L.done&&d[i])d[i].classList.add("on")},ms))})})});
+    setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.remove("loading")},14000)})()</script>
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
@@ -2375,7 +2376,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   let ldEnded=false;const endLoad=()=>{const ld=document.getElementById("dLoad");if(ldEnded)return;ldEnded=true;
     const fin=()=>{sp.classList.remove("loading");sp.classList.add("reveal");setTimeout(()=>sp.classList.remove("reveal"),600)};
     if(!ld||matchMedia("(prefers-reduced-motion: reduce)").matches){if(ld)ld.remove();return fin()}
-    let k=0;ld.querySelectorAll("i").forEach(d=>{if(parseFloat(getComputedStyle(d).opacity)>0)return;d.style.setProperty("--d",k*110+"ms");d.classList.add("on");k++});
+    const L=window.__yamsLoad;if(L){L.done=true;L.t.forEach(clearTimeout)}
+    let k=0;ld.querySelectorAll("i").forEach(d=>{if(d.classList.contains("on"))return;d.style.setProperty("--d",k*110+"ms");d.classList.add("on");k++});
     setTimeout(()=>{ld.classList.add("off");fin();setTimeout(()=>ld.remove(),400)},k*110+800)};
   const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null);endLoad()};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return no3d();
