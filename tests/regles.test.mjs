@@ -85,5 +85,29 @@ await t("joueur rejoint avec expireAt",assertSucceeds(setDoc(doc(anon,"direct/K7
 await t("liste des joueurs d'une partie (hôte)",assertSucceeds(getDocs(collection(anon,"direct/K7P2Q/joueurs"))));
 await env.cleanup();
 }
+// ---------- Mode histoire : fiche du compte ----------
+{
+const env=await initializeTestEnvironment({projectId:"demo-regles4",firestore:{rules,host:"127.0.0.1",port:8085}});
+const anon=env.unauthenticatedContext().firestore();
+const tom=env.authenticatedContext("uT",{pseudo:"Tom"}).firestore();
+const lea=env.authenticatedContext("uL",{pseudo:"Léa"}).firestore();
+const anonyme=env.authenticatedContext("uA").firestore(); // identité anonyme du téléphone, sans pseudo
+const nico=(o={})=>({battu:true,record:212,parties:3,victoires:1,dernieres:[{id:"h1",d:"2026-11-26T18:00:00Z",s:212,n:180}],...o});
+const fiche=(o={},x={})=>({nico:nico(o),updatedAt:serverTimestamp(),...x});
+await t("compte crée sa fiche",assertSucceeds(setDoc(doc(tom,"histoire/uT"),fiche())));
+await t("compte lit sa fiche",assertSucceeds(getDoc(doc(tom,"histoire/uT"))));
+await t("compte met à jour sa fiche",assertSucceeds(setDoc(doc(tom,"histoire/uT"),fiche({parties:4,record:230}))));
+await t("autre compte ne lit pas",assertFails(getDoc(doc(lea,"histoire/uT"))));
+await t("autre compte n'écrit pas",assertFails(setDoc(doc(lea,"histoire/uT"),fiche())));
+await t("sans connexion refusé",assertFails(getDoc(doc(anon,"histoire/uT"))));
+await t("identité anonyme refusée",assertFails(setDoc(doc(anonyme,"histoire/uA"),fiche())));
+await t("record hors normes refusé",assertFails(setDoc(doc(tom,"histoire/uT"),fiche({record:5000}))));
+await t("plus de victoires que de parties refusé",assertFails(setDoc(doc(tom,"histoire/uT"),fiche({victoires:9,parties:2}))));
+await t("plus de 20 parties gardées refusé",assertFails(setDoc(doc(tom,"histoire/uT"),fiche({dernieres:Array(21).fill({id:"h",d:"x",s:1,n:2})}))));
+await t("champ en trop refusé",assertFails(setDoc(doc(tom,"histoire/uT"),fiche({},{x:1}))));
+await t("date imposée refusée",assertFails(setDoc(doc(tom,"histoire/uT"),fiche({},{updatedAt:Timestamp.fromMillis(0)}))));
+await t("compte efface sa fiche",assertSucceeds(deleteDoc(doc(tom,"histoire/uT"))));
+await env.cleanup();
+}
 console.log(`Règles : ${n - f}/${n}`);
 if (f) process.exit(1);

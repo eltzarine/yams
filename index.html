@@ -2962,6 +2962,8 @@ function accDelete(){
     b.onclick=async()=>{busy(b,true,"Suppression…");setErr(sh,"");
       try{const uid=Acc.user.uid;
         if(DB)await DB.collection("joueurs").doc(uid).delete().catch(()=>{});
+        if(DB)await DB.collection("histoire").doc(uid).delete().catch(()=>{});
+        try{localStorage.removeItem("yams_histoire_c_"+uid);localStorage.removeItem("yams_histoire_q_"+uid)}catch(e){}
         const r=await api("/account/delete",{},true);
         try{await fbAuth().signInWithCustomToken(r.token);await fbAuth().currentUser.delete()}catch(e){await fbAuth().signOut().catch(()=>{})}
         setPkHere(false);ev("compte_supprime");closeSheet();toast("Compte supprimé.")}

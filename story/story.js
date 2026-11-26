@@ -21,19 +21,59 @@ const ROWS=[["un","deux","trois","quatre","cinq","six"],["brelan","carre","full"
 const GEAR=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
 const XICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
 
+/* ---------- progression liée au compte : histoire/{uid} dans Firestore ----------
+   Fiche du compte : { nico:{battu,record,parties,victoires,dernieres:[{id,d,s,n}] (20 max)}, updatedAt }.
+   Le record compte aussi les défaites. La progression déjà sur le téléphone (yams_histoire, d'avant les comptes)
+   est donnée une seule fois, au premier compte qui se connecte ici (prog().owner = son uid), en gardant le meilleur.
+   Hors connexion : les combats finis attendent dans yams_histoire_q_<uid> et partent à la prochaine synchro. */
+const CKEY=u=>"yams_histoire_c_"+u,QKEY=u=>"yams_histoire_q_"+u;
+const rd=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k)||"null");return v==null?d:v}catch(e){return d}};
+const wr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const uid=()=>{try{return typeof meName==="function"&&meName()&&Acc.user?Acc.user.uid:null}catch(e){return null}};
+const blank=()=>({battu:false,record:0,parties:0,victoires:0,dernieres:[]});
+const clean=n=>{const b=blank();n=n&&typeof n==="object"?n:{};
+  return{battu:!!n.battu,record:Math.max(0,Math.min(1200,n.record|0)),parties:Math.max(0,n.parties|0),victoires:Math.max(0,n.victoires|0),dernieres:Array.isArray(n.dernieres)?n.dernieres.slice(0,20):b.dernieres}};
+/* ajoute des combats finis (les plus récents en tête), sans doublon */
+const addGames=(n,games)=>{games.forEach(g=>{if(n.dernieres.some(x=>x.id===g.id))return;n.parties++;if(g.s>g.n){n.victoires++;n.battu=true}
+  n.record=Math.max(n.record,g.s);n.dernieres.unshift(g)});n.dernieres=n.dernieres.slice(0,20);n.victoires=Math.min(n.victoires,n.parties);return n};
+/* ce que l'accueil affiche : la fiche du compte connecté, sinon la progression du téléphone si personne ne l'a encore prise */
+const view=()=>{const u=uid();if(u){const n=addGames(clean(rd(CKEY(u),null)),rd(QKEY(u),[]).slice().reverse());
+    const p=prog();if(!p.owner&&(p.nico==="win"||p.best)){n.battu=n.battu||p.nico==="win";n.record=Math.max(n.record,p.best|0)}return n}
+  const p=prog();return p.owner?blank():{...blank(),battu:p.nico==="win",record:p.best|0}};
+let syncing=null,synced=null;
+async function sync(){const u=uid();if(!u||typeof DB==="undefined"||!DB)return;if(syncing)return syncing;
+  syncing=(async()=>{const ref=DB.collection("histoire").doc(u),q=rd(QKEY(u),[]),p=prog(),claim=!p.owner&&(p.nico==="win"||p.best);
+    const snap=await ref.get({source:"server"});
+    const n=clean(snap.exists?(snap.data()||{}).nico:null),before=JSON.stringify(n);
+    if(claim){n.battu=n.battu||p.nico==="win";n.record=Math.max(n.record,p.best|0)}
+    addGames(n,q.slice().reverse());
+    if(JSON.stringify(n)!==before||!snap.exists)await ref.set({nico:n,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    wr(CKEY(u),n);
+    const left=rd(QKEY(u),[]).filter(g=>!q.some(x=>x.id===g.id));wr(QKEY(u),left);
+    if(claim){const p2=prog();p2.owner=u;saveProg(p2);ga("histoire_progression_rattachee")}
+    synced=u;paintBox();return true})().catch(()=>false).then(ok=>{syncing=null;
+    if(ok&&uid()===u&&rd(QKEY(u),[]).length)sync()}); /* un combat fini pendant l'envoi part juste après */
+  return syncing}
+/* combat fini : rangé dans la file du compte, puis envoyé */
+function record(a,b){const u=uid();if(!u)return;
+  const q=rd(QKEY(u),[]);q.push({id:"h"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),d:new Date().toISOString(),s:a|0,n:b|0});wr(QKEY(u),q.slice(-50));sync()}
+function paintBox(){const el=document.getElementById("storyBox");if(!el||!window.storyHTML)return;el.outerHTML=storyHTML();if(window.bindStory)bindStory()}
+window.addEventListener("online",()=>{if(uid())sync()});
+
 /* ---------- bloc sur l'accueil ---------- */
-window.storyHTML=()=>{const p=prog(),won=p.nico==="win",b=BOSSES[0];
+window.storyHTML=()=>{const v=view(),won=v.battu,b=BOSSES[0];
   return`<div class="storybox" id="storyBox"><img class="sb-sprite" src="${b.sprite}" alt="" aria-hidden="true">
   <small>Mode histoire · Chapitre 1</small><h2>${b.nom}</h2>
   <p>${won?`Nico est battu. Prochain adversaire : <b>${NEXT}</b>, bientôt.`:`Le patron du <b>Parvis</b> t'apprend à jouer. Bats-le pour gagner ta place au club.`}</p>
-  <button id="storyGo" type="button">${won?"Revanche":"Jouer l'histoire"}</button>${won?`<span class="sb-done">✓ Battu${p.best?" · record "+p.best:""}</span>`:""}</div>`};
+  <button id="storyGo" type="button">${won?"Revanche":"Jouer l'histoire"}</button>${won?`<span class="sb-done">✓ Battu${v.record?" · record "+v.record:""}</span>`:v.record?`<span class="sb-done">Record ${v.record}</span>`:""}</div>`};
 /* l'histoire se joue avec un compte : sans connexion, même parcours que « Me connecter », puis le combat s'ouvre */
 const needLogin=()=>{try{return ACC_ON&&typeof meName==="function"&&!meName()}catch(e){return false}};
 window.bindStory=()=>{const b=document.getElementById("storyGo");if(b)b.onclick=()=>{
   if(needLogin()&&typeof accTap==="function"){ga("histoire_connexion_demandee");if(window.loginThen)loginThen(()=>{if(!needLogin()){ga("histoire_connexion_ok");open()}});accTap();return}
   open()}};
 /* connexion / déconnexion pendant le combat : pastille à jour, et retour à l'accueil si on n'est plus connecté */
-window.storyAcct=()=>{if(!root||root.hidden)return;if(needLogin())return close();names()};
+window.storyAcct=()=>{const u=uid();if(u&&synced!==u)sync();else if(!u&&synced){synced=null;paintBox()}
+  if(!root||root.hidden)return;if(needLogin())return close();names()};
 
 /* ---------- écran de combat ---------- */
 let root=null,box=null,boxP=null;
@@ -377,7 +417,7 @@ async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.lo
 
 /* ---------- fin du combat ---------- */
 function end(){G.phase="end";paintHud();hud();hint("");say("");const a=total(G.me),b=total(G.bot),won=a>b,p=prog();
-  if(won){p.nico="win";p.best=Math.max(p.best||0,a);saveProg(p)}
+  if(uid())record(a,b);else if(won){p.nico="win";p.best=Math.max(p.best||0,a);saveProg(p)}
   ga("histoire_fin",{boss:"nico",gagne:won?"oui":"non",resultat:issue(a,b),score:a,boss_score:b,ecart:a-b,...stats()});
   ko(won?"Nico est battu":"Fin du combat",won?"K.O. !":a===b?"Égalité":"Perdu");if(won)sfx.ko();else sfx.heavy();
   mus.stop(.8);setTimeout(()=>{if(G.phase==="end")mus.play(won?"victoire":"defaite")},700);

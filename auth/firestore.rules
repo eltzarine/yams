@@ -124,6 +124,28 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
+    // Mode histoire : la fiche de progression d'un compte (boss battus, record, dernières parties).
+    // Lue et écrite seulement par son compte (connecté avec un pseudo validé par le mini-serveur).
+    match /histoire/{uid} {
+      function bossValide(n) {
+        return n is map
+          && n.keys().hasOnly(['battu', 'record', 'parties', 'victoires', 'dernieres'])
+          && n.battu is bool
+          && n.record is int && n.record >= 0 && n.record <= 1200
+          && n.parties is int && n.parties >= 0
+          && n.victoires is int && n.victoires >= 0 && n.victoires <= n.parties
+          && n.dernieres is list && n.dernieres.size() <= 20;
+      }
+      function monCompte() {
+        return request.auth != null && request.auth.uid == uid && request.auth.token.pseudo is string;
+      }
+      allow read: if monCompte();
+      allow create, update: if monCompte()
+        && request.resource.data.keys().hasOnly(['nico', 'updatedAt'])
+        && bossValide(request.resource.data.nico)
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if monCompte();
+    }
     // Tout le reste de la base est fermé
     match /{document=**} {
       allow read, write: if false;
