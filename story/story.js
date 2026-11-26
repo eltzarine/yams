@@ -71,7 +71,7 @@ function build(){
   </div>`;
   document.body.appendChild(root);
   $("#sQuit").onclick=askQuit;$("#sAcct").onclick=()=>{if(typeof accTap==="function")accTap()};$("#sGear").onclick=gear;
-  $("#sZone").addEventListener("click",tap);root.addEventListener("pointerdown",()=>{revive();audio();if(musicOn())ctx()},{passive:true});
+  $("#sZone").addEventListener("click",tap);["pointerdown","touchend","click"].forEach(ev=>root.addEventListener(ev,()=>{revive();audio();if(musicOn())ctx()},{passive:true}));
   $("#sGrid").addEventListener("click",e=>{const c=e.target.closest(".sc");if(c&&G.phase==="me")choose(c.dataset.k)});
   $("#sVs").addEventListener("click",()=>{if(G.phase==="vs"&&mus.want==="entree")mus.play("match",.6);skipVs()});
 }
@@ -201,16 +201,20 @@ function ctx(){
     mbus=actx.createGain();mbus.connect(actx.destination);
     noiseBuf=actx.createBuffer(1,actx.sampleRate*.6,actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
   if(actx.state!=="running")actx.resume().catch(()=>{});return actx}
-function revive(){if(!actx||actx.state==="running")return;const old=actx;old.resume().catch(()=>{});
+/* Safari iPhone : après être sorti de l'appli, le contexte peut se dire « running » tout en restant muet.
+   Au premier toucher après un retour, on le recrée donc systématiquement (les sons chargés sont réutilisés, la musique reprend où elle était). */
+let wasHidden=false;
+function hardReset(){const old=actx;try{old.close()}catch(e){}actx=null;mus.cur=null;roomIn=null;ctx();mus.resume()}
+function revive(){if(!actx)return;if(wasHidden){wasHidden=false;return hardReset()}if(actx.state==="running")return;const old=actx;old.resume().catch(()=>{});
   setTimeout(()=>{if(actx!==old||old.state==="running")return;try{old.close()}catch(e){}actx=null;mus.cur=null;ctx();mus.resume()},350)}
-document.addEventListener("visibilitychange",()=>{if(!actx)return;if(document.hidden){mus.pauseAt();actx.suspend().catch(()=>{})}else actx.resume().catch(()=>{})});
+document.addEventListener("visibilitychange",()=>{if(!actx)return;if(document.hidden){wasHidden=true;mus.pauseAt();actx.suspend().catch(()=>{})}else actx.resume().catch(()=>{})});
 
 /* ---------- musique : riff d'entrée, boucle de match, fin de match. Bouton « Musique » dans les réglages (clé yamsMusique). ---------- */
-let mbus=null;const MBUF={};
+let mbus=null,roomIn=null;const MBUF={};
 const mus={cur:null,want:null,pos:0,
   load(){const base=new URL(".",location.href).pathname;["entree","match","victoire","defaite"].forEach(n=>{if(MBUF[n]||MBUF[n]===0)return;MBUF[n]=0;
     fetch(base+`story/musique/${n}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>ctx().decodeAudioData(b,ok,ko))).then(x=>{MBUF[n]=x;if(mus.want===n&&!mus.cur)mus.play(n)}).catch(()=>{delete MBUF[n]})})},
-  vol:{entree:.6,match:.32,victoire:.6,defaite:.6},
+  vol:{entree:.42,match:.2,victoire:.42,defaite:.42},
   play(n,fadeIn){this.want=n;this.stop(.25,true);if(!musicOn()||root.hidden)return;const a=ctx(),b=MBUF[n];if(!a||!b)return this.load();
     const s=a.createBufferSource(),g=a.createGain();s.buffer=b;const t=a.currentTime,v=this.vol[n];
     g.gain.setValueAtTime(fadeIn?.0001:v,t);if(fadeIn)g.gain.exponentialRampToValueAtTime(v,t+fadeIn);
@@ -219,7 +223,7 @@ const mus={cur:null,want:null,pos:0,
     s.onended=()=>{if(this.cur&&this.cur.s===s){this.cur=null;if(n==="entree"&&this.want==="entree")this.play("match",1)}}},
   stop(fade,keepWant){const c=this.cur;if(!keepWant)this.want=null;if(!c)return;this.cur=null;const a=actx;if(!a)return;const t=a.currentTime;
     try{c.g.gain.cancelScheduledValues(t);c.g.gain.setValueAtTime(c.g.gain.value,t);c.g.gain.linearRampToValueAtTime(0,t+(fade||.2));c.s.stop(t+(fade||.2)+.02)}catch(e){}},
-  pauseAt(){const c=this.cur;if(c&&c.n==="match"&&actx)this.pos=actx.currentTime-c.t0},
+  pauseAt(){const c=this.cur;if(c&&c.n==="match"&&actx&&actx.state==="running")this.pos=actx.currentTime-c.t0},
   resume(){if(this.want==="match"&&!this.cur){this.pauseAt();this.play("match",.8)}}};
 const play=(list,vol,rate)=>{const a=audio();if(!a||!list.length)return false;const s=a.createBufferSource();s.buffer=list[Math.random()*list.length|0];
   s.playbackRate.value=rate||(.92+Math.random()*.16);const g=a.createGain();g.gain.value=vol;s.connect(g).connect(master);s.start(a.currentTime+Math.random()*.008);return true};
@@ -235,14 +239,15 @@ function hookImpacts(){const p=peek();if(hooked||!p||!p.scene)return;hooked=true
       const s=Math.hypot(o.x-q.x,o.y-q.y,o.z-q.z)/dt;if(q.s>1.2&&s<q.s*.55&&t-q.last>70){clack(q.s/9);q.last=t}
       Object.assign(q,{x:o.x,y:o.y,z:o.z,t,s})})})}
 /* ---------- ring de boxe : gant (avec un peu de salle), cloche, foule ---------- */
-let roomIn=null;function room(){const a=actx;if(roomIn&&roomIn.context===a)return roomIn;const i=a.createGain(),d=a.createDelay(),fb=a.createGain(),lp=a.createBiquadFilter();
+function room(){const a=actx;if(roomIn&&roomIn.context===a)return roomIn;const i=a.createGain(),d=a.createDelay(),fb=a.createGain(),lp=a.createBiquadFilter();
   d.delayTime.value=.09;fb.gain.value=.3;lp.type="lowpass";lp.frequency.value=2200;i.connect(master);i.connect(d);d.connect(lp).connect(fb).connect(d);lp.connect(master);return roomIn=i}
 function env(g,t,v,att,dec){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+att+dec)}
 function nz(at,o){const a=audio();if(!a||!noiseBuf)return;const t=a.currentTime+at,n=a.createBufferSource();n.buffer=noiseBuf;const f=a.createBiquadFilter();f.type=o.type;f.frequency.setValueAtTime(o.f,t);if(o.f2)f.frequency.exponentialRampToValueAtTime(o.f2,t+o.att+o.dec);f.Q.value=o.q||.9;
   const g=a.createGain();env(g,t,o.v,o.att,o.dec);n.loop=true;n.connect(f).connect(g).connect(o.out||master);n.start(t);n.stop(t+o.att+o.dec+.05)}
 function tn(at,o){const a=audio();if(!a)return;const t=a.currentTime+at,s=a.createOscillator();s.type="sine";s.frequency.setValueAtTime(o.f,t);if(o.f2)s.frequency.exponentialRampToValueAtTime(o.f2,t+o.att+o.dec);
   const g=a.createGain();env(g,t,o.v,o.att,o.dec);s.connect(g).connect(o.out||master);s.start(t);s.stop(t+o.att+o.dec+.05)}
-function glove(at,v){if(!audio())return;nz(at,{type:"lowpass",f:900,v,att:.002,dec:.07,out:room()});tn(at,{f:110,f2:50,v:v*1.3,att:.002,dec:.15,out:room()})}
+function glove(at,v){if(!audio())return;nz(at,{type:"highpass",f:2200,v:v*.7,att:.001,dec:.035,out:room()});nz(at,{type:"bandpass",f:1100,q:.8,v,att:.002,dec:.08,out:room()});
+  tn(at,{f:240,f2:90,v:v*1.1,att:.002,dec:.12,out:room()});tn(at,{f:110,f2:50,v:v*1.2,att:.002,dec:.15})}
 function bell(at,v){[1,2.76,5.4].forEach((m,i)=>tn(at,{f:880*m,v:v/(i+1.5),att:.002,dec:1.1-i*.3}))}
 function crowd(at,dur,v){nz(at,{type:"bandpass",f:600,f2:900,q:.5,v,att:dur*.5,dec:dur*.6})}
 function voice(n){if(audio())play(BUF[n],1,1)}
@@ -251,14 +256,16 @@ const sfx={
   medium:()=>{glove(0,.45);glove(.13,.45)},
   heavy:()=>{glove(0,.5);glove(.1,.5);bell(.22,.25)},
   super:()=>{[0,.12,.24].forEach(t=>glove(t,.5));bell(.36,.3);bell(.62,.3);crowd(.3,1.4,.35)},
+  tap:()=>glove(0,.32),
+  miss:()=>nz(0,{type:"bandpass",f:600,f2:2500,q:2,v:.25,att:.04,dec:.14}),
   bell1:()=>bell(0,.28),
   broken:()=>{const a=audio();if(!a)return;const t=a.currentTime,o=a.createOscillator();o.type="sine";o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(90,t+.25);
     const g=a.createGain();g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g).connect(master);o.start(t);o.stop(t+.3)},
   ko:()=>{bell(0,.32);bell(.3,.32);bell(.6,.32);crowd(.1,1.6,.4)}};
 /* bon coup : bruitage, tremblement et annonce selon la combinaison */
-function hit(k,p,mine){if(!p)return;let lvl=null;
+function hit(k,p,mine){if(!p){if(mine)sfx.miss();return}let lvl="tap";
   if(k==="yams")lvl="super";else if(k==="grande"||k==="carre"||k==="full")lvl="heavy";else if(k==="petite"||p>=25)lvl="medium";else if(p>=18)lvl="light";
-  if(!lvl)return;sfx[lvl]();
+  sfx[lvl]();if(lvl==="tap")return;
   if(lvl!=="light"){const sc=root.querySelector(".scr");sc.classList.remove("shake","shake2");void sc.offsetWidth;sc.classList.add(lvl==="super"?"shake2":"shake")}
   if(navigator.vibrate)navigator.vibrate(lvl==="super"?[30,40,30,40,80]:lvl==="heavy"?[30,40,60]:30);
   if(lvl==="super")setTimeout(()=>ko(mine?"Super combo":"Nico","Yam's !"),300);
@@ -280,7 +287,7 @@ async function myThrow(){if(G.busy||G.phase!=="me"||G.throws>=3&&!G.pending)retu
   if(r.broken){G.pending=ids;paintDice();grid();hud();hint("Tape 2 fois pour relancer");say("<b>Dé cassé !</b> Un dé est penché ou monté sur un autre : tape 2 fois pour relancer ce lancer.",0,true);return}
   if(G.pending)say("");G.pending=null;G.throws++;const v=r.v;
   const bt=best(G.me,v),win=new Set();
-  if(bt){pop(`+${bt.p} ${SAY[bt.k]}`);winIds(bt.k,win);setTimeout(()=>hit(bt.k,bt.p,true),250)}
+  if(bt){pop(`+${bt.p} ${SAY[bt.k]}`);winIds(bt.k,win);}
   paintDice(win);grid();hud();paintHud();
   if(G.throws>=3){hint("");say(G.turn===1?"Plus de lancer ! Touche une case en bas. La <b>dorée</b> rapporte le plus.":"Plus de lancer : choisis une case.")}
   else{hint("");
@@ -304,7 +311,7 @@ function choose(k){if(G.phase!=="me"||G.busy||!G.throws||G.pending||G.me[k]!=nul
   if(G.turn<=2&&bt&&bt.p>p&&!G.warned){G.warned=true;say(`Hé, le bleu ! <b>${SAY[bt.k]}</b> te rapporte ${bt.p}. Touche encore pour confirmer ${SAY[k]}.`);G.warnK=k;return}
   if(G.warned&&G.warnK!==k&&G.turn<=2&&bt&&bt.p>p){G.warnK=k;say(`<b>${SAY[bt.k]}</b> te rapporte ${bt.p}. Touche encore pour confirmer ${SAY[k]}.`);return}
   G.warned=false;G.warnK=null;
-  const hadPrime=upper(G.me)>=+ST.seuil;G.me[k]=p;pop(p?`+${p} ${SAY[k]}`:`${SAY[k]} rayé`);
+  const hadPrime=upper(G.me)>=+ST.seuil;G.me[k]=p;pop(p?`+${p} ${SAY[k]}`:`${SAY[k]} rayé`);hit(k,p,true); /* le coup part quand on inscrit sa case */
   if(!hadPrime&&upper(G.me)>=+ST.seuil)setTimeout(()=>{ko("Cases 1 à 6","Prime +"+ST.prime);sfx.heavy()},500);ga("histoire_case",{tour:G.turn,case:k,points:p});
   G.phase="wait";grid();paintHud();hud();
   say(p?(G.turn===1?"Pas mal ! À moi maintenant, regarde et apprends…":""):"Rayer une case, ça arrive. Choisis bien laquelle !",p?0:2200);

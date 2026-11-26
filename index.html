@@ -1245,7 +1245,8 @@ function soundOn(){try{return localStorage.getItem(SOUND_KEY)!=="0"}catch(e){ret
 let AC=null;
 function audioCtx(){if(!soundOn())return null;try{if(AC&&AC.state==="closed")AC=null;AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=="running")AC.resume().catch(()=>{});return AC}catch(e){return null}}
 /* retour dans l'appli : l'iPhone peut laisser le son « interrompu ». Au premier toucher, on le relance, sinon on le recrée. */
-document.addEventListener("pointerdown",()=>{if(!AC||AC.state==="running")return;const old=AC;old.resume().catch(()=>{});setTimeout(()=>{if(AC===old&&old.state!=="running"){try{old.close()}catch(e){}AC=null}},350)},{capture:true,passive:true});
+let acHidden=false;document.addEventListener("visibilitychange",()=>{if(document.hidden)acHidden=true});
+document.addEventListener("pointerdown",()=>{if(AC&&acHidden){acHidden=false;try{AC.close()}catch(e){}AC=null;return}if(!AC||AC.state==="running")return;const old=AC;old.resume().catch(()=>{});setTimeout(()=>{if(AC===old&&old.state!=="running"){try{old.close()}catch(e){}AC=null}},350)},{capture:true,passive:true});
 function tone(f,at,dur,type,vol){const a=audioCtx();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();
   o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
   o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}
