@@ -71,9 +71,9 @@ function build(){
   </div>`;
   document.body.appendChild(root);
   $("#sQuit").onclick=askQuit;$("#sAcct").onclick=()=>{if(typeof accTap==="function")accTap()};$("#sGear").onclick=gear;
-  $("#sZone").addEventListener("click",tap);root.addEventListener("pointerdown",()=>audio(),{passive:true});
+  $("#sZone").addEventListener("click",tap);root.addEventListener("pointerdown",()=>{revive();audio();if(musicOn())ctx()},{passive:true});
   $("#sGrid").addEventListener("click",e=>{const c=e.target.closest(".sc");if(c&&G.phase==="me")choose(c.dataset.k)});
-  $("#sVs").addEventListener("click",()=>skipVs());
+  $("#sVs").addEventListener("click",()=>{if(G.phase==="vs"&&mus.want==="entree")mus.play("match",.6);skipVs()});
 }
 
 function open(){
@@ -82,12 +82,13 @@ function open(){
   root.hidden=false;document.documentElement.classList.add("story-on");
   Object.assign(G,{phase:"vs",turn:1,throws:0,me:{},bot:{},busy:false,vals:[],tut:0,warned:false,warnK:null,pending:null,botLast:null,t0:Date.now(),rollMs:[],nBroken:0});G.locked.clear();G.broken.clear();
   paintHud();grid();say("");hint("");hud();
+  mus.pos=0;mus.load();mus.play("entree");
   vs();initDice();ga("histoire_debut",{boss:"nico"});
 }
 function names(){const n=me();$("#sAcct .an").textContent=n;$("#sAcct").setAttribute("aria-label","Mon compte : "+n);
   $("#sPfMe .ini").textContent=(n[0]||"?").toUpperCase();$("#sNmMe").textContent=n}
 function close(){
-  G.phase="off";root.hidden=true;document.documentElement.classList.remove("story-on");$("#sModal").hidden=true;
+  G.phase="off";mus.stop(.4);root.hidden=true;document.documentElement.classList.remove("story-on");$("#sModal").hidden=true;
   if(typeof render==="function")render(); /* rafraîchit le bloc histoire de l'accueil */
 }
 
@@ -180,15 +181,41 @@ const issue=(a,b)=>a>b?"gagne":a===b?"egalite":"perdu";
    Réglage partagé avec l'accueil (bouton haut-parleur, clé yamsSon). Respecte le mode silencieux de l'iPhone. */
 const SKEY="yamsSon";let actx=null,master=null,lastAny=0,noiseBuf=null;const BUF={felt:[],click:[]};
 const soundOn=()=>{try{return localStorage.getItem(SKEY)!=="0"}catch(e){return true}};
-function audio(){if(!soundOn())return null;
+const MKEY="yamsMusique";
+const musicOn=()=>{try{return localStorage.getItem(MKEY)!=="0"}catch(e){return true}};
+const audio=()=>soundOn()?ctx():null;
+/* contexte audio commun aux bruitages et à la musique. Au retour dans l'appli, l'iPhone peut le laisser « interrompu » :
+   on le relance quel que soit son état et, s'il refuse encore après un toucher, on le recrée (les sons déjà chargés sont réutilisés). */
+function ctx(){
   if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
     try{if(navigator.audioSession)navigator.audioSession.type="ambient"}catch(e){}
     actx=new AC();master=actx.createGain();master.gain.value=.85;master.connect(actx.destination);
     const base=new URL(".",location.href).pathname;
     const get=(list,name,n)=>{for(let i=1;i<=n;i++)fetch(base+`dice/sounds/${name}${i}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>actx.decodeAudioData(b,ok,ko))).then(x=>list.push(x)).catch(()=>{})};
-    get(BUF.felt,"surface_felt",7);get(BUF.click,"dicehit_plastic",5);
+    if(!BUF.felt.length){get(BUF.felt,"surface_felt",7);get(BUF.click,"dicehit_plastic",5)}
+    mbus=actx.createGain();mbus.connect(actx.destination);
     noiseBuf=actx.createBuffer(1,actx.sampleRate*.6,actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
-  if(actx.state==="suspended")actx.resume();return actx}
+  if(actx.state!=="running")actx.resume().catch(()=>{});return actx}
+function revive(){if(!actx||actx.state==="running")return;const old=actx;old.resume().catch(()=>{});
+  setTimeout(()=>{if(actx!==old||old.state==="running")return;try{old.close()}catch(e){}actx=null;mus.cur=null;ctx();mus.resume()},350)}
+document.addEventListener("visibilitychange",()=>{if(!actx)return;if(document.hidden){mus.pauseAt();actx.suspend().catch(()=>{})}else actx.resume().catch(()=>{})});
+
+/* ---------- musique : riff d'entrée, boucle de match, fin de match. Bouton « Musique » dans les réglages (clé yamsMusique). ---------- */
+let mbus=null;const MBUF={};
+const mus={cur:null,want:null,pos:0,
+  load(){const base=new URL(".",location.href).pathname;["entree","match","victoire","defaite"].forEach(n=>{if(MBUF[n]||MBUF[n]===0)return;MBUF[n]=0;
+    fetch(base+`story/musique/${n}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>ctx().decodeAudioData(b,ok,ko))).then(x=>{MBUF[n]=x;if(mus.want===n&&!mus.cur)mus.play(n)}).catch(()=>{delete MBUF[n]})})},
+  vol:{entree:.6,match:.32,victoire:.6,defaite:.6},
+  play(n,fadeIn){this.want=n;this.stop(.25,true);if(!musicOn()||root.hidden)return;const a=ctx(),b=MBUF[n];if(!a||!b)return this.load();
+    const s=a.createBufferSource(),g=a.createGain();s.buffer=b;const t=a.currentTime,v=this.vol[n];
+    g.gain.setValueAtTime(fadeIn?.0001:v,t);if(fadeIn)g.gain.exponentialRampToValueAtTime(v,t+fadeIn);
+    let off=0;if(n==="match"){s.loop=true;s.loopStart=1;s.loopEnd=31;off=1+(this.pos||0)%30}
+    s.connect(g).connect(mbus);s.start(t,off);this.cur={s,g,n,t0:t-(off-(n==="match"?1:0))};
+    s.onended=()=>{if(this.cur&&this.cur.s===s){this.cur=null;if(n==="entree"&&this.want==="entree")this.play("match",1)}}},
+  stop(fade,keepWant){const c=this.cur;if(!keepWant)this.want=null;if(!c)return;this.cur=null;const a=actx;if(!a)return;const t=a.currentTime;
+    try{c.g.gain.cancelScheduledValues(t);c.g.gain.setValueAtTime(c.g.gain.value,t);c.g.gain.linearRampToValueAtTime(0,t+(fade||.2));c.s.stop(t+(fade||.2)+.02)}catch(e){}},
+  pauseAt(){const c=this.cur;if(c&&c.n==="match"&&actx)this.pos=actx.currentTime-c.t0},
+  resume(){if(this.want==="match"&&!this.cur){this.pauseAt();this.play("match",.8)}}};
 const play=(list,vol,rate)=>{const a=audio();if(!a||!list.length)return false;const s=a.createBufferSource();s.buffer=list[Math.random()*list.length|0];
   s.playbackRate.value=rate||(.92+Math.random()*.16);const g=a.createGain();g.gain.value=vol;s.connect(g).connect(master);s.start(a.currentTime+Math.random()*.008);return true};
 const clack=v=>{const a=audio();if(!a)return;const now=a.currentTime;if(now-lastAny<.03)return;lastAny=now;play(BUF.felt,.25+.55*Math.max(.1,Math.min(1,v)))};
@@ -313,6 +340,7 @@ function end(){G.phase="end";paintHud();hud();hint("");say("");const a=total(G.m
   if(won){p.nico="win";p.best=Math.max(p.best||0,a);saveProg(p)}
   ga("histoire_fin",{boss:"nico",gagne:won?"oui":"non",resultat:issue(a,b),score:a,boss_score:b,ecart:a-b,...stats()});
   ko(won?"Nico est battu":"Fin du combat",won?"K.O. !":a===b?"Égalité":"Perdu");if(won)sfx.ko();else sfx.heavy();
+  mus.stop(.8);setTimeout(()=>{if(G.phase==="end")mus.play(won?"victoire":"defaite")},700);
   setTimeout(()=>{modal(`<h3 class="sark">${won?"Victoire !":a===b?"Égalité":"Perdu…"}</h3>
     <p>${won?"« Pas mal le bleu, t'as ta place au Parvis. » Prochain adversaire : <b>"+NEXT+"</b>, bientôt.":"« Reviens quand tu veux, le bleu. » Nico t'attend pour la revanche."}</p>
     <div class="sres"><div><small>${E(me())}</small>${a}</div><div><small>Nico</small>${b}</div></div>
@@ -335,10 +363,13 @@ function askQuit(){if(G.phase==="end"||G.phase==="vs"&&!G.throws&&G.turn===1&&!O
   m=>{m.querySelector("#sStay").onclick=()=>{$("#sModal").hidden=true};m.querySelector("#sLeave").onclick=()=>{ga("histoire_abandon",{tour:G.turn,score:total(G.me),boss_score:total(G.bot),ecart:total(G.me)-total(G.bot),...stats()});close()}})}
 function gear(){modal(`<h3 class="sark">Réglages</h3>
   <label class="stog">Conseils de Nico<input type="checkbox" id="sTips" ${tipsOn()?"checked":""}></label>
+  <label class="stog">Musique<input type="checkbox" id="sMus" ${musicOn()?"checked":""}></label>
   <label class="stog">Son des dés et bruitages<input type="checkbox" id="sSnd" ${soundOn()?"checked":""}></label>
   <ul class="srules"><li>13 tours chacun, 3 lancers maximum par tour.</li><li>Touche un dé pour le garder, tape 2 fois sur le tapis pour lancer.</li><li>Prime de ${ST.prime} si tu fais ${ST.seuil} ou plus sur les cases 1 à 6.</li><li>Full ${ST.fullFixe}, petite suite ${ST.petite}, grande suite ${ST.grande}, Yam's ${ST.yams}.</li></ul>
   <button class="sbtn gold" id="sOk" type="button">OK</button>`,
-  m=>{m.querySelector("#sSnd").onchange=e=>{try{localStorage.setItem(SKEY,e.target.checked?"1":"0")}catch(_){}if(e.target.checked)sfx.light()};m.querySelector("#sTips").onchange=e=>{try{localStorage.setItem(TKEY,e.target.checked?"1":"0")}catch(_){}if(!e.target.checked)say("")};m.querySelector("#sOk").onclick=()=>{$("#sModal").hidden=true}})}
+  m=>{m.querySelector("#sMus").onchange=e=>{try{localStorage.setItem(MKEY,e.target.checked?"1":"0")}catch(_){}
+    if(!e.target.checked){mus.pauseAt();mus.stop(.3)}else if(G.phase==="me"||G.phase==="bot"){mus.play("match",.8)}};
+    m.querySelector("#sSnd").onchange=e=>{try{localStorage.setItem(SKEY,e.target.checked?"1":"0")}catch(_){}if(e.target.checked)sfx.light()};m.querySelector("#sTips").onchange=e=>{try{localStorage.setItem(TKEY,e.target.checked?"1":"0")}catch(_){}if(!e.target.checked)say("")};m.querySelector("#sOk").onclick=()=>{$("#sModal").hidden=true}})}
 window.Story={open,close};
 })();
 /* l'accueil a pu s'afficher avant ce script : on le redessine pour faire apparaître le bloc histoire */

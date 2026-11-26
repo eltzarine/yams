@@ -1243,7 +1243,9 @@ const SND_OFF=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 const SOUND_KEY="yams-son";
 function soundOn(){try{return localStorage.getItem(SOUND_KEY)!=="0"}catch(e){return true}}
 let AC=null;
-function audioCtx(){if(!soundOn())return null;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC}catch(e){return null}}
+function audioCtx(){if(!soundOn())return null;try{if(AC&&AC.state==="closed")AC=null;AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=="running")AC.resume().catch(()=>{});return AC}catch(e){return null}}
+/* retour dans l'appli : l'iPhone peut laisser le son « interrompu ». Au premier toucher, on le relance, sinon on le recrée. */
+document.addEventListener("pointerdown",()=>{if(!AC||AC.state==="running")return;const old=AC;old.resume().catch(()=>{});setTimeout(()=>{if(AC===old&&old.state!=="running"){try{old.close()}catch(e){}AC=null}},350)},{capture:true,passive:true});
 function tone(f,at,dur,type,vol){const a=audioCtx();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();
   o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
   o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}
@@ -2353,8 +2355,12 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
       try{if(navigator.audioSession)navigator.audioSession.type="ambient"}catch(e){}
       actx=new AC();master=actx.createGain();master.gain.value=.8;
-      const lp=actx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;master.connect(lp).connect(actx.destination);loadSounds(actx)}
-    if(actx.state==="suspended")actx.resume();return actx};
+      const lp=actx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;master.connect(lp).connect(actx.destination);if(!BUF.felt.length)loadSounds(actx)}
+    if(actx.state!=="running")actx.resume().catch(()=>{});return actx};
+  /* même correction que plus haut pour les dés de l'accueil : relance au toucher, recréation si l'iPhone refuse */
+  document.addEventListener("pointerdown",()=>{if(!actx||actx.state==="running")return;const old=actx;old.resume().catch(()=>{});
+    setTimeout(()=>{if(actx===old&&old.state!=="running"){try{old.close()}catch(e){}actx=null}},350)},{capture:true,passive:true});
+  document.addEventListener("visibilitychange",()=>{if(actx&&!document.hidden)actx.resume().catch(()=>{})});
   const env=(g,t,peak,dur)=>{g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+.006);g.gain.exponentialRampToValueAtTime(0.0001,t+dur)};
   const play=(list,vol,rate)=>{const a=audio();if(!a||!list.length)return false;const s=a.createBufferSource();s.buffer=list[Math.random()*list.length|0];
     s.playbackRate.value=rate||(.92+Math.random()*.16);const g=a.createGain();g.gain.value=vol;s.connect(g).connect(master);s.start(a.currentTime+Math.random()*.008);return true};
