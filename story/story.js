@@ -332,7 +332,7 @@ function botPick(sc,v){let bk=null,bv=-1;ALL.forEach(k=>{if(sc[k]!=null)return;l
     const u=UPPER.find(x=>x[0]===k);let s=p;if(u)s=p+(counts(v)[u[2]]>=3?8:0)-u[2];if(k==="chance")s=p-14;if(s>bv){bv=s;bk=k}});
   return bk||SACRIFICE.find(k=>sc[k]==null)}
 async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.locked.clear();G.botLast=null;paintHud();grid();hint("");
-  ko(G.turn===1?"Tour de Nico":"Nico","Ma main !");await wait(1200);if(G.phase!=="bot")return;
+  ko("Round "+G.turn,"À Nico !");await wait(1200);if(G.phase!=="bot")return;
   if(G.turn===1)say("Je regarde ce qui sort, je garde le meilleur et je relance le reste.",3000);
   let ids=allIds().length===5?allIds():[0,1,2,3,4];
   for(let n=0;n<3;n++){paintDice();let r=await toss(ids);if(!r||G.phase!=="bot")return;
