@@ -149,7 +149,8 @@ const tint=(d,kind)=>{const b=d.mesh.instancedBuffers;if(!b||!b.customColor)retu
   const c=new b.customColor.constructor(parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255);c.__k=kind;b.customColor=c};
 let rq=0;
 function paintDice(win){const p=peek();if(!p)return;live().forEach(d=>{const id=d.config.rollId;tint(d,G.broken.has(id)?"ko":G.locked.has(id)?"on":win&&win.has(id)?"win":"base")});
-  cancelAnimationFrame(rq);let n=0;const f=()=>{p.scene.render();if(++n<24)rq=requestAnimationFrame(f)};f()}
+  cancelAnimationFrame(rq);if(G.busy)return; /* pendant un lancer, dice-box dessine déjà : pas de second rendu */
+  let n=0;const f=()=>{if(G.busy)return;p.scene.render();if(++n<24)rq=requestAnimationFrame(f)};f()}
 function initDice(){
   if(boxP)return boxP;
   let gl=false;try{const c=document.createElement("canvas");gl=!!(c.getContext("webgl2")||c.getContext("webgl"))}catch(e){}
@@ -163,7 +164,7 @@ function initDice(){
 function noDice(){const z=$("#sZone");if(z.querySelector(".snod3"))return;const d=document.createElement("div");d.className="snod3";
   d.textContent="Le mode histoire a besoin des dés 3D, indisponibles sur cet appareil.";z.appendChild(d)}
 /* lance les dés donnés (rollId) et renvoie les 5 valeurs */
-async function toss(ids){const b=await initDice();if(!b)return null;G.busy=true;G.broken.clear();rattle();hookImpacts();
+async function toss(ids){const b=await initDice();if(!b)return null;G.busy=true;cancelAnimationFrame(rq);G.broken.clear();rattle();hookImpacts();
   try{const rs=b.getRollResults()[0];
     if(rs&&rs.rolls.length===5)await b.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true});else await b.roll("5dpip");
     live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))G.broken.add(d.config.rollId)});
