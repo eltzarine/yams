@@ -2309,7 +2309,16 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     else{const[nom,txt]=DEFIS[prog.n];post.innerHTML=`<small>Défi ${prog.n+1}/20</small><b>${nom}</b> ${txt}`}
     if(anim){void post.offsetWidth;post.classList.add("new")}};
   paintPost();if(prog.n>=1)unlock(false);
-  const no3d=()=>{sp.classList.remove("d3");unlock(false)};
+  /* UN SEUL tapis 3D pour toute l'appli : le mode histoire l'emprunte (take) puis le rend (give) au lieu d'en créer un second.
+     Le tour en cours de l'accueil repart de zéro au retour. */
+  let boxOk;const boxReady=new Promise(r=>boxOk=r);
+  window.yamsDice={ready:()=>boxReady,peek:()=>worldPeek(),
+    async take(el){const b=await boxReady;if(!b)return null;while(busy)await new Promise(r=>setTimeout(r,100));worldPeek();suspended=true;
+      clearTimeout(tapT);clearTimeout(hudT);locked.clear();broken.clear();win.clear();pending=null;done=false;throws=0;lastTap=0;
+      const se=document.querySelector(".dscore");if(se)se.classList.remove("on","ok");
+      try{b.clear()}catch(e){}el.prepend(b.canvas);dispatchEvent(new Event("resize"));return b},
+    give(){if(!box||!suspended)return;try{box.clear()}catch(e){}zone.prepend(box.canvas);suspended=false;dispatchEvent(new Event("resize"));try{draw()}catch(e){}}};
+  const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null)};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return no3d();
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return no3d()}catch(e){return no3d()}
   const safety=setTimeout(()=>{if(!box)no3d()},12000); /* réseau lent : on ne bloque pas l'entrée */
@@ -2324,7 +2333,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")sendLeave()});
   const hud=document.createElement("div");hud.className="dhud";hud.setAttribute("aria-live","polite");
   /* le monde 3D de CE tapis (le combat a le sien) : on le retrouve par son canvas */
-  let myWorld=null;const peek=()=>{if(!myWorld)myWorld=(globalThis.__yamsWorlds||[]).find(w=>{const c=w.yamsPeek().canvas;return c&&c.closest&&c.closest("#dice3d")})||null;const w=myWorld||(!globalThis.__yamsWorlds&&globalThis.__yamsWorld);return w&&w.yamsPeek()}; /* repli : ancien fichier de dés encore en cache */
+  /* le monde 3D du tapis (retrouvé par son canvas). Pendant un combat, le tapis est prêté au combat : l'accueil ne le touche plus. */
+  let myWorld=null,suspended=false;const worldPeek=()=>{if(!myWorld)myWorld=(globalThis.__yamsWorlds||[]).find(w=>{const c=w.yamsPeek().canvas;return c&&c.closest&&c.closest("#dice3d")})||null;const w=myWorld||(!globalThis.__yamsWorlds&&globalThis.__yamsWorld);return w&&w.yamsPeek()}; /* repli : ancien fichier de dés encore en cache */
+  const peek=()=>suspended?null:worldPeek();
   const rolls=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls:[]};
   const allIds=()=>rolls().map(x=>x.rollId);
   const live=()=>{const p=peek();return p?Object.values(p.dice).filter(d=>d.mesh&&d.mesh.rotationQuaternion&&d.config&&d.config.rollId!=null):[]};
@@ -2385,7 +2396,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   /* chocs repérés en suivant chaque dé : grosse perte de vitesse d'une mise à jour à l'autre = il a tapé quelque chose */
   const track={};let hooked=false;
   const hookImpacts=()=>{const p=peek();if(hooked||!p||!p.scene)return;hooked=true;
-    p.scene.onAfterRenderObservable.add(()=>{if(!soundOn())return;const t=performance.now();
+    p.scene.onAfterRenderObservable.add(()=>{if(!soundOn()||suspended)return;const t=performance.now();
       Object.values(p.dice).forEach(d=>{if(!d.mesh||!d.config)return;const id=d.config.rollId,o=d.mesh.position,q=track[id];
         if(o.y<-50){delete track[id];return}
         if(q&&q.x===o.x&&q.y===o.y&&q.z===o.z)return; /* pas de nouvelle position de la physique sur cette image */
@@ -2472,12 +2483,12 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
       /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
-    await box.init();clearTimeout(safety);if(!sp.isConnected)return;
+    await box.init();clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);
     sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();audio(); /* prépare les sons (chargés en avance, joués au 1er lancer) */
     zone.addEventListener("click",tap);
     let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
     /* pas de box.clear() à la fermeture : vider pendant un lancer fait planter dice-box ; le rendu s'arrête seul quand les dés sont posés */
-  }).catch(e=>{console.warn("dés 3D indisponibles",e);clearTimeout(safety);hud.remove();no3d()});
+  }).catch(e=>{console.warn("dés 3D indisponibles",e);clearTimeout(safety);hud.remove();no3d();boxOk(null)});
 })();
 /* bouton « Installer l'appli » sur l'écran d'accueil */
 (()=>{const b=document.getElementById("btnInstall"),h=document.getElementById("ihelp");if(!b||!h)return;

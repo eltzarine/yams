@@ -90,7 +90,9 @@ function open(){
 function names(){const n=me();$("#sAcct .an").textContent=n;$("#sAcct").setAttribute("aria-label","Mon compte : "+n);
   $("#sPfMe .ini").textContent=(n[0]||"?").toUpperCase();$("#sNmMe").textContent=n}
 function close(){
-  G.phase="off";mus.stop(.4);root.hidden=true;document.documentElement.classList.remove("story-on");$("#sModal").hidden=true;
+  G.phase="off";mus.stop(.4);root.hidden=true;
+  if(shared){const f=inflight;shareQ=shareQ.then(()=>f).then(()=>window.yamsDice.give());shared=false;box=null;boxP=null} /* rend le tapis à l'accueil une fois le lancer en cours fini */
+document.documentElement.classList.remove("story-on");$("#sModal").hidden=true;
   if(typeof render==="function")render(); /* rafraîchit le bloc histoire de l'accueil */
 }
 
@@ -136,7 +138,7 @@ function grid(){const isBot=G.phase==="bot",sc=isBot?G.bot:G.me,v=G.vals,can=!is
 
 /* ---------- dés 3D (même moteur et mêmes réglages que l'accueil) ---------- */
 /* le monde 3D du tapis du combat (l'accueil a le sien) : on le retrouve par son canvas */
-let myWorld=null;const peek=()=>{if(!myWorld)myWorld=(globalThis.__yamsWorlds||[]).find(w=>{const c=w.yamsPeek().canvas;return c&&c.closest&&c.closest("#sdice")})||null;const w=myWorld||(!globalThis.__yamsWorlds&&globalThis.__yamsWorld);return w&&w.yamsPeek()}; /* repli : ancien fichier de dés encore en cache */
+let myWorld=null,shared=false,shareQ=Promise.resolve();const peek=()=>{if(shared)return window.yamsDice.peek();if(!myWorld)myWorld=(globalThis.__yamsWorlds||[]).find(w=>{const c=w.yamsPeek().canvas;return c&&c.closest&&c.closest("#sdice")})||null;const w=myWorld||(!globalThis.__yamsWorlds&&globalThis.__yamsWorld);return w&&w.yamsPeek()}; /* repli : ancien fichier de dés encore en cache */
 const rolls=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls:[]};
 const allIds=()=>rolls().map(x=>x.rollId);
 const live=()=>{const p=peek();return p?Object.values(p.dice).filter(d=>d.mesh&&d.mesh.rotationQuaternion&&d.config&&d.config.rollId!=null):[]};
@@ -159,8 +161,15 @@ let rq=0;
 function paintDice(win){const p=peek();if(!p)return;live().forEach(d=>{const id=d.config.rollId;tint(d,G.broken.has(id)?"ko":G.locked.has(id)?"on":win&&win.has(id)?"win":"base")});
   cancelAnimationFrame(rq);if(G.busy)return; /* pendant un lancer, dice-box dessine déjà : pas de second rendu */
   let n=0;const f=()=>{if(G.busy)return;p.scene.render();if(++n<24)rq=requestAnimationFrame(f)};f()}
+/* le combat emprunte le tapis 3D de l'accueil (un seul moteur 3D pour toute l'appli) ; tapis à lui seulement si l'accueil n'en a pas */
 function initDice(){
   if(boxP)return boxP;
+  if(window.yamsDice)return boxP=(shareQ=shareQ.then(()=>window.yamsDice.take($("#sdice")))).then(b=>{
+    if(!b){boxP=null;return ownDice()}
+    if(G.phase==="off"){window.yamsDice.give();boxP=null;return null} /* combat déjà quitté */
+    shared=true;box=b;return b});
+  return ownDice()}
+function ownDice(){
   let gl=false;try{const c=document.createElement("canvas");gl=!!(c.getContext("webgl2")||c.getContext("webgl"))}catch(e){}
   if(!gl){noDice();return boxP=Promise.resolve(null)}
   const base=new URL(".",location.href);
