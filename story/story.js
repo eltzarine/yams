@@ -92,14 +92,17 @@ function close(){
   if(typeof render==="function")render(); /* rafraîchit le bloc histoire de l'accueil */
 }
 
-/* ---------- écran VS puis « À toi ! » ---------- */
+/* ---------- écran VS (calé sur le riff d'entrée de 5,2 s : VS à 3,35 s, fin à 4,9 s), puis « Ready ? Fight ! », puis « À toi ! » ---------- */
 let vsT=0;
 function vs(){const b=BOSSES[0],n=me(),v=$("#sVs");
   v.innerHTML=`<div class="f"><div class="big"><div class="ini">${E((n[0]||"?").toUpperCase())}</div></div><b class="sark">${E(n)}</b><small>Le bleu</small></div>
   <b class="sark">VS</b>
   <div class="f"><small>${b.lieu}</small><img class="sprite" src="${b.sprite}" alt="${b.nom}"><b class="sark">${b.nom}</b><small>${b.titre}</small></div>`;
-  v.classList.remove("off");clearTimeout(vsT);vsT=setTimeout(skipVs,2800)}
-function skipVs(){if(G.phase!=="vs")return;clearTimeout(vsT);$("#sVs").classList.add("off");startMyTurn()}
+  v.classList.remove("off");clearTimeout(vsT);vsT=setTimeout(skipVs,4900)}
+function skipVs(){if(G.phase!=="vs")return;clearTimeout(vsT);$("#sVs").classList.add("off");G.phase="ready";
+  ko("Round 1","Ready ?");voice("ready");
+  vsT=setTimeout(()=>{if(G.phase!=="ready")return;ko(BOSSES[0].nom+" vs "+me(),"Fight !");voice("fight");sfx.bell1();
+    vsT=setTimeout(()=>{if(G.phase==="ready")startMyTurn()},1000)},1100)}
 function ko(small,big){const k=$("#sKo");k.innerHTML=`<div><small>${small}</small><b class="sark">${big}</b></div>`;k.classList.remove("go");void k.offsetWidth;k.classList.add("go")}
 
 /* ---------- textes ---------- */
@@ -179,7 +182,7 @@ const issue=(a,b)=>a>b?"gagne":a===b?"egalite":"perdu";
 
 /* ---------- sons : vrais bruits de dés (mêmes fichiers que l'accueil) + coups façon Street Fighter fabriqués avec Web Audio ----------
    Réglage partagé avec l'accueil (bouton haut-parleur, clé yamsSon). Respecte le mode silencieux de l'iPhone. */
-const SKEY="yamsSon";let actx=null,master=null,lastAny=0,noiseBuf=null;const BUF={felt:[],click:[]};
+const SKEY="yamsSon";let actx=null,master=null,lastAny=0,noiseBuf=null;const BUF={felt:[],click:[],ready:[],fight:[]};
 const soundOn=()=>{try{return localStorage.getItem(SKEY)!=="0"}catch(e){return true}};
 const MKEY="yamsMusique";
 const musicOn=()=>{try{return localStorage.getItem(MKEY)!=="0"}catch(e){return true}};
@@ -193,6 +196,7 @@ function ctx(){
     const base=new URL(".",location.href).pathname;
     const get=(list,name,n)=>{for(let i=1;i<=n;i++)fetch(base+`dice/sounds/${name}${i}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>actx.decodeAudioData(b,ok,ko))).then(x=>list.push(x)).catch(()=>{})};
     if(!BUF.felt.length){get(BUF.felt,"surface_felt",7);get(BUF.click,"dicehit_plastic",5)}
+    ["ready","fight"].forEach(n=>{if(!BUF[n].length)fetch(base+`story/voix/${n}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>actx.decodeAudioData(b,ok,ko))).then(x=>BUF[n].push(x)).catch(()=>{})});
     mbus=actx.createGain();mbus.connect(actx.destination);
     noiseBuf=actx.createBuffer(1,actx.sampleRate*.6,actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
   if(actx.state!=="running")actx.resume().catch(()=>{});return actx}
@@ -229,26 +233,27 @@ function hookImpacts(){const p=peek();if(hooked||!p||!p.scene)return;hooked=true
       const dt=(t-q.t)/1000;if(dt<=0||dt>.3){Object.assign(q,{x:o.x,y:o.y,z:o.z,t,s:0});return}
       const s=Math.hypot(o.x-q.x,o.y-q.y,o.z-q.z)/dt;if(q.s>1.2&&s<q.s*.55&&t-q.last>70){clack(q.s/9);q.last=t}
       Object.assign(q,{x:o.x,y:o.y,z:o.z,t,s})})})}
-/* coup de poing : souffle (bruit filtré) + choc sourd qui descend */
-function punch(at,vol,low){const a=audio();if(!a||!noiseBuf)return;const t=a.currentTime+(at||0);
-  const n=a.createBufferSource();n.buffer=noiseBuf;const bp=a.createBiquadFilter();bp.type="bandpass";bp.frequency.value=low?700:1400;bp.Q.value=.9;
-  const gn=a.createGain();gn.gain.setValueAtTime(vol,t);gn.gain.exponentialRampToValueAtTime(.001,t+.09);n.connect(bp).connect(gn).connect(master);n.start(t);n.stop(t+.12);
-  const o=a.createOscillator();o.type="sine";o.frequency.setValueAtTime(low?120:170,t);o.frequency.exponentialRampToValueAtTime(40,t+.16);
-  const go=a.createGain();go.gain.setValueAtTime(vol*1.4,t);go.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(go).connect(master);o.start(t);o.stop(t+.2)}
-function boom(at,vol){const a=audio();if(!a||!noiseBuf)return;const t=a.currentTime+(at||0);
-  const n=a.createBufferSource();n.buffer=noiseBuf;const lp=a.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(120,t+.5);
-  const g=a.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+.55);n.connect(lp).connect(g).connect(master);n.start(t);n.stop(t+.6);
-  const o=a.createOscillator();o.type="sine";o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(30,t+.5);const go=a.createGain();go.gain.setValueAtTime(vol*1.6,t);go.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(go).connect(master);o.start(t);o.stop(t+.55)}
-function riser(at,dur){const a=audio();if(!a)return;const t=a.currentTime+(at||0),o=a.createOscillator();o.type="square";o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(1300,t+dur);
-  const g=a.createGain();g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.06,t+dur*.8);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(master);o.start(t);o.stop(t+dur+.02)}
+/* ---------- ring de boxe : gant (avec un peu de salle), cloche, foule ---------- */
+let roomIn=null;function room(){const a=actx;if(roomIn&&roomIn.context===a)return roomIn;const i=a.createGain(),d=a.createDelay(),fb=a.createGain(),lp=a.createBiquadFilter();
+  d.delayTime.value=.09;fb.gain.value=.3;lp.type="lowpass";lp.frequency.value=2200;i.connect(master);i.connect(d);d.connect(lp).connect(fb).connect(d);lp.connect(master);return roomIn=i}
+function env(g,t,v,att,dec){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+att+dec)}
+function nz(at,o){const a=audio();if(!a||!noiseBuf)return;const t=a.currentTime+at,n=a.createBufferSource();n.buffer=noiseBuf;const f=a.createBiquadFilter();f.type=o.type;f.frequency.setValueAtTime(o.f,t);if(o.f2)f.frequency.exponentialRampToValueAtTime(o.f2,t+o.att+o.dec);f.Q.value=o.q||.9;
+  const g=a.createGain();env(g,t,o.v,o.att,o.dec);n.loop=true;n.connect(f).connect(g).connect(o.out||master);n.start(t);n.stop(t+o.att+o.dec+.05)}
+function tn(at,o){const a=audio();if(!a)return;const t=a.currentTime+at,s=a.createOscillator();s.type="sine";s.frequency.setValueAtTime(o.f,t);if(o.f2)s.frequency.exponentialRampToValueAtTime(o.f2,t+o.att+o.dec);
+  const g=a.createGain();env(g,t,o.v,o.att,o.dec);s.connect(g).connect(o.out||master);s.start(t);s.stop(t+o.att+o.dec+.05)}
+function glove(at,v){if(!audio())return;nz(at,{type:"lowpass",f:900,v,att:.002,dec:.07,out:room()});tn(at,{f:110,f2:50,v:v*1.3,att:.002,dec:.15,out:room()})}
+function bell(at,v){[1,2.76,5.4].forEach((m,i)=>tn(at,{f:880*m,v:v/(i+1.5),att:.002,dec:1.1-i*.3}))}
+function crowd(at,dur,v){nz(at,{type:"bandpass",f:600,f2:900,q:.5,v,att:dur*.5,dec:dur*.6})}
+function voice(n){if(audio())play(BUF[n],1,1)}
 const sfx={
-  light:()=>punch(0,.35),
-  medium:()=>{punch(0,.45);punch(.11,.4,true)},
-  heavy:()=>{punch(0,.5);punch(.09,.45);boom(.18,.5)},
-  super:()=>{riser(0,.45);[.45,.53,.61].forEach(t=>punch(t,.5));boom(.72,.7)},
+  light:()=>glove(0,.45),
+  medium:()=>{glove(0,.45);glove(.13,.45)},
+  heavy:()=>{glove(0,.5);glove(.1,.5);bell(.22,.25)},
+  super:()=>{[0,.12,.24].forEach(t=>glove(t,.5));bell(.36,.3);bell(.62,.3);crowd(.3,1.4,.35)},
+  bell1:()=>bell(0,.28),
   broken:()=>{const a=audio();if(!a)return;const t=a.currentTime,o=a.createOscillator();o.type="sine";o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(90,t+.25);
     const g=a.createGain();g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g).connect(master);o.start(t);o.stop(t+.3)},
-  ko:()=>{boom(0,.8);punch(.05,.5,true);boom(.35,.5)}};
+  ko:()=>{bell(0,.32);bell(.3,.32);bell(.6,.32);crowd(.1,1.6,.4)}};
 /* bon coup : bruitage, tremblement et annonce selon la combinaison */
 function hit(k,p,mine){if(!p)return;let lvl=null;
   if(k==="yams")lvl="super";else if(k==="grande"||k==="carre"||k==="full")lvl="heavy";else if(k==="petite"||p>=25)lvl="medium";else if(p>=18)lvl="light";
@@ -357,7 +362,7 @@ async function share(btn,a,b,won){const app=location.origin+location.pathname.re
   catch(e){if(e&&e.name==="AbortError"){sent("partage","annule");return}}
   try{await navigator.clipboard.writeText(text+" "+url);sent("copie","envoye");btn.textContent="Copié ! Colle-le où tu veux"}catch(e){sent("copie","echec");btn.textContent="Partage indisponible"}}
 function modal(html,bind){const m=$("#sModal"),bx=$("#sBox");bx.innerHTML=html;m.hidden=false;if(bind)bind(bx);const f=bx.querySelector("button");if(f)f.focus()}
-function askQuit(){if(G.phase==="end"||G.phase==="vs"&&!G.throws&&G.turn===1&&!Object.keys(G.me).length){G.phase="off";clearTimeout(vsT);return close()}
+function askQuit(){if(G.phase==="end"||(G.phase==="vs"||G.phase==="ready")&&!G.throws&&G.turn===1&&!Object.keys(G.me).length){G.phase="off";clearTimeout(vsT);return close()}
   modal(`<h3 class="sark">Quitter ?</h3><p>Le combat contre Nico sera abandonné.</p>
   <button class="sbtn gold" id="sStay" type="button">Continuer le combat</button><button class="sbtn" id="sLeave" type="button">Quitter</button>`,
   m=>{m.querySelector("#sStay").onclick=()=>{$("#sModal").hidden=true};m.querySelector("#sLeave").onclick=()=>{ga("histoire_abandon",{tour:G.turn,score:total(G.me),boss_score:total(G.bot),ecart:total(G.me)-total(G.bot),...stats()});close()}})}
