@@ -389,9 +389,9 @@ function end(){G.phase="end";paintHud();hud();hint("");say("");const a=total(G.m
     <button class="sbtn" id="sAgain" type="button">${won?"Rejouer":"Revanche"}</button><button class="sbtn" id="sBack" type="button">Retour au club</button>`,
     m=>{m.querySelector("#sShare").onclick=e=>share(e.currentTarget,a,b,won);m.querySelector("#sAgain").onclick=()=>{ga("histoire_revanche",{resultat:issue(a,b)});$("#sModal").hidden=true;open()};m.querySelector("#sBack").onclick=()=>{ga("histoire_retour_club",{resultat:issue(a,b)});close()}})},1800)}
 async function share(btn,a,b,won){const app=location.origin+location.pathname.replace(/[^/]*$/,"");
-  /* victoire : lien vers la page « J'ai battu Nico » (aperçu dédié dans les messageries) ; défaite : accueil, suivi par campagne */
-  const url=won?app+"nico/":app+"?utm_source=partage&utm_medium=social&utm_campaign=defaite_nico";
-  const res=issue(a,b),text=won?`J'ai battu Nico au Parvis : ${a} à ${b} au Yam's Club ! À ton tour 🎲`:`Nico m'a mis une raclée au Parvis : ${a} à ${b} au Yam's Club 🍺 Viens me venger 🎲`;
+  /* victoire : page « J'ai battu Nico », défaite : page « Nico m'a mis une raclée » (chacune son aperçu dans les messageries et sa campagne de suivi) */
+  const url=won?app+"nico/":app+"nico-gagne/";
+  const res=issue(a,b),text=won?`J'ai battu Nico au Parvis : ${a} à ${b} au Yam's Club ! À ton tour 🎲`:`Nico m'a mis une raclée au Parvis : ${a} à ${b} au Yam's Club 💪 Viens me venger 🎲`;
   const sent=(methode,etat)=>ga("histoire_partage",{gagne:won?"oui":"non",resultat:res,score:a,methode,etat});
   try{if(navigator.share){await navigator.share({title:"Yam's Club",text,url});sent("partage","envoye");btn.textContent=won?"Merci ! Ton verre t'attend":"Envoyé. Assume, maintenant";return}}
   catch(e){if(e&&e.name==="AbortError"){sent("partage","annule");return}}
