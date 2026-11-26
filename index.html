@@ -739,15 +739,17 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
     <button type="button" class="updbar-btn" id="updateBtn">Mettre à jour</button>
   </div>
 </div>
-<div class="splash loading" id="splash">
+<div class="splash" id="splash"><!-- loader désactivé : pour le remettre, ajouter la classe « loading » ici et décommenter le bloc #dLoad ci-dessous -->
   <h1 class="logo"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
   <div class="piste" aria-hidden="true"></div>
+  <!-- LOADER DÉSACTIVÉ (26 nov. 2026)
   <div class="dload" id="dLoad" aria-hidden="true"><div class="row"><i></i><i></i><i></i><i></i><i></i></div><span>On sort les dés…</span></div>
   <script>/* sortie des 4 premiers dés, lancée APRÈS le 1er affichage (Safari joue les animations avant de peindre l'écran) ; le 5e attend le tapis 3D */
   (function(){var L=window.__yamsLoad={t:[],go:false};
     requestAnimationFrame(function(){requestAnimationFrame(function(){if(L.done)return;L.go=true;
       var d=document.querySelectorAll("#dLoad i");[150,650,1300,2150].forEach(function(ms,i){L.t.push(setTimeout(function(){if(!L.done&&d[i])d[i].classList.add("on")},ms))})})});
     setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.remove("loading")},14000)})()</script>
+  FIN LOADER -->
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
@@ -2373,7 +2375,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
     give(){if(!box||!suspended)return;try{box.clear()}catch(e){}zone.prepend(box.canvas);suspended=false;dispatchEvent(new Event("resize"));try{draw()}catch(e){}}};
   /* chargement : 5 dés qui sortent de la boîte (#dLoad, dans la page dès le 1er affichage ; les 4 premiers en CSS).
      Tapis prêt (ou pas de 3D) : les dés pas encore sortis sortent vite, petite pause, puis fondu vers le tapis. Toujours joué. */
-  let ldEnded=false;const endLoad=()=>{const ld=document.getElementById("dLoad");if(ldEnded)return;ldEnded=true;
+  let ldEnded=false;const endLoad=()=>{const ld=document.getElementById("dLoad");if(ldEnded||!ld)return;ldEnded=true; /* rien à faire si le loader est désactivé (bloc #dLoad commenté) */
     const fin=()=>{sp.classList.remove("loading");sp.classList.add("reveal");setTimeout(()=>sp.classList.remove("reveal"),600)};
     if(!ld||matchMedia("(prefers-reduced-motion: reduce)").matches){if(ld)ld.remove();return fin()}
     const L=window.__yamsLoad;if(L){L.done=true;L.t.forEach(clearTimeout)}
