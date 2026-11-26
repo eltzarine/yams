@@ -440,7 +440,11 @@ header h1.brand img{height:clamp(40px,12vw,52px);width:auto;max-width:100%;displ
 .splash .dload i:nth-child(3){background-position-x:50%;--r:-3deg;--y:4px}
 .splash .dload i:nth-child(4){background-position-x:75%;--r:9deg;--y:-2px}
 .splash .dload i:nth-child(5){background-position-x:100%;--r:-6deg;--y:5px}
-.splash .dload i.on{animation:dout .5s cubic-bezier(.25,1.5,.45,1) both}
+.splash .dload i{animation:dout .5s cubic-bezier(.25,1.5,.45,1) both paused}
+.splash.loading .dload i:nth-child(-n+4){animation-play-state:running}
+.splash .dload i:nth-child(1){animation-delay:.15s}.splash .dload i:nth-child(2){animation-delay:.65s}
+.splash .dload i:nth-child(3){animation-delay:1.3s}.splash .dload i:nth-child(4){animation-delay:2.15s}
+.splash .dload i.on{animation:dout .5s cubic-bezier(.25,1.5,.45,1) both running;animation-delay:var(--d,0s)}
 @keyframes dout{0%{opacity:0;transform:translateY(-46px) scale(1.35) rotate(calc(var(--r) - 30deg))}45%{opacity:1}100%{opacity:1;transform:translateY(var(--y)) rotate(var(--r))}}
 .splash .dload span{font:600 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-ink);opacity:.55;animation:ldpulse 1.4s ease-in-out infinite}
 @keyframes ldpulse{50%{opacity:.25}}
@@ -738,9 +742,11 @@ body:has(#splash:not(.hide)) .backdrop{z-index:60}body:has(#splash:not(.hide)) .
     <button type="button" class="updbar-btn" id="updateBtn">Mettre à jour</button>
   </div>
 </div>
-<div class="splash" id="splash">
+<div class="splash loading" id="splash">
   <h1 class="logo"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362" decoding="async"></h1>
   <div class="piste" aria-hidden="true"></div>
+  <div class="dload" id="dLoad" aria-hidden="true"><div class="row"><i></i><i></i><i></i><i></i><i></i></div><span>On sort les dés…</span></div>
+  <script>setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.remove("loading")},14000)</script>
   <div class="dice3d" id="dice3d" aria-label="Relancer les dés" role="button" tabindex="-1"></div>
   <div class="feltmsg" id="feltMsg" aria-hidden="true">Tape 2 fois<br>pour lancer</div>
   <div class="dscore" id="dScore" aria-live="polite"></div>
@@ -2364,24 +2370,17 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       const se=document.querySelector(".dscore");if(se)se.classList.remove("on","ok");
       try{b.clear()}catch(e){}el.prepend(b.canvas);dispatchEvent(new Event("resize"));return b},
     give(){if(!box||!suspended)return;try{box.clear()}catch(e){}zone.prepend(box.canvas);suspended=false;dispatchEvent(new Event("resize"));try{draw()}catch(e){}}};
-  let endLoad=null; /* chargement : 5 dés qui sortent de la boîte (voir .dload) */
-  const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null);if(endLoad)endLoad()};
+  /* chargement : 5 dés qui sortent de la boîte (#dLoad, dans la page dès le 1er affichage ; les 4 premiers en CSS).
+     Tapis prêt (ou pas de 3D) : les dés pas encore sortis sortent vite, petite pause, puis fondu vers le tapis. Toujours joué. */
+  let ldEnded=false;const endLoad=()=>{const ld=document.getElementById("dLoad");if(ldEnded)return;ldEnded=true;
+    const fin=()=>{sp.classList.remove("loading");sp.classList.add("reveal");setTimeout(()=>sp.classList.remove("reveal"),600)};
+    if(!ld||matchMedia("(prefers-reduced-motion: reduce)").matches){if(ld)ld.remove();return fin()}
+    let k=0;ld.querySelectorAll("i").forEach(d=>{if(parseFloat(getComputedStyle(d).opacity)>0)return;d.style.setProperty("--d",k*110+"ms");d.classList.add("on");k++});
+    setTimeout(()=>{ld.classList.add("off");fin();setTimeout(()=>ld.remove(),400)},k*110+800)};
+  const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null);endLoad()};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return no3d();
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return no3d()}catch(e){return no3d()}
   const safety=setTimeout(()=>{if(!box)no3d()},12000); /* réseau lent : on ne bloque pas l'entrée */
-  /* le 1er dé sort à 0,3 s (rien ne s'affiche si le tapis est prêt avant), puis de plus en plus lentement ; le 5e attend le tapis.
-     Tapis prêt : les dés restants sortent vite, petite pause, puis fondu vers le tapis 3D. */
-  {const ld=document.createElement("div");ld.className="dload";ld.setAttribute("aria-hidden","true");
-    ld.innerHTML='<div class="row"><i></i><i></i><i></i><i></i><i></i></div><span>On sort les dés…</span>';
-    const pi=sp.querySelector(".piste");if(pi)pi.after(ld);else sp.prepend(ld);sp.classList.add("loading");
-    const dz=[...ld.querySelectorAll("i")];let shown=0,ended=false;
-    const out=()=>{if(shown<5)dz[shown++].classList.add("on")};
-    const tm=[300,850,1550,2450].map(t=>setTimeout(out,t));
-    const finish=()=>{sp.classList.remove("loading");sp.classList.add("reveal");setTimeout(()=>sp.classList.remove("reveal"),600)};
-    endLoad=()=>{if(ended)return;ended=true;tm.forEach(clearTimeout);
-      if(!shown){ld.remove();sp.classList.remove("loading");return}
-      const rest=5-shown;for(let k=0;k<rest;k++)setTimeout(out,k*110);
-      setTimeout(()=>{ld.classList.add("off");finish();setTimeout(()=>ld.remove(),400)},rest*110+500)}}
   const base=new URL(".",location.href);let box=null,busy=false,throws=0,pending=null,done=false,hudT=0,lastTap=0,tapT=0;
   const locked=new Set(),broken=new Set(),win=new Set();
   /* Analytics : compteur de lancers gardé sur ce téléphone (total depuis la 1re ouverture) + lancers de la visite */
@@ -2570,7 +2569,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
       /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
-    await box.init();clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);if(endLoad)endLoad();
+    await box.init();clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);endLoad();
     sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();audio(); /* prépare les sons (chargés en avance, joués au 1er lancer) */
     zone.addEventListener("click",tap);
     let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
