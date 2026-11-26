@@ -1,5 +1,5 @@
 /* Yam's Club — service worker (installation + hors connexion) */
-const VERSION = "yams-v99";
+const VERSION = "yams-v100";
 const SHELL = [
   "./",
   "./index.html",
@@ -15,6 +15,9 @@ const SHELL = [
   "./story/parvis.png",
   "./story/nico_sprite.png",
   "./story/nico_head_sprite.png",
+  "./story/eglise.webp",
+  "./story/bruno_sprite.png",
+  "./story/bruno_head_sprite.png",
   "./story/musique/entree.mp3",
   "./story/musique/match.mp3",
   "./story/musique/victoire.mp3",
