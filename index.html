@@ -32,6 +32,26 @@
   /* iOS ignore user-scalable=no : on bloque aussi le pincement */
   ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
 })();
+/* iOS, appli installée sur l'écran d'accueil : après le clavier (connexion, pseudo) ou un retour d'arrière-plan,
+   iOS garde parfois une page plus courte que l'écran (souvent de la hauteur de la barre d'état) et laisse une
+   bande noire en bas jusqu'à ce qu'on tue l'appli. On le détecte et on force iOS à remesurer la page. */
+(function(){
+  var sa=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
+  if(!sa||!/iP(hone|od|ad)/.test(navigator.userAgent))return;
+  var n=0,t=0;
+  function manque(){if(innerWidth>innerHeight)return 0; /* portrait seulement */
+    var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return 0; /* clavier ouvert : normal */
+    var m=screen.height-innerHeight;return m>4?m:0}
+  function repare(){if(!manque())return;var b=document.body;if(!b)return;
+    var y=scrollY;b.style.display="none";void b.offsetHeight;b.style.display="";scrollTo(0,y);n++;
+    dispatchEvent(new Event("resize"))}
+  function bientot(ms){clearTimeout(t);t=setTimeout(repare,ms||160)}
+  document.addEventListener("focusout",function(){bientot(160)});
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)bientot(250)});
+  addEventListener("pageshow",function(){bientot(250)});
+  addEventListener("load",function(){bientot(400)});
+  window.__yamsBande=function(){return{manque:manque(),reparations:n}};
+})();
 </script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://yams-auth.cesar-poirrier.workers.dev https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; manifest-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -2897,13 +2917,15 @@ setInterval(()=>{const sp=document.getElementById("splash");if(sp&&sp.isConnecte
 <script>
 /* Diagnostic d'affichage : ?diag dans l'adresse, ou 5 tapes rapides sur le logo « Yam’s Club » de l'accueil */
 (function(){
+  try{caches.keys().then(function(k){var v=k.filter(function(x){return /^yams-v\d+$/.test(x)}).sort(function(a,b){return a.slice(6)-b.slice(6)}).pop();if(v)window.__yamsVersion=v.slice(5)})}catch(e){}
   function show(){
     var old=document.getElementById("diagbox");if(old){old.remove();return}
     var m=window.__yamsMesure?window.__yamsMesure():{},de=document.documentElement,
         wrap=document.querySelector(".wrap,#turn,header"),
         sa=(matchMedia("(display-mode: standalone)").matches||navigator.standalone)?"oui":"non",
         vv=window.visualViewport,
-        L=[["Version","v32"],["Appli installée",sa],["Page (CSS px)",m.w+" × "+m.h],["Écran (CSS px)",m.sw+" × "+m.sh],
+        bd=window.__yamsBande?window.__yamsBande():null,
+        L=[["Version",window.__yamsVersion||"?"],["Bande en bas",bd?(bd.manque?bd.manque+" px manquants":"aucune")+" · réparée "+bd.reparations+" fois":"non concerné"],["Appli installée",sa],["Page (CSS px)",m.w+" × "+m.h],["Écran (CSS px)",m.sw+" × "+m.sh],
            ["Densité (DPR)",m.dpr],["Largeur physique",m.phys+" px"],["Tactile","coarse="+m.coarse+" · points="+m.touch],
            ["Règle A / B",(m.a?"oui":"non")+" / "+(m.b?"oui":"non")],["Zoom appliqué",de.style.zoom||"aucun"],
            ["Zoom visuel",vv?Math.round(vv.scale*100)/100:"?"],["Largeur contenu",wrap?Math.round(wrap.getBoundingClientRect().width)+" px":"?"],
