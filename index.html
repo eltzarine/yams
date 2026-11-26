@@ -2382,7 +2382,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   const no3d=()=>{sp.classList.remove("d3");unlock(false);boxOk(null);endLoad()};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return no3d();
   try{const c=document.createElement("canvas");if(!(c.getContext("webgl2")||c.getContext("webgl")))return no3d()}catch(e){return no3d()}
-  const safety=setTimeout(()=>{if(!box)no3d()},12000); /* réseau lent : on ne bloque pas l'entrée */
+  let boxUp=false; /* vrai seulement quand le tapis 3D est prêt (box existe dès le début du chargement, il ne suffit pas) */
+  const safety=setTimeout(()=>{if(!boxUp)no3d()},12000); /* réseau lent ou 3D bloquée : on ne bloque pas l'entrée */
   const base=new URL(".",location.href);let box=null,busy=false,throws=0,pending=null,done=false,hudT=0,lastTap=0,tapT=0;
   const locked=new Set(),broken=new Set(),win=new Set();
   /* Analytics : compteur de lancers gardé sur ce téléphone (total depuis la 1re ouverture) + lancers de la visite */
@@ -2571,7 +2572,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
       theme:"yams",themeColor:TINT.base,scale:5,insetPx:62,wallH:1.5,startingHeight:7,shadowTransparency:.65,lightIntensity:1.05,
       /* dés plus lourds : tombent plus vite, rebondissent et tournent moins, glissent moins longtemps */
       gravity:2.2,mass:3,throwForce:4,spinForce:4,restitution:.05,friction:.9,linearDamping:.6,angularDamping:.55});
-    await box.init();clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);endLoad();
+    await box.init();boxUp=true;clearTimeout(safety);if(!sp.isConnected)return boxOk(null);boxOk(box);endLoad();
     sp.classList.add("d3");sp.appendChild(hud);draw();soundBtn();audio(); /* prépare les sons (chargés en avance, joués au 1er lancer) */
     zone.addEventListener("click",tap);
     let rz=0;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(draw,250)});
