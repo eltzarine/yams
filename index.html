@@ -1133,7 +1133,7 @@ function openSheet(html,bind){
 let lastFocus=null,lockY=0;
 function lockPage(){if(document.body.classList.contains("locked"))return;lockY=window.scrollY;document.body.style.top=-lockY+"px";document.body.classList.add("locked")}
 function unlockPage(){if(!document.body.classList.contains("locked"))return;document.body.classList.remove("locked");document.body.style.top="";window.scrollTo(0,lockY)}
-function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;unlockPage();if(scanStream||scanRAF)stopScan();
+function closeSheet(){const sh=document.getElementById("sheet");if(sh.inert)return;sh.inert=true;loginNext=null;unlockPage();if(scanStream||scanRAF)stopScan();
   if(lastFocus&&lastFocus.isConnected)lastFocus.focus({preventScroll:true});lastFocus=null;
   document.getElementById("sheet").classList.remove("open");document.getElementById("backdrop").classList.remove("open");ui.sheet=null}
 
@@ -2580,6 +2580,7 @@ function acctUI(){
   const sp=document.getElementById("acctChip");
   if(sp){sp.hidden=!Acc.ready||!ACC_ON;sp.querySelector(".nm").textContent=on?Acc.pseudo:"Me connecter";sp.classList.toggle("on",on);sp.setAttribute("aria-label",on?"Mon compte : "+Acc.pseudo:"Créer un compte ou se connecter")}
   claimKeeps().finally(upgradeJoin);
+  if(window.storyAcct)storyAcct();
   if(VIEW){if(Acc.ready)render();return}
   watchMyInvite();
   const inSetup=!VIEW&&!S.started&&document.querySelector("#app header");
@@ -2782,14 +2783,18 @@ async function accTap(){
     if(!bioCancel(err)){const sh=document.getElementById("sheet");setErr(sh,errMsg(err&&err.code?err:{code:"passkey"}))}}
   finally{bioBusy=false}
 }
-function afterLogin(){closeSheet();toast(`Content de te revoir, ${Acc.pseudo} 🎲`);if(window.splashGo)splashGo()}
+/* action à reprendre après la connexion (ex. « Jouer l'histoire ») : oubliée si le volet est fermé sans se connecter */
+let loginNext=null;
+window.loginThen=fn=>{loginNext={fn,at:Date.now()}};
+function takeLoginNext(){const n=loginNext;loginNext=null;return n&&Date.now()-n.at<30*60e3?n.fn:null}
+function afterLogin(){const next=takeLoginNext();closeSheet();toast(`Content de te revoir, ${Acc.pseudo} 🎲`);if(window.splashGo)splashGo();if(next)setTimeout(next,0)}
 
 function accWelcome(){
   openSheet(`<div class="acc welcome"><div class="wdice" aria-hidden="true">🎲</div>
     <h3 id="sheetTitle">Bienvenue, ${esc(Acc.pseudo)}</h3>
     <div class="sub">Ton compte est prêt. Tes prochaines parties compteront pour ton palmarès.${PK_OK?` Tu pourras activer ${BIO_T} dans « Mon compte ».`:""}</div>
     <button class="primary" id="accPlay">Jouer</button></div>`,
-  sh=>{sh.querySelector("#accPlay").onclick=()=>{closeSheet();const b=document.getElementById("btnPlay");if(b&&b.isConnected)b.click()}});
+  sh=>{sh.querySelector("#accPlay").onclick=()=>{const next=takeLoginNext();closeSheet();if(next){if(window.splashGo)splashGo();return next()}const b=document.getElementById("btnPlay");if(b&&b.isConnected)b.click()}});
 }
 
 function accSignedIn(){

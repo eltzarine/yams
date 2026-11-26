@@ -12,8 +12,10 @@ html.story-on,html.story-on body{overflow:hidden;overscroll-behavior:none}
 .story .sib{height:40px;min-width:40px;border-radius:10px;border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.12);color:#fff;display:inline-grid;place-items:center;padding:0}
 .story .sib svg{width:20px;height:20px}
 .story .sib.acct{display:inline-flex;align-items:center;gap:6px;padding:0 10px 0 5px;border-color:#E9B949;font:600 15px/1 "Barlow",sans-serif;max-width:38vw}
-.story .sib.acct i{width:28px;height:28px;border-radius:50%;background:#E9B949;color:#1B2620;display:grid;place-items:center;font:700 17px/1 "Barlow Condensed",sans-serif;font-style:normal;flex:none}
-.story .sib.acct span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story .sib.acct{padding:0 12px;cursor:pointer}
+.story .sib.acct .an{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* volet Compte au-dessus du combat */
+html.story-on .backdrop{z-index:70}html.story-on .sheet{z-index:71}html.story-on .toast{z-index:72}
 
 /* barres de vie façon Street Fighter */
 .story .shud{display:grid;grid-template-columns:34px minmax(0,1fr) 44px minmax(0,1fr) 34px;align-items:center;gap:6px;image-rendering:auto}

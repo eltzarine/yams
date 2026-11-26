@@ -27,7 +27,13 @@ window.storyHTML=()=>{const p=prog(),won=p.nico==="win",b=BOSSES[0];
   <small>Mode histoire · Chapitre 1</small><h2>${b.nom}</h2>
   <p>${won?`Nico est battu. Prochain adversaire : <b>${NEXT}</b>, bientôt.`:`Le patron du <b>Parvis</b> t'apprend à jouer. Bats-le pour gagner ta place au club.`}</p>
   <button id="storyGo" type="button">${won?"Revanche":"Jouer l'histoire"}</button>${won?`<span class="sb-done">✓ Battu${p.best?" · record "+p.best:""}</span>`:""}</div>`};
-window.bindStory=()=>{const b=document.getElementById("storyGo");if(b)b.onclick=()=>open()};
+/* l'histoire se joue avec un compte : sans connexion, même parcours que « Me connecter », puis le combat s'ouvre */
+const needLogin=()=>{try{return ACC_ON&&typeof meName==="function"&&!meName()}catch(e){return false}};
+window.bindStory=()=>{const b=document.getElementById("storyGo");if(b)b.onclick=()=>{
+  if(needLogin()&&typeof accTap==="function"){if(window.loginThen)loginThen(()=>{if(!needLogin())open()});accTap();return}
+  open()}};
+/* connexion / déconnexion pendant le combat : pastille à jour, et retour à l'accueil si on n'est plus connecté */
+window.storyAcct=()=>{if(!root||root.hidden)return;if(needLogin())return close();names()};
 
 /* ---------- écran de combat ---------- */
 let root=null,box=null,boxP=null;
@@ -39,7 +45,7 @@ function build(){
   const b=BOSSES[0];
   root.innerHTML=`<div class="scr">
   <header class="stop"><h1 class="brand"><img src="logo-yams-club.webp" alt="Yam’s Club" width="1086" height="362"></h1>
-    <span class="sib acct" id="sAcct"><i></i><span></span></span>
+    <button class="sib acct on" id="sAcct" type="button"><span aria-hidden="true">👤</span><span class="an"></span></button>
     <button class="sib" id="sGear" type="button" aria-label="Réglages" title="Réglages">${GEAR}</button>
     <button class="sib" id="sQuit" type="button" aria-label="Quitter le combat" title="Quitter">${XICON}</button></header>
   <section class="shud" aria-label="Score">
@@ -64,7 +70,7 @@ function build(){
   <div class="smodal" id="sModal" hidden><div class="box" id="sBox"></div></div>
   </div>`;
   document.body.appendChild(root);
-  $("#sQuit").onclick=askQuit;$("#sGear").onclick=gear;
+  $("#sQuit").onclick=askQuit;$("#sAcct").onclick=()=>{if(typeof accTap==="function")accTap()};$("#sGear").onclick=gear;
   $("#sZone").addEventListener("click",tap);root.addEventListener("pointerdown",()=>audio(),{passive:true});
   $("#sGrid").addEventListener("click",e=>{const c=e.target.closest(".sc");if(c&&G.phase==="me")choose(c.dataset.k)});
   $("#sVs").addEventListener("click",()=>skipVs());
@@ -72,13 +78,14 @@ function build(){
 
 function open(){
   if(!root)build();
-  const n=me();$("#sAcct i").textContent=(n[0]||"?").toUpperCase();$("#sAcct span").textContent=n;
-  $("#sPfMe .ini").textContent=(n[0]||"?").toUpperCase();$("#sNmMe").textContent=n;
+  names();
   root.hidden=false;document.documentElement.classList.add("story-on");
   Object.assign(G,{phase:"vs",turn:1,throws:0,me:{},bot:{},busy:false,vals:[],tut:0,warned:false,warnK:null,pending:null,botLast:null});G.locked.clear();G.broken.clear();
   paintHud();grid();say("");hint("");hud();
   vs();initDice();ga("histoire_debut",{boss:"nico"});
 }
+function names(){const n=me();$("#sAcct .an").textContent=n;$("#sAcct").setAttribute("aria-label","Mon compte : "+n);
+  $("#sPfMe .ini").textContent=(n[0]||"?").toUpperCase();$("#sNmMe").textContent=n}
 function close(){
   G.phase="off";root.hidden=true;document.documentElement.classList.remove("story-on");$("#sModal").hidden=true;
   if(typeof render==="function")render(); /* rafraîchit le bloc histoire de l'accueil */
