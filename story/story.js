@@ -80,9 +80,11 @@ function open(){
   if(!root)build();
   names();
   root.hidden=false;document.documentElement.classList.add("story-on");
-  Object.assign(G,{phase:"vs",turn:1,throws:0,me:{},bot:{},busy:false,vals:[],tut:0,warned:false,warnK:null,pending:null,botLast:null,t0:Date.now(),rollMs:[],nBroken:0});G.locked.clear();G.broken.clear();
+  G.gen=(G.gen||0)+1;Object.assign(G,{phase:"vs",turn:1,throws:0,me:{},bot:{},busy:false,vals:[],tut:0,warned:false,warnK:null,pending:null,botLast:null,t0:Date.now(),rollMs:[],nBroken:0});G.locked.clear();G.broken.clear();
   paintHud();grid();say("");hint("");hud();
   mus.pos=0;mus.load();mus.play("entree");
+  /* tapis vide à chaque combat : on attend un éventuel lancer encore en cours (combat quitté en plein lancer), puis on vide */
+  inflight=inflight.then(()=>{if(box)try{box.clear()}catch(e){}});
   vs();initDice();ga("histoire_debut",{boss:"nico"});
 }
 function names(){const n=me();$("#sAcct .an").textContent=n;$("#sAcct").setAttribute("aria-label","Mon compte : "+n);
@@ -133,7 +135,8 @@ function grid(){const isBot=G.phase==="bot",sc=isBot?G.bot:G.me,v=G.vals,can=!is
     return`<button type="button" class="sc ${cl}" data-k="${k}" aria-label="${SAY[k]} : ${val}"><span>${SHORT[k]}</span><b>${val}</b></button>`}).join("")}</div>`).join("")}
 
 /* ---------- dés 3D (même moteur et mêmes réglages que l'accueil) ---------- */
-const peek=()=>globalThis.__yamsWorld&&globalThis.__yamsWorld.yamsPeek();
+/* le monde 3D du tapis du combat (l'accueil a le sien) : on le retrouve par son canvas */
+let myWorld=null;const peek=()=>{if(!myWorld)myWorld=(globalThis.__yamsWorlds||[]).find(w=>{const c=w.yamsPeek().canvas;return c&&c.closest&&c.closest("#sdice")})||null;const w=myWorld||(!globalThis.__yamsWorlds&&globalThis.__yamsWorld);return w&&w.yamsPeek()}; /* repli : ancien fichier de dés encore en cache */
 const rolls=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls:[]};
 const allIds=()=>rolls().map(x=>x.rollId);
 const live=()=>{const p=peek();return p?Object.values(p.dice).filter(d=>d.mesh&&d.mesh.rotationQuaternion&&d.config&&d.config.rollId!=null):[]};
@@ -169,13 +172,22 @@ function initDice(){
 function noDice(){const z=$("#sZone");if(z.querySelector(".snod3"))return;const d=document.createElement("div");d.className="snod3";
   d.textContent="Le mode histoire a besoin des dés 3D, indisponibles sur cet appareil.";z.appendChild(d)}
 /* lance les dés donnés (rollId) et renvoie les 5 valeurs */
-async function toss(ids){const b=await initDice();if(!b)return null;G.busy=true;cancelAnimationFrame(rq);const tR=performance.now();G.broken.clear();rattle();hookImpacts();
+let inflight=Promise.resolve();
+async function toss(ids){if(G.busy)return null;G.busy=true;const gen=G.gen,prev=inflight;let fin;inflight=new Promise(r=>fin=r);
+  try{await prev}catch(e){}if(gen!==G.gen){fin();G.busy=false;return null}
+  const b=await initDice();if(!b){fin();G.busy=false;return null}cancelAnimationFrame(rq);const tR=performance.now();G.broken.clear();rattle();hookImpacts();
   try{const rs=b.getRollResults()[0];
-    if(rs&&rs.rolls.length===5)await b.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true});else await b.roll("5dpip");
+    /* toujours 5 dés sur le tapis : si un lancer a été interrompu (appli quittée, erreur), on vide le tapis avant de relancer les 5 */
+    if(rs&&rs.rolls.length===5&&live().length===5&&b.getRollResults().length===1)await b.reroll(rs.rolls.filter(r=>ids.includes(r.rollId)),{remove:true});
+    else{try{b.clear()}catch(e){}G.locked.clear();await b.roll("5dpip")}
+    if(gen!==G.gen)return null; /* combat quitté pendant le lancer */
+    if(live().length!==5||rolls().length!==5){try{b.clear()}catch(e){}G.locked.clear();await b.roll("5dpip")} /* jamais plus de 5 dés */
     live().forEach(d=>{if(ids.includes(d.config.rollId)&&isBroken(d))G.broken.add(d.config.rollId)});
     G.vals=rolls().map(r=>r.value);G.rollMs&&G.rollMs.push(Math.round(performance.now()-tR));if(G.broken.size){G.nBroken++;sfx.broken();if(navigator.vibrate)navigator.vibrate(60)}
-    return{v:G.vals,broken:G.broken.size>0}}catch(e){return null}finally{G.busy=false}}
+    return{v:G.vals,broken:G.broken.size>0}}catch(e){try{b.clear()}catch(_){}return null}finally{if(gen===G.gen)G.busy=false;fin()}}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+/* Nico ne reste jamais bloqué : si un lancer échoue, il réessaie */
+async function tossRetry(ids){for(let i=0;i<4;i++){const r=await toss(ids);if(r||G.phase!=="bot")return r;await wait(400)}return null}
 /* mesures envoyées avec la fin ou l'abandon : durée de la partie et vitesse des lancers (repère les téléphones qui rament) */
 function stats(){const r=G.rollMs||[],moy=r.length?Math.round(r.reduce((x,y)=>x+y,0)/r.length):0;
   return{duree_s:Math.round((Date.now()-(G.t0||Date.now()))/1000),lancers:r.length,lancer_moyen_ms:moy,lancer_max_ms:r.length?Math.max(...r):0,des_casses:G.nBroken||0}}
@@ -204,7 +216,7 @@ function ctx(){
 /* Safari iPhone : après être sorti de l'appli, le contexte peut se dire « running » tout en restant muet.
    Au premier toucher après un retour, on le recrée donc systématiquement (les sons chargés sont réutilisés, la musique reprend où elle était). */
 let wasHidden=false;
-function hardReset(){const old=actx;try{old.close()}catch(e){}actx=null;mus.cur=null;roomIn=null;ctx();mus.resume()}
+function hardReset(){const old=actx;try{old.close()}catch(e){}actx=null;mus.cur=null;roomIn=null;["felt","click","rf"].forEach(k=>BUF[k].length=0);ctx();mus.resume()}
 function revive(){if(!actx)return;if(wasHidden){wasHidden=false;return hardReset()}if(actx.state==="running")return;const old=actx;old.resume().catch(()=>{});
   setTimeout(()=>{if(actx!==old||old.state==="running")return;try{old.close()}catch(e){}actx=null;mus.cur=null;ctx();mus.resume()},350)}
 document.addEventListener("visibilitychange",()=>{if(!actx)return;if(document.hidden){wasHidden=true;mus.pauseAt();actx.suspend().catch(()=>{})}else actx.resume().catch(()=>{})});
@@ -341,8 +353,8 @@ async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.lo
   ko("Round "+G.turn,"À Nico !");await wait(1200);if(G.phase!=="bot")return;
   if(G.turn===1)say("Je regarde ce qui sort, je garde le meilleur et je relance le reste.",3000);
   let ids=allIds().length===5?allIds():[0,1,2,3,4];
-  for(let n=0;n<3;n++){paintDice();let r=await toss(ids);if(!r||G.phase!=="bot")return;
-    for(let k=0;r.broken&&k<4;k++){paintDice();await wait(900);if(G.phase!=="bot")return;r=await toss(ids);if(!r||G.phase!=="bot")return}
+  for(let n=0;n<3;n++){paintDice();let r=await tossRetry(ids);if(!r||G.phase!=="bot")return;
+    for(let k=0;r.broken&&k<4;k++){paintDice();await wait(900);if(G.phase!=="bot")return;r=await tossRetry(ids);if(!r||G.phase!=="bot")return}
     G.broken.clear();const v=r.v;G.throws=n+1;hud();paintDice();await wait(700);
     if(n===2)break;const keep=botKeep(v,G.bot,n);if(keep===null)break;
     G.locked=new Set(keep);paintDice();await wait(650);ids=allIds().filter(id=>!G.locked.has(id));if(!ids.length)break}

@@ -2323,7 +2323,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
   new MutationObserver(()=>{if(sp.classList.contains("hide"))sendLeave()}).observe(sp,{attributes:true,attributeFilter:["class"]});
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")sendLeave()});
   const hud=document.createElement("div");hud.className="dhud";hud.setAttribute("aria-live","polite");
-  const peek=()=>globalThis.__yamsWorld&&globalThis.__yamsWorld.yamsPeek();
+  /* le monde 3D de CE tapis (le combat a le sien) : on le retrouve par son canvas */
+  let myWorld=null;const peek=()=>{if(!myWorld)myWorld=(globalThis.__yamsWorlds||[]).find(w=>{const c=w.yamsPeek().canvas;return c&&c.closest&&c.closest("#dice3d")})||null;const w=myWorld||(!globalThis.__yamsWorlds&&globalThis.__yamsWorld);return w&&w.yamsPeek()}; /* repli : ancien fichier de dés encore en cache */
   const rolls=()=>{const r=box&&box.getRollResults()[0];return r?r.rolls:[]};
   const allIds=()=>rolls().map(x=>x.rollId);
   const live=()=>{const p=peek();return p?Object.values(p.dice).filter(d=>d.mesh&&d.mesh.rotationQuaternion&&d.config&&d.config.rollId!=null):[]};
