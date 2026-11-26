@@ -1,7 +1,7 @@
 {
   "name": "Yam’s Club",
   "short_name": "Yam’s",
-  "description": "Lance les dés, rejoins le club et viens affronter les boss du Yam’s et tes potes. Yam’s Club, avec la feuille de score qui compte pour toi.",
+  "description": "Lance les dés, rejoins le club et viens affronter les boss du Yam’s avec tes potes. Yam’s Club, avec la feuille de score qui compte pour toi.",
   "lang": "fr",
   "id": "./",
   "start_url": "./",
