@@ -157,7 +157,7 @@ function open(ch){
 function names(){const n=me();$("#sAcct .an").textContent=n;$("#sAcct").setAttribute("aria-label","Mon compte : "+n);
   $("#sPfMe .ini").textContent=(n[0]||"?").toUpperCase();$("#sNmMe").textContent=n}
 function close(){
-  G.phase="off";fxOff();if(G.reactGo)G.reactGo();mus.stop(.4);root.hidden=true;
+  G.phase="off";fxOff();unfreeze();if(G.reactGo)G.reactGo();mus.stop(.4);root.hidden=true;
   if(shared){const f=inflight;shareQ=shareQ.then(()=>f).then(()=>window.yamsDice.give());shared=false;box=null;boxP=null} /* rend le tapis à l'accueil une fois le lancer en cours fini */
 document.documentElement.classList.remove("story-on");$("#sModal").hidden=true;
   if(typeof render==="function")render(); /* rafraîchit le bloc histoire de l'accueil */
@@ -302,10 +302,12 @@ document.addEventListener("visibilitychange",()=>{if(!actx)return;if(document.hi
 /* ---------- musique : riff d'entrée, boucle de match, fin de match. Bouton « Musique » dans les réglages (clé yamsMusique). ---------- */
 let mbus=null,roomIn=null;const MBUF={};
 const mus={cur:null,want:null,pos:0,
-  load(){const base=new URL(".",location.href).pathname;["entree","match","victoire","defaite"].forEach(n=>{if(MBUF[n]||MBUF[n]===0)return;MBUF[n]=0;
-    fetch(base+`story/musique/${n}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>ctx().decodeAudioData(b,ok,ko))).then(x=>{MBUF[n]=x;if(mus.want===n&&!mus.cur)mus.play(n)}).catch(()=>{delete MBUF[n]})})},
+  /* chaque chapitre a sa musique (chapitre 2 : orgue d'église façon arcade, dans musique/eglise/) */
+  key(n){return(CH===2?"eglise/":"")+n},
+  load(){const base=new URL(".",location.href).pathname;["entree","match","victoire","defaite"].forEach(n=>{const k=this.key(n);if(MBUF[k]||MBUF[k]===0)return;MBUF[k]=0;
+    fetch(base+`story/musique/${k}.mp3`).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,ko)=>ctx().decodeAudioData(b,ok,ko))).then(x=>{MBUF[k]=x;if(mus.want===n&&!mus.cur&&mus.key(n)===k)mus.play(n)}).catch(()=>{delete MBUF[k]})})},
   vol:{entree:.42,match:.2,victoire:.42,defaite:.42},
-  play(n,fadeIn){this.want=n;this.stop(.25,true);if(!musicOn()||root.hidden)return;const a=ctx(),b=MBUF[n];if(!a||!b)return this.load();
+  play(n,fadeIn){this.want=n;this.stop(.25,true);if(!musicOn()||root.hidden)return;const a=ctx(),b=MBUF[this.key(n)];if(!a||!b)return this.load();
     const s=a.createBufferSource(),g=a.createGain();s.buffer=b;const t=a.currentTime,v=this.vol[n];
     g.gain.setValueAtTime(fadeIn?.0001:v,t);if(fadeIn)g.gain.exponentialRampToValueAtTime(v,t+fadeIn);
     let off=0;if(n==="match"){s.loop=true;s.loopStart=1;s.loopEnd=31;off=1+(this.pos||0)%30}
@@ -368,7 +370,7 @@ function hit(k,p,mine){if(!p){if(mine)sfx.miss();return}let lvl="tap";
   else if(lvl==="heavy"&&mine)setTimeout(()=>ko(SAY[k],"Combo !"),250)}
 
 /* ---------- tour du joueur ---------- */
-function startMyTurn(){G.phase="me";G.throws=0;G.vals=[];G.locked.clear();G.broken.clear();G.pending=null;G.frozen.clear();G.extra=false;G.dbl=false;G.atk=false;G.hold=false;paintDice();paintHud();grid();hud();paintPow();
+function startMyTurn(){G.phase="me";G.throws=0;G.vals=[];G.locked.clear();G.broken.clear();G.pending=null;unfreeze();G.extra=false;G.dbl=false;G.atk=false;G.hold=false;paintDice();paintHud();grid();hud();paintPow();
   if(CH===2){hint("Tape 2 fois pour lancer");ko("Round "+G.turn,"À toi !");
     if(G.turn===1)setTimeout(()=>say("Bienvenue dans la maison du Seigneur ! Ici on joue au <b>Yam's des dieux</b> : un full, une suite ou un Yam's te donnent un <b>pouvoir</b>.",4200,true),900);return}
   hint("Tape 2 fois pour lancer");
@@ -389,7 +391,7 @@ async function myThrow(){if(G.busy||G.hold||G.phase!=="me"||G.throws>=3&&!G.pend
   const bt=best(G.me,v),win=new Set();
   if(bt){pop(`+${bt.p} ${SAY[bt.k]}`);winIds(bt.k,win);setTimeout(()=>sfx.combo(bt.p),350)}
   paintDice(win);grid();hud();paintHud();paintPow();
-  if(CH===2){if(G.throws<3)await botStrike();else hint(G.pw.me.qua?"4e lancer à gauche, ou choisis ta case":"");return}
+  if(CH===2){gain("me");if(G.throws<3)await botStrike();else hint(G.pw.me.qua?"4e lancer à gauche, ou choisis ta case":"");return}
   if(G.throws>=3){hint("");say(G.turn===1?"Plus de lancer ! Touche une case en bas. La <b>dorée</b> rapporte le plus.":"Plus de lancer : choisis une case.")}
   else{hint("");
     if(G.turn===1&&G.throws===1)say(bt?`${SAY[bt.k]} possible ! Touche les dés à <b>garder</b> (ils passent en bleu), puis tape 2 fois pour relancer les autres.`:"Touche les dés à <b>garder</b> (ils passent en bleu), puis tape 2 fois pour relancer les autres.");
@@ -416,8 +418,8 @@ function choose(k){if(G.phase!=="me"||G.busy||G.hold||!G.throws||G.pending||G.me
   G.warned=false;G.warnK=null;
   const hadPrime=upper(G.me)>=+ST.seuil;G.me[k]=p;pop(p?`+${p} ${SAY[k]}`:`${SAY[k]} rayé`);hit(k,p,true); /* le coup part quand on inscrit sa case */
   if(!hadPrime&&upper(G.me)>=+ST.seuil)setTimeout(()=>{ko("Cases 1 à 6","Prime +"+ST.prime);sfx.heavy()},500);ga("histoire_case",{tour:G.turn,case:k,points:p});
-  G.phase="wait";G.extra=false;G.dbl=false;G.frozen.clear();grid();paintHud();hud();
-  if(CH===2){earn("me",k,p);say(p?"":"Le Seigneur pardonne… pas les cases rayées.",p?0:2200)}
+  G.phase="wait";G.extra=false;G.dbl=false;unfreeze();grid();paintHud();hud();
+  if(CH===2)say(p?"":"Le Seigneur pardonne… pas les cases rayées.",p?0:2200);
   else say(p?(G.turn===1?"Pas mal ! À moi maintenant, regarde et apprends…":""):"Rayer une case, ça arrive. Choisis bien laquelle !",p?0:2200);
   setTimeout(botTurn,1100)}
 
@@ -435,7 +437,7 @@ function botKeep(v,sc,n){const c=counts(v),rs=rolls(),open=k=>sc[k]==null;
 function botPick(sc,v){let bk=null,bv=-1;ALL.forEach(k=>{if(sc[k]!=null)return;let p=pts(k,v);if(p<=0)return;
     const u=UPPER.find(x=>x[0]===k);let s=p;if(u)s=p+(counts(v)[u[2]]>=3?8:0)-u[2];if(k==="chance")s=p-14;if(s>bv){bv=s;bk=k}});
   return bk||SACRIFICE.find(k=>sc[k]==null)}
-async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.locked.clear();G.frozen.clear();G.botLast=null;paintHud();grid();hint("");paintPow();
+async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.locked.clear();unfreeze();G.botLast=null;paintHud();grid();hint("");paintPow();
   ko("Round "+G.turn,"À "+B().court+" !");await wait(1200);if(G.phase!=="bot")return;
   if(CH===1&&G.turn===1)say("Je regarde ce qui sort, je garde le meilleur et je relance le reste.",3000);
   let bdbl=false;if(CH===2&&G.pw.bot.dbl&&G.turn>2&&Math.random()<.6){G.pw.bot.dbl--;bdbl=true;paintPow();ko("Père Bruno","Double garanti");sfx.heavy();await wait(1100);if(G.phase!=="bot")return}
@@ -443,6 +445,7 @@ async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.lo
   for(let n=0;n<4;n++){paintDice();let r=await tossRetry(ids);if(!r||G.phase!=="bot")return;
     for(let k=0;r.broken&&k<4;k++){paintDice();await wait(900);if(G.phase!=="bot")return;r=await tossRetry(ids);if(!r||G.phase!=="bot")return}
     if(bdbl){bdbl=false;r=await divine(ids,true)||r;if(G.phase!=="bot")return}
+    if(CH===2)gain("bot");
     G.broken.clear();G.throws=Math.min(3,n+1);hud();paintDice();await wait(700);if(G.phase!=="bot")return;
     if(CH===2&&n<3){await react(n);if(G.phase!=="bot")return}
     const v=G.vals;
@@ -454,8 +457,8 @@ async function botTurn(){if(G.phase==="off")return;G.phase="bot";G.throws=0;G.lo
     let keep=botKeep(v,G.bot,n);if(keep===null&&!G.frozen.size)break;
     G.locked=new Set([...(keep||allIds()),...G.frozen]);paintDice();await wait(650);ids=allIds().filter(id=>!G.locked.has(id));if(!ids.length)break}
   if(G.phase!=="bot")return;
-  const k=botPick(G.bot,G.vals),p=pts(k,G.vals);G.bot[k]=p;G.botLast=k;grid();if(p)hit(k,p,false);const w=new Set();if(p)winIds(k,w);G.locked.clear();G.frozen.clear();paintDice(w);
-  pop(p?`${B().court} +${p} ${SAY[k]}`:`${B().court} raye ${SAY[k]}`);paintHud();if(CH===2)earn("bot",k,p);
+  const k=botPick(G.bot,G.vals),p=pts(k,G.vals);G.bot[k]=p;G.botLast=k;grid();if(p)hit(k,p,false);const w=new Set();if(p)winIds(k,w);G.locked.clear();unfreeze();paintDice(w);
+  pop(p?`${B().court} +${p} ${SAY[k]}`:`${B().court} raye ${SAY[k]}`);paintHud();
   if(CH===1&&G.turn===1)say(`J'ai pris <b>${SAY[k]}</b> pour ${p}. Chaque case ne sert qu'une fois : 13 tours, 13 cases.`,3200);
   await wait(1700);if(G.phase!=="bot")return;
   if(G.turn>=13)return end();
@@ -492,16 +495,15 @@ function gear(){modal(`<h3 class="sark">Réglages</h3>
   <label class="stog">Conseils de Nico<input type="checkbox" id="sTips" ${tipsOn()?"checked":""}></label>
   <label class="stog">Musique<input type="checkbox" id="sMus" ${musicOn()?"checked":""}></label>
   <label class="stog">Son des dés et bruitages<input type="checkbox" id="sSnd" ${soundOn()?"checked":""}></label>
-  <ul class="srules"><li>13 tours chacun, 3 lancers maximum par tour.</li><li>Touche un dé pour le garder, tape 2 fois sur le tapis pour lancer.</li><li>Prime de ${ST.prime} si tu fais ${ST.seuil} ou plus sur les cases 1 à 6.</li><li>Full ${ST.fullFixe}, petite suite ${ST.petite}, grande suite ${ST.grande}, Yam's ${ST.yams}.</li>${CH===2?`<li><b>Pouvoirs</b> (inscris la combinaison) : full = geler un dé de Bruno, petite suite = relancer un de ses dés, grande suite = 4e lancer, Yam's = double garanti au prochain lancer.</li><li>Les attaques (rouge) se jouent au tour de Bruno, juste après un de ses lancers, sur un dé qu'il n'a pas gardé.</li>`:""}</ul>
+  <ul class="srules"><li>13 tours chacun, 3 lancers maximum par tour.</li><li>Touche un dé pour le garder, tape 2 fois sur le tapis pour lancer.</li><li>Prime de ${ST.prime} si tu fais ${ST.seuil} ou plus sur les cases 1 à 6.</li><li>Full ${ST.fullFixe}, petite suite ${ST.petite}, grande suite ${ST.grande}, Yam's ${ST.yams}.</li>${CH===2?`<li><b>Pouvoirs</b> : fais la combinaison pendant ton tour (pas besoin de l'inscrire), un seul de chaque à la fois. Full = geler un dé de Bruno, petite suite = relancer un de ses dés, grande suite = 4e lancer, Yam's = double garanti au prochain lancer.</li><li>Les attaques (rouge) se jouent au tour de Bruno, juste après un de ses lancers, sur un dé qu'il n'a pas gardé.</li>`:""}</ul>
   <button class="sbtn gold" id="sOk" type="button">OK</button>`,
   m=>{m.querySelector("#sMus").onchange=e=>{try{localStorage.setItem(MKEY,e.target.checked?"1":"0")}catch(_){}
     if(!e.target.checked){mus.pauseAt();mus.stop(.3)}else if(G.phase==="me"||G.phase==="bot"){mus.play("match",.8)}};
     m.querySelector("#sSnd").onchange=e=>{try{localStorage.setItem(SKEY,e.target.checked?"1":"0")}catch(_){}if(e.target.checked)sfx.light()};m.querySelector("#sTips").onchange=e=>{try{localStorage.setItem(TKEY,e.target.checked?"1":"0")}catch(_){}if(!e.target.checked)say("")};m.querySelector("#sOk").onclick=()=>{$("#sModal").hidden=true}})}
 /* ---------- chapitre 2 : pouvoirs du Yam's des dieux ----------
-   On gagne un pouvoir en inscrivant la combinaison (avec des points) : full = geler un dé adverse, petite suite = relancer un dé adverse,
+   On gagne un pouvoir en faisant la combinaison pendant son tour (sans avoir à l'inscrire), un seul de chaque à la fois : full = geler un dé adverse, petite suite = relancer un dé adverse,
    grande suite = 4e lancer, Yam's = au moins un double au prochain lancer. Attaques (rouge) : au tour de l'adversaire, juste après un
    de ses lancers, sur un dé qu'il n'a pas gardé ; un dé gelé ne peut plus être relancé jusqu'à la fin de son tour. Boosts (vert) : à son tour. */
-const EARN={full:"gel",petite:"rel",grande:"qua",yams:"dbl"};
 const PNAME={gel:"Geler un dé",rel:"Relancer un dé",qua:"4e lancer",dbl:"Double garanti"};
 const PSTEP=["gel","rel","qua","dbl"];
 const SV=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -525,8 +527,11 @@ function paintPow(){if(!root||CH!==2||!G.pw)return;
       return`<${a} class="pk ${k==="gel"||k==="rel"?"atk":"self"} ${st}" data-p="${k}" aria-label="${lab}">${PICON[k]}${n?`<b>${n}</b>`:""}</${who==="me"?"button":"span"}>`};
     return`<em class="pg atk">ATQ</em>${key("gel")}${key("rel")}<i class="psep"></i><em class="pg self">BOOST</em>${key("qua")}${key("dbl")}`};
   $("#sPowMe").innerHTML=side("me");$("#sPowB").innerHTML=side("bot")}
-function earn(who,k,p){const w=EARN[k];if(!w||!p)return;G.pw[who][w]++;paintPow();ga("histoire_pouvoir_gagne",{qui:who,pouvoir:w});
-  setTimeout(()=>{if(G.phase==="off")return;ko(who==="me"?"Pouvoir gagné":"Bruno gagne un pouvoir",PNAME[w]);sfx.combo(50)},1400)}
+function gain(who){const v=G.vals;if(v.length!==5)return;const c=counts(v),mx=Math.max(...c);let w=null;
+  if(mx===5)w="dbl";else if(hasRun(c,5))w="qua";else if(hasRun(c,4))w="rel";else if(pts("full",v)>0)w="gel";
+  if(!w||G.pw[who][w])return; /* un seul de chaque pouvoir à la fois */
+  G.pw[who][w]=1;paintPow();ga("histoire_pouvoir_gagne",{qui:who,pouvoir:w});
+  setTimeout(()=>{if(G.phase==="off")return;ko(who==="me"?"Pouvoir gagné":"Bruno gagne un pouvoir",PNAME[w]);sfx.combo(50)},700)}
 function power(k){if(CH!==2||!G.pw||!G.pw.me[k])return;
   if(G.arm===k){G.arm=null;fxOff();paintDice();paintPow();hint("");if(G.reactGo)G.reactGo();return} /* retouche = annuler */
   if(!usable(k)){sfx.miss();return}
@@ -562,7 +567,7 @@ async function botStrike(){if(G.atk||G.phase!=="me")return;const free=allIds().f
   else{const c=free.filter(id=>win.has(id)),pool=c.length?c:free,id=pool[Math.random()*pool.length|0];
     G.pw.bot.rel--;paintPow();fxOn("rel");ko("Père Bruno","Le temps s'arrête");say("Pardonne-moi, mon enfant…",2000,true);await wait(1700);if(G.phase!=="me")return;
     let r=await toss([id]);if(r&&r.broken)r=await toss([id]);fxOff();if(G.phase!=="me")return;
-    const b2=best(G.me,G.vals),w2=new Set();if(b2){pop(`+${b2.p} ${SAY[b2.k]}`);winIds(b2.k,w2)}paintDice(w2);grid()}
+    const b2=best(G.me,G.vals),w2=new Set();if(b2){pop(`+${b2.p} ${SAY[b2.k]}`);winIds(b2.k,w2)}paintDice(w2);grid();gain("me")}
   G.hold=false;hud();paintPow()}
 /* double garanti : tant qu'il n'y a pas de paire, un dé libre est relancé « guidé par le Saint-Esprit » */
 async function divine(ids,bot){const has2=()=>G.vals.length===5&&Math.max(...counts(G.vals))>=2;if(has2())return null;
@@ -582,11 +587,29 @@ function fxOn(k){fxOff();G.fx=k;root.classList.add(k==="gel"?"frozen":k==="rel"?
 function fxOff(){if(!root)return;root.classList.remove("frozen","tstop","holy");const fx=$("#sFx");if(fx)fx.innerHTML="";clearInterval(tickT);
   const was=G.fx;G.fx=null;if(was==="rel"&&G.phase!=="off"&&G.phase!=="end"&&musicOn())mus.resume()}
 function iceHit(){[0,.05,.11].forEach((t,i)=>tn(t,{f:2600-i*500,f2:1400,v:.09,att:.002,dec:.25}));nz(0,{type:"highpass",f:3000,v:.15,att:.002,dec:.2})}
-/* dé gelé : teinte glacée (dans le moteur 3D) + anneau de givre et pastille flocon posés au-dessus */
-function paintFz(){const z=root&&$("#sFz");if(!z)return;if(!G.frozen||!G.frozen.size){z.innerHTML="";return}const p=peek();if(!p)return;
+/* dé gelé : coque de glace en 3D dans la scène (copie agrandie du dé, matière glace translucide, accrochée au dé)
+   + teinte glacée du dé + petite pastille flocon au-dessus */
+const shells=new Map();let iceMatS=null;
+function iceMat(sc){if(iceMatS&&iceMatS.getScene()===sc)return iceMatS;const S=sc.materials.find(m=>m.getClassName()==="StandardMaterial");if(!S)return null;
+  const m=new S.constructor("yamsIce",sc),C3=S.diffuseColor.constructor;m.diffuseColor=new C3(.74,.9,1);m.emissiveColor=new C3(.2,.4,.58);m.specularColor=new C3(1,1,1);m.specularPower=110;
+  m.alpha=.42;m.backFaceCulling=true;return iceMatS=m}
+function shellOn(d){const id=d.config.rollId,o=shells.get(id);if(o&&o.die===d.mesh&&!o.sh.isDisposed())return;if(o)try{o.sh.dispose()}catch(e){}
+  const src=d.mesh.sourceMesh,sc=d.mesh.getScene(),m=src&&iceMat(sc);if(!m)return;let sh;try{sh=src.clone("yamsIce"+id,null,true)}catch(e){return}if(!sh)return;
+  sh.setEnabled(true);sh.isVisible=true;sh.isPickable=false;sh.material=m;sh.parent=d.mesh;sh.position.set(0,0,0);sh.rotationQuaternion=null;
+  sh.rotation.set(.13,.22,-.09);sh.scaling.set(1.3,1.22,1.34);try{sh.receiveShadows=false}catch(e){}shells.set(id,{sh,die:d.mesh})}
+function shellOff(id,burst){const o=shells.get(id);if(!o)return;shells.delete(id);const sh=o.sh;if(!burst||sh.isDisposed()){try{sh.dispose()}catch(e){}return}
+  /* la glace éclate : la coque gonfle et s'efface */
+  const m=sh.material.clone("yamsIceOut");sh.material=m;const p=peek(),t0=performance.now();iceHit();
+  const f=()=>{const k=Math.min(1,(performance.now()-t0)/320);sh.scaling.set(1.3+k*.5,1.22+k*.5,1.34+k*.5);m.alpha=.42*(1-k);try{p&&p.scene.render()}catch(e){}
+    if(k<1)requestAnimationFrame(f);else{try{sh.dispose();m.dispose()}catch(e){}}};f()}
+function unfreeze(){const burst=G.phase!=="off";[...shells.keys()].forEach(id=>shellOff(id,burst&&G.frozen.has(id)));if(G.frozen)G.frozen.clear();paintFz()}
+function paintFz(){const z=root&&$("#sFz");if(!z)return;const fr=G.frozen||new Set();
+  [...shells.keys()].forEach(id=>{if(!fr.has(id))shellOff(id,false)});
+  if(!fr.size){z.innerHTML="";return}const p=peek();if(!p)return;
+  const ds=live().filter(d=>fr.has(d.config.rollId));ds.forEach(shellOn);
   const zr=$("#sZone").getBoundingClientRect(),cr=p.canvas.getBoundingClientRect();
-  z.innerHTML=live().filter(d=>G.frozen.has(d.config.rollId)).map(d=>{const g=geo(d),x=cr.left-zr.left+g.x,y=cr.top-zr.top+g.y,s=g.size*1.35;
-    return`<span class="fzr" style="left:${x}px;top:${y}px;width:${s}px;height:${s}px"></span><span class="fzb" style="left:${x+g.size*.45}px;top:${y-g.size*.8}px">${PICON.gel}</span>`}).join("")}
+  z.innerHTML=ds.map(d=>{const g=geo(d),x=cr.left-zr.left+g.x,y=cr.top-zr.top+g.y;
+    return`<span class="fzb" style="left:${x+g.size*.55}px;top:${y-g.size*.85}px">${PICON.gel}</span>`}).join("")}
 function end2(a,b,won){ga("histoire_fin",{boss:"bruno",gagne:won?"oui":"non",resultat:issue(a,b),score:a,boss_score:b,ecart:a-b,...stats()});
   ko(won?"Bruno est battu":"Fin du combat",won?"K.O. !":a===b?"Égalité":"Perdu");if(won)sfx.ko();else sfx.heavy();
   mus.stop(.8);setTimeout(()=>{if(G.phase==="end")mus.play(won?"victoire":"defaite")},700);
