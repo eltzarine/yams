@@ -569,11 +569,18 @@ async function botStrike(){if(G.atk||G.phase!=="me")return;const free=allIds().f
     let r=await toss([id]);if(r&&r.broken)r=await toss([id]);fxOff();if(G.phase!=="me")return;
     const b2=best(G.me,G.vals),w2=new Set();if(b2){pop(`+${b2.p} ${SAY[b2.k]}`);winIds(b2.k,w2)}paintDice(w2);grid();gain("me")}
   G.hold=false;hud();paintPow()}
-/* double garanti : tant qu'il n'y a pas de paire, un dé libre est relancé « guidé par le Saint-Esprit » */
-async function divine(ids,bot){const has2=()=>G.vals.length===5&&Math.max(...counts(G.vals))>=2;if(has2())return null;
+/* double garanti : le double doit sortir parmi les dés qu'on vient de lancer (ou, si on n'en lance qu'un, avec un dé déjà posé).
+   Le moteur physique ne choisit pas les faces : tant que ce n'est pas le cas, un des dés lancés est relancé « guidé par le Saint-Esprit ». */
+async function divine(ids,bot){const v=id=>valOf(id);
+  /* un dé relancé change d'identifiant : les dés lancés sont ceux qui ne sont ni gardés ni gelés */
+  const thrown=()=>allIds().filter(id=>!G.locked.has(id)&&!G.frozen.has(id));
+  const ok=()=>{if(G.vals.length!==5)return true;const t=thrown();if(!t.length)return true;
+    if(t.length>=2){const c={};return t.some(id=>(c[v(id)]=(c[v(id)]||0)+1)>=2)}
+    return allIds().some(id=>id!==t[0]&&v(id)===v(t[0]))};
+  if(ok())return null;
   ko(bot?"Père Bruno":"Yam's des dieux","Saint-Esprit");fxOn("holy");let r=null;const gen=G.gen;
-  for(let i=0;i<10&&!has2();i++){const pool=ids.filter(id=>!G.locked.has(id)&&!G.frozen.has(id)),src=pool.length?pool:ids,id=src[Math.random()*src.length|0];
-    await wait(300);if(gen!==G.gen)return null;r=await toss([id]);if(!r)break;if(r.broken){r=await toss([id]);if(!r)break}}
+  for(let i=0;i<20&&!ok();i++){const t=thrown(),id=t.length>=2?t[1+i%(t.length-1)]:t[0]; /* un dé lancé sert d'ancre, on relance les autres */
+    await wait(120);if(gen!==G.gen)return null;r=await toss([id]);if(!r)break;if(r.broken){r=await toss([...G.broken]);if(!r)break}}
   fxOff();return r}
 /* effets : vent glacial, temps arrêté (musique coupée, tic-tac), lumière divine */
 let tickT=0;
